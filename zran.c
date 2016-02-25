@@ -319,10 +319,11 @@ build_index_error:
  *
  * If whence is not equal to SEEK_SET, returns -1.
  */ 
-static int zran_seek(zran_index_t *index,
-                     FILE         *in,
-                     off_t         offset,
-                     int           whence) {
+static int zran_seek(zran_index_t  *index,
+                     FILE          *in,
+                     off_t          offset,
+                     int            whence,
+                     zran_point_t **point) {
 
     zran_point_t *seek_point;
 
@@ -342,7 +343,11 @@ static int zran_seek(zran_index_t *index,
 
     if (seek_point->bits > 0)
         offset -= 1;
-    
+
+    zran_log("Seeking to compressed stream offset %lld\n", offset);
+
+    *point = seek_point;
+
     return fseeko(in, offset, SEEK_SET);
 }
 
@@ -364,11 +369,8 @@ static int zran_extract(zran_index_t *index,
     if (len < 0)
         return 0;
 
-    /* find where in stream to start */
-    here = index->list;
-    ret = index->have;
-    while (--ret && here[1].uncmp_offset <= offset)
-        here++;
+    if (zran_seek(index, in, offset, SEEK_SET, &here) != 0)
+        return -1;
 
     /* initialize file and inflate state to start there */
     strm.zalloc = Z_NULL;
@@ -377,9 +379,10 @@ static int zran_extract(zran_index_t *index,
     strm.avail_in = 0;
     strm.next_in = Z_NULL;
     ret = inflateInit2(&strm, -15);         /* raw inflate */
+    
     if (ret != Z_OK)
         return ret;
-    ret = fseeko(in, here->cmp_offset - (here->bits ? 1 : 0), SEEK_SET);
+
     if (ret == -1)
         goto extract_ret;
     if (here->bits) {

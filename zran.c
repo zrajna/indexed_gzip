@@ -1,64 +1,18 @@
-/* zran.c -- example of zlib/gzip stream indexing and random access
- * Copyright (C) 2005, 2012 Mark Adler
- * For conditions of distribution and use, see copyright notice in zlib.h
-   Version 1.1  29 Sep 2012  Mark Adler */
+ 
+//#define ZRAN_FOR_PYTHON
 
-/* Version History:
- 1.0  29 May 2005  First version
- 1.1  29 Sep 2012  Fix memory reallocation error
- */
-
-/* Illustrate the use of Z_BLOCK, inflatePrime(), and inflateSetDictionary()
-   for random access of a compressed file.  A file containing a zlib or gzip
-   stream is provided on the command line.  The compressed stream is decoded in
-   its entirety, and an index built with access points about every SPAN bytes
-   in the uncompressed output.  The compressed file is left open, and can then
-   be read randomly, having to decompress on the average SPAN/2 uncompressed
-   bytes before getting to the desired block of data.
-
-   An access point can be created at the start of any deflate block, by saving
-   the starting file offset and bit of that block, and the 32K bytes of
-   uncompressed data that precede that block.  Also the uncompressed offset of
-   that block is saved to provide a referece for locating a desired starting
-   point in the uncompressed stream.  build_index() works by decompressing the
-   input zlib or gzip stream a block at a time, and at the end of each block
-   deciding if enough uncompressed data has gone by to justify the creation of
-   a new access point.  If so, that point is saved in a data structure that
-   grows as needed to accommodate the points.
-
-   To use the index, an offset in the uncompressed data is provided, for which
-   the latest accees point at or preceding that offset is located in the index.
-   The input file is positioned to the specified location in the index, and if
-   necessary the first few bits of the compressed data is read from the file.
-   inflate is initialized with those bits and the 32K of uncompressed data, and
-   the decompression then proceeds until the desired offset in the file is
-   reached.  Then the decompression continues to read the desired uncompressed
-   data from the file.
-
-   Another approach would be to generate the index on demand.  In that case,
-   requests for random access reads from the compressed data would try to use
-   the index, but if a read far enough past the end of the index is required,
-   then further index entries would be generated and added.
-
-   There is some fair bit of overhead to starting inflation for the random
-   access, mainly copying the 32K byte dictionary.  So if small pieces of the
-   file are being accessed, it would make sense to implement a cache to hold
-   some lookahead and avoid many calls to extract() for small lengths.
-
-   Another way to build an index would be to use inflateCopy().  That would
-   not be constrained to have access points at block boundaries, but requires
-   more memory per access point, and also cannot be saved to file due to the
-   use of pointers in the state.  The approach here allows for storage of the
-   index in a file.
- */
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "zlib.h"
 
+#ifdef ZRAN_FOR_PYTHON
+#include <Python.h>
+#include "structmember.h"
+#endif
 
-#define SPAN 1048576L       /* desired distance between access points */
+
 #define WINSIZE 32768U      /* sliding window size */
 #define CHUNK 16384         /* file input buffer size */
 
@@ -69,16 +23,23 @@ struct _zran_index;
 typedef struct _zran_point zran_point_t;
 typedef struct _zran_index zran_index_t;
 
+
 /* access point entry */
 struct _zran_point {
+    
     off_t         out;              /* corresponding offset in uncompressed data */
     off_t         in;               /* offset in input file of first full byte */
     int           bits;             /* number of bits (1-7) from byte at in - 1, or 0 */
     unsigned char window[WINSIZE];  /* preceding 32K of uncompressed data */
 };
 
+
 /* access point list */
 struct _zran_index {
+
+    PyObject_HEAD
+
+
     int span;  
     int have;           /* number of list entries filled in */
     int size;           /* number of list entries allocated */
@@ -88,13 +49,17 @@ struct _zran_index {
 
 static void zran_index_new(zran_index_t *index) {
 
+    index->fid  = 0;
     index->span = 0;
     index->have = 0;
     index->size = 0;
     index->list = NULL;
-}
+};
 
-static int zran_index_init(zran_index_t *index, int span) {
+static int zran_index_init(zran_index_t *index,
+                           FILE         *fid,
+                           int           span,
+                           bool          init_index) {
 
     if (index->list != NULL)
         return -1;
@@ -109,9 +74,13 @@ static int zran_index_init(zran_index_t *index, int span) {
     index->span = span;
     index->size = 8;
     index->have = 0;
+
+    if (init_index) {
+        zran_buid_full_index(index);
+    }
     
     return 0;
-}
+};
 
 
 static int zran_index_expand(zran_index_t *index) {
@@ -128,7 +97,7 @@ static int zran_index_expand(zran_index_t *index) {
     index->list = new_list;
     
     return 0;
-}
+};
 
 
 static int zran_index_free_unused(zran_index_t *index) {
@@ -145,11 +114,11 @@ static int zran_index_free_unused(zran_index_t *index) {
     index->size = index->have;
 
     return 0;
-}
+};
 
 
 /* Deallocate an index built by build_index() */
-static void zran_free_index(zran_index_t *index) {
+static void zran_index_dealloc(zran_index_t *index) {
     
     if (index->list != NULL) {
         free(index->list);
@@ -159,7 +128,7 @@ static void zran_free_index(zran_index_t *index) {
     index->have = 0;
     index->size = 0;
     index->list = NULL;
-}
+};
 
 
 /* Add an entry to the access point list. */
@@ -193,7 +162,8 @@ static int zran_add_point(zran_index_t *index,
     index->have++;
 
     return 0;
-}
+};
+
 
 /* Make one entire pass through the compressed stream and build an index, with
    access points about every span bytes of uncompressed output -- span is
@@ -203,8 +173,7 @@ static int zran_add_point(zran_index_t *index,
    returns the number of access points on success (>= 1), Z_MEM_ERROR for out
    of memory, Z_DATA_ERROR for an error in the input file, or Z_ERRNO for a
    file read error.  On success, *built points to the resulting index. */
-static int zran_build_full_index(FILE *in,
-                                 zran_index_t *index) {
+static int zran_build_full_index(zran_index_t *index, FILE *in) {
     int ret;
     off_t totin, totout;        /* our own total counters to avoid 4GB limit */
     off_t last;                 /* totout value of last access point */
@@ -298,7 +267,7 @@ static int zran_build_full_index(FILE *in,
 build_index_error:
     (void)inflateEnd(&strm);
     return ret;
-}
+};
 
 /* Use the index to read len bytes from offset into buf, return bytes read or
    negative for error (Z_DATA_ERROR or Z_MEM_ERROR).  If data is requested past
@@ -307,8 +276,8 @@ build_index_error:
    should not return a data error unless the file was modified since the index
    was generated.  extract() may also return Z_ERRNO if there is an error on
    reading or seeking the input file. */
-static int zran_extract(FILE *in,
-                        zran_index_t *index,
+static int zran_extract(zran_index_t *index,
+                        FILE *in,
                         off_t offset,
                         unsigned char *buf,
                         int len) {
@@ -409,12 +378,14 @@ static int zran_extract(FILE *in,
   extract_ret:
     (void)inflateEnd(&strm);
     return ret;
-}
+};
+
 
 /* Demonstrate the use of build_full_index() and extract() by processing the
    file provided on the command line, and the extracting 16K from about 2/3rds
    of the way through the uncompressed output, and writing that to stdout. 
 */
+#ifndef ZRAN_FOR_PYTHON
 int main(int argc, char **argv)
 {
     int len;
@@ -436,10 +407,10 @@ int main(int argc, char **argv)
 
     /*Initialise the index*/
     zran_index_new( &index);
-    zran_index_init(&index, SPAN);
+    zran_index_init(&index, 1048576);
 
     /* build index */
-    len = zran_build_full_index(in, &index);
+    len = zran_build_full_index(&index, in);
 
     if (len < 0) {
         fclose(in);
@@ -462,7 +433,7 @@ int main(int argc, char **argv)
 
     /* use index by reading some bytes from an arbitrary offset */
     offset = (index.list[index.have - 1].out << 1) / 3;
-    len = zran_extract(in, &index, offset, buf, CHUNK);
+    len = zran_extract(&index, in, offset, buf, CHUNK);
     if (len < 0)
         fprintf(stderr, "zran: extraction failed: %s error\n",
                 len == Z_MEM_ERROR ? "out of memory" : "input corrupted");
@@ -472,7 +443,148 @@ int main(int argc, char **argv)
     }
 
     /* clean up and exit */
-    zran_free_index(&index);
+    zran_index_dealloc(&index);
     fclose(in);
     return 0;
-}
+};
+#endif
+
+
+
+#ifdef ZRAN_FOR_PYTHON
+static PyObject * zran_ZIndex_new(PyTypeObject *type,
+                                  PyObject     *args,
+                                  PyObject     *kwargs) {
+
+    zran_index_t *self;
+
+    self = (zran_index_t *)type->tp_alloc(type, 0);
+
+    if (self == NULL) 
+        goto fail;
+
+    zran_index_new(self);
+
+    return (PyObject *)self;
+
+ fail:
+    if (self != NULL) {
+        Py_DECREF(self);
+        return NULL;
+    }
+
+    return (PyObject *)self;
+};
+
+
+// ZIndex(span=1048576)
+//
+// todo: ZIndex(span, filename=None, fid=None, init_index=False)
+//
+static int zran_ZIndex_init(zran_index_t *self,
+                            PyObject     *args,
+                            PyObject     *kwargs) {
+
+    int span = 1048576;
+
+    static char *kwlist[] = {"span", NULL};
+
+    if (!PyArg_ParseTupleAndKeywords(args,
+                                     kwargs,
+                                     "|i",
+                                     kwlist,
+                                     &span)) {
+        goto fail;
+    }
+
+    zran_index_init(self, span);
+
+    return 0;
+
+fail:
+    return -1;
+};
+
+
+static void zran_ZIndex_dealloc(zran_index_t *self) {
+    zran_index_dealloc(self);
+};
+
+
+static struct PyMemberDef zran_ZIndex_members[] = {
+
+    {"span", T_INT, offsetof(zran_index_t, span), 0, "span"},
+    {"have", T_INT, offsetof(zran_index_t, have), 0, "have"},
+    {"size", T_INT, offsetof(zran_index_t, size), 0, "size"},
+    {NULL}
+};
+
+static PyTypeObject zran_ZIndex_type = {
+    PyVarObject_HEAD_INIT(NULL, 0)
+    "zran.ZIndex",                   /* tp_name */
+    sizeof(zran_index_t),            /* tp_basicsize */
+    0,                               /* tp_itemsize */
+    (destructor)zran_ZIndex_dealloc, /* tp_dealloc */
+    0,                         /* tp_print */
+    0,                         /* tp_getattr */
+    0,                         /* tp_setattr */
+    0,                         /* tp_reserved */
+    0,                         /* tp_repr */
+    0,                         /* tp_as_number */
+    0,                         /* tp_as_sequence */
+    0,                         /* tp_as_mapping */
+    0,                         /* tp_hash  */
+    0,                         /* tp_call */
+    0,                         /* tp_str */
+    0,                         /* tp_getattro */
+    0,                         /* tp_setattro */
+    0,                         /* tp_as_buffer */
+    Py_TPFLAGS_DEFAULT,        /* tp_flags */
+    "ZIndex objects",      /* tp_doc */
+    0,                         /* tp_traverse */
+    0,                         /* tp_clear */
+    0,                         /* tp_richcompare */
+    0,                         /* tp_weaklistoffset */
+    0,                         /* tp_iter */
+    0,                         /* tp_iternext */
+    0,             /* tp_methods */
+    zran_ZIndex_members,       /* tp_members */
+    0,                         /* tp_getset */
+    0,                         /* tp_base */
+    0,                         /* tp_dict */
+    0,                         /* tp_descr_get */
+    0,                         /* tp_descr_set */
+    0,                         /* tp_dictoffset */
+    (initproc)zran_ZIndex_init,/* tp_init */
+    0,                         /* tp_alloc */
+    zran_ZIndex_new,           /* tp_new */
+};
+
+
+static PyModuleDef zran_module = {
+    PyModuleDef_HEAD_INIT,
+    "zran",
+    "zran description",
+    -1,
+    NULL, NULL, NULL, NULL, NULL
+};
+
+PyMODINIT_FUNC PyInit_zran(void) {
+    PyObject *m;
+
+    if (PyType_Ready(&zran_ZIndex_type) < 0) {
+        return NULL;
+    }
+
+    m = PyModule_Create(&zran_module);
+
+    if (m == NULL) {
+        return NULL;
+    }
+
+    Py_INCREF(&zran_ZIndex_type);
+    PyModule_AddObject(m, "ZIndex", (PyObject *)&zran_ZIndex_type);
+
+    return m;
+};
+#endif

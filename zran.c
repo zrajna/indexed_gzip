@@ -64,21 +64,21 @@
 
 
 struct _zran_point;
-struct _zran_point_list;
+struct _zran_index;
 
-typedef struct _zran_point      zran_point_t;
-typedef struct _zran_point_list zran_point_list_t;
+typedef struct _zran_point zran_point_t;
+typedef struct _zran_index zran_index_t;
 
 /* access point entry */
 struct _zran_point {
-    off_t out;          /* corresponding offset in uncompressed data */
-    off_t in;           /* offset in input file of first full byte */
-    int bits;           /* number of bits (1-7) from byte at in - 1, or 0 */
+    off_t         out;              /* corresponding offset in uncompressed data */
+    off_t         in;               /* offset in input file of first full byte */
+    int           bits;             /* number of bits (1-7) from byte at in - 1, or 0 */
     unsigned char window[WINSIZE];  /* preceding 32K of uncompressed data */
 };
 
 /* access point list */
-struct _zran_point_list {
+struct _zran_index {
     int span;  
     int have;           /* number of list entries filled in */
     int size;           /* number of list entries allocated */
@@ -86,7 +86,7 @@ struct _zran_point_list {
 };
 
 
-static void zran_point_list_new(zran_point_list_t *index) {
+static void zran_index_new(zran_index_t *index) {
 
     index->span = 0;
     index->have = 0;
@@ -94,12 +94,12 @@ static void zran_point_list_new(zran_point_list_t *index) {
     index->list = NULL;
 }
 
-static int zran_point_list_init(zran_point_list_t *index, int span) {
+static int zran_index_init(zran_index_t *index, int span) {
 
-    /* if list is empty, create it (start with eight points) */
     if (index->list != NULL)
         return -1;
 
+    /* Create an initial point list */
     index->list = malloc(sizeof(zran_point_t) * 8);
         
     if (index->list == NULL) {
@@ -114,7 +114,7 @@ static int zran_point_list_init(zran_point_list_t *index, int span) {
 }
 
 
-static int zran_point_list_expand(zran_point_list_t *index) {
+static int zran_index_expand(zran_index_t *index) {
 
     int new_size = index->size * 2;
     
@@ -131,7 +131,7 @@ static int zran_point_list_expand(zran_point_list_t *index) {
 }
 
 
-static int zran_point_list_free_unused(zran_point_list_t *index) {
+static int zran_index_free_unused(zran_index_t *index) {
 
     zran_point_t *new_list;
 
@@ -149,7 +149,7 @@ static int zran_point_list_free_unused(zran_point_list_t *index) {
 
 
 /* Deallocate an index built by build_index() */
-static void zran_free_index(zran_point_list_t *index) {
+static void zran_free_index(zran_index_t *index) {
     
     if (index->list != NULL) {
         free(index->list);
@@ -163,7 +163,7 @@ static void zran_free_index(zran_point_list_t *index) {
 
 
 /* Add an entry to the access point list. */
-static int zran_add_point(zran_point_list_t *index,
+static int zran_add_point(zran_index_t *index,
                           int bits,
                           off_t in,
                           off_t out,
@@ -174,7 +174,7 @@ static int zran_add_point(zran_point_list_t *index,
 
     /* if list is full, make it bigger */
     if (index->have == index->size) {
-        if (zran_point_list_expand(index) != 0) {
+        if (zran_index_expand(index) != 0) {
             return -1;
         }
     }
@@ -204,7 +204,7 @@ static int zran_add_point(zran_point_list_t *index,
    of memory, Z_DATA_ERROR for an error in the input file, or Z_ERRNO for a
    file read error.  On success, *built points to the resulting index. */
 static int zran_build_full_index(FILE *in,
-                                 zran_point_list_t *index) {
+                                 zran_index_t *index) {
     int ret;
     off_t totin, totout;        /* our own total counters to avoid 4GB limit */
     off_t last;                 /* totout value of last access point */
@@ -274,8 +274,6 @@ static int zran_build_full_index(FILE *in,
             if ((strm.data_type & 128) && !(strm.data_type & 64) &&
                 (totout == 0 || totout - last > index->span)) {
 
-                printf("Adding \n");
-                
                 if (zran_add_point(index, strm.data_type & 7, totin,
                                    totout, strm.avail_out, window) != 0) {
                     ret = Z_MEM_ERROR;
@@ -289,7 +287,7 @@ static int zran_build_full_index(FILE *in,
     /* clean up and return index (release unused entries in list) */
     (void)inflateEnd(&strm);
 
-    if (zran_point_list_free_unused(index) != 0) {
+    if (zran_index_free_unused(index) != 0) {
         ret = Z_MEM_ERROR;
         goto build_index_error;
     }
@@ -310,7 +308,7 @@ build_index_error:
    was generated.  extract() may also return Z_ERRNO if there is an error on
    reading or seeking the input file. */
 static int zran_extract(FILE *in,
-                        zran_point_list_t *index,
+                        zran_index_t *index,
                         off_t offset,
                         unsigned char *buf,
                         int len) {
@@ -422,7 +420,7 @@ int main(int argc, char **argv)
     int len;
     off_t offset;
     FILE *in;
-    zran_point_list_t index;
+    zran_index_t index;
     unsigned char buf[CHUNK];
 
     /* open input file */
@@ -437,13 +435,12 @@ int main(int argc, char **argv)
     }
 
     /*Initialise the index*/
-    zran_point_list_new( &index);
-    zran_point_list_init(&index, SPAN);
+    zran_index_new( &index);
+    zran_index_init(&index, SPAN);
 
     /* build index */
     len = zran_build_full_index(in, &index);
 
-    printf("index built\n");
     if (len < 0) {
         fclose(in);
         switch (len) {

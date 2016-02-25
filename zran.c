@@ -1,6 +1,14 @@
  
-//#define ZRAN_FOR_PYTHON
+#define ZRAN_FOR_PYTHON
 
+#define ZRAN_VERBOSE
+
+
+#ifdef ZRAN_VERBOSE
+#define zran_log(...) printf(__VA_ARGS__)
+#else
+#define zran_log(...) 
+#endif
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -37,29 +45,26 @@ struct _zran_point {
 /* access point list */
 struct _zran_index {
 
-    PyObject_HEAD
-
-
-    int span;  
-    int have;           /* number of list entries filled in */
-    int size;           /* number of list entries allocated */
+    int           span;  
+    int           have; /* number of list entries filled in */
+    int           size; /* number of list entries allocated */
     zran_point_t *list; /* allocated list */
 };
 
 
 static void zran_index_new(zran_index_t *index) {
 
-    index->fid  = 0;
+    zran_log("zran_index_new\n");
+
     index->span = 0;
     index->have = 0;
     index->size = 0;
     index->list = NULL;
 };
 
-static int zran_index_init(zran_index_t *index,
-                           FILE         *fid,
-                           int           span,
-                           bool          init_index) {
+static int zran_index_init(zran_index_t *index, int span) {
+
+    zran_log("zran_index_init (%i)\n", span);
 
     if (index->list != NULL)
         return -1;
@@ -74,10 +79,6 @@ static int zran_index_init(zran_index_t *index,
     index->span = span;
     index->size = 8;
     index->have = 0;
-
-    if (init_index) {
-        zran_buid_full_index(index);
-    }
     
     return 0;
 };
@@ -86,6 +87,8 @@ static int zran_index_init(zran_index_t *index,
 static int zran_index_expand(zran_index_t *index) {
 
     int new_size = index->size * 2;
+
+    zran_log("zran_index_expand (%i -> %i)\n", index->size, new_size);
     
     zran_point_t *new_list = realloc(index->list,
                                      sizeof(zran_point_t) * new_size);
@@ -95,12 +98,15 @@ static int zran_index_expand(zran_index_t *index) {
     }
     
     index->list = new_list;
+    index->size = new_size;
     
     return 0;
 };
 
 
 static int zran_index_free_unused(zran_index_t *index) {
+
+    zran_log("zran_index_free_unused\n");
 
     zran_point_t *new_list;
 
@@ -119,6 +125,8 @@ static int zran_index_free_unused(zran_index_t *index) {
 
 /* Deallocate an index built by build_index() */
 static void zran_index_dealloc(zran_index_t *index) {
+
+    zran_log("zran_index_dealloc\n");
     
     if (index->list != NULL) {
         free(index->list);
@@ -138,6 +146,8 @@ static int zran_add_point(zran_index_t *index,
                           off_t out,
                           unsigned left,
                           unsigned char *window) {
+
+    zran_log("zran_index_add_point(%lld <-> %lld)\n", in, out);
 
     zran_point_t *next;
 
@@ -180,6 +190,8 @@ static int zran_build_full_index(zran_index_t *index, FILE *in) {
     z_stream strm;
     unsigned char input[CHUNK];
     unsigned char window[WINSIZE];
+
+    zran_log("zran_build_full_index\n");
 
     /* initialize inflate */
     strm.zalloc = Z_NULL;
@@ -286,6 +298,8 @@ static int zran_extract(zran_index_t *index,
     zran_point_t *here;
     unsigned char input[CHUNK];
     unsigned char discard[WINSIZE];
+
+    zran_log("zran_extract\n");
 
     /* proceed only if something reasonable to do */
     if (len < 0)
@@ -452,18 +466,42 @@ int main(int argc, char **argv)
 
 
 #ifdef ZRAN_FOR_PYTHON
+
+
+struct _ZIndex {
+
+    PyObject_HEAD
+    
+    PyObject    *py_fid;
+    FILE        *fid;
+    int          span; 
+    int          size;
+    int          available_size;
+    zran_index_t index;
+};
+
+typedef struct _ZIndex ZIndex;
+
+
 static PyObject * zran_ZIndex_new(PyTypeObject *type,
                                   PyObject     *args,
                                   PyObject     *kwargs) {
 
-    zran_index_t *self;
+    ZIndex *self;
 
-    self = (zran_index_t *)type->tp_alloc(type, 0);
+    zran_log("ZIndex_new\n");
+
+    self = (ZIndex *)type->tp_alloc(type, 0);
 
     if (self == NULL) 
         goto fail;
 
-    zran_index_new(self);
+    zran_index_new(&(self->index));
+
+    self->fid            = NULL;
+    self->span           = 0;
+    self->size           = 0;
+    self->available_size = 0;
 
     return (PyObject *)self;
 
@@ -481,23 +519,45 @@ static PyObject * zran_ZIndex_new(PyTypeObject *type,
 //
 // todo: ZIndex(span, filename=None, fid=None, init_index=False)
 //
-static int zran_ZIndex_init(zran_index_t *self,
-                            PyObject     *args,
-                            PyObject     *kwargs) {
+static int zran_ZIndex_init(ZIndex   *self,
+                            PyObject *args,
+                            PyObject *kwargs) {
 
-    int span = 1048576;
+    PyObject *py_fid     = NULL;
+    FILE     *fid        = NULL;
+    int       span       = -1;
+    char      init_index = -1;
 
-    static char *kwlist[] = {"span", NULL};
+    zran_log("ZIndex_init\n");
 
+    static char *kwlist[] = {"fid", "span", "init_index", NULL};
+    
     if (!PyArg_ParseTupleAndKeywords(args,
                                      kwargs,
-                                     "|i",
+                                     "O|$ip",
                                      kwlist,
-                                     &span)) {
+                                     &py_fid,
+                                     &span,
+                                     &init_index)) {
         goto fail;
     }
 
-    zran_index_init(self, span);
+    if (span       < 0) { span       = 1048576; }
+    if (init_index < 0) { init_index = 0;       }
+
+    fid = fdopen(PyObject_AsFileDescriptor(py_fid), "rb");
+
+    zran_index_init(&(self->index), span);
+
+    self->py_fid         = py_fid;
+    self->fid            = fid;
+    self->span           = self->index.span;
+    self->size           = self->index.size;
+    self->available_size = self->index.have;
+
+    if (init_index != 0) {
+        zran_build_full_index(&(self->index), self->fid);
+    }
 
     return 0;
 
@@ -506,23 +566,30 @@ fail:
 };
 
 
-static void zran_ZIndex_dealloc(zran_index_t *self) {
-    zran_index_dealloc(self);
+static void zran_ZIndex_dealloc(ZIndex *self) {
+    
+    zran_index_dealloc(&(self->index));
+
+    self->fid            = NULL;
+    self->span           = 0;
+    self->size           = 0;
+    self->available_size = 0;
 };
 
 
 static struct PyMemberDef zran_ZIndex_members[] = {
 
-    {"span", T_INT, offsetof(zran_index_t, span), 0, "span"},
-    {"have", T_INT, offsetof(zran_index_t, have), 0, "have"},
-    {"size", T_INT, offsetof(zran_index_t, size), 0, "size"},
+    {"fid",            T_OBJECT_EX, offsetof(ZIndex, fid),            0, "fid"},
+    {"span",           T_INT,       offsetof(ZIndex, span),           0, "span"},
+    {"size",           T_INT,       offsetof(ZIndex, size),           0, "size"},
+    {"available_size", T_INT,       offsetof(ZIndex, available_size), 0, "available_size"},
     {NULL}
 };
 
 static PyTypeObject zran_ZIndex_type = {
     PyVarObject_HEAD_INIT(NULL, 0)
     "zran.ZIndex",                   /* tp_name */
-    sizeof(zran_index_t),            /* tp_basicsize */
+    sizeof(ZIndex),                  /* tp_basicsize */
     0,                               /* tp_itemsize */
     (destructor)zran_ZIndex_dealloc, /* tp_dealloc */
     0,                         /* tp_print */

@@ -35,8 +35,8 @@ typedef struct _zran_index zran_index_t;
 /* access point entry */
 struct _zran_point {
     
-    off_t         out;              /* corresponding offset in uncompressed data */
-    off_t         in;               /* offset in input file of first full byte */
+    off_t         uncmp_offset;     /* corresponding offset in uncompressed data */
+    off_t         cmp_offset;       /* offset in input file of first full byte */
     int           bits;             /* number of bits (1-7) from byte at in - 1, or 0 */
     unsigned char window[WINSIZE];  /* preceding 32K of uncompressed data */
 };
@@ -140,14 +140,14 @@ static void zran_index_dealloc(zran_index_t *index) {
 
 
 /* Add an entry to the access point list. */
-static int zran_add_point(zran_index_t *index,
-                          int bits,
-                          off_t in,
-                          off_t out,
-                          unsigned left,
+static int zran_add_point(zran_index_t  *index,
+                          int            bits,
+                          off_t          cmp_offset,
+                          off_t          uncmp_offset,
+                          unsigned       left,
                           unsigned char *window) {
 
-    zran_log("zran_index_add_point(%lld <-> %lld)\n", in, out);
+    zran_log("zran_index_add_point(%lld <-> %lld)\n", cmp_offset, uncmp_offset);
 
     zran_point_t *next;
 
@@ -159,13 +159,14 @@ static int zran_add_point(zran_index_t *index,
     }
 
     /* fill in entry and increment how many we have */
-    next = index->list + index->have;
-    next->bits = bits;
-    next->in = in;
-    next->out = out;
+    next               = index->list + index->have;
+    next->bits         = bits;
+    next->cmp_offset   = cmp_offset;
+    next->uncmp_offset = uncmp_offset;
     
     if (left)
         memcpy(next->window, window + WINSIZE - left, left);
+    
     if (left < WINSIZE)
         memcpy(next->window + left, window, WINSIZE - left);
     
@@ -308,7 +309,7 @@ static int zran_extract(zran_index_t *index,
     /* find where in stream to start */
     here = index->list;
     ret = index->have;
-    while (--ret && here[1].out <= offset)
+    while (--ret && here[1].uncmp_offset <= offset)
         here++;
 
     /* initialize file and inflate state to start there */
@@ -320,7 +321,7 @@ static int zran_extract(zran_index_t *index,
     ret = inflateInit2(&strm, -15);         /* raw inflate */
     if (ret != Z_OK)
         return ret;
-    ret = fseeko(in, here->in - (here->bits ? 1 : 0), SEEK_SET);
+    ret = fseeko(in, here->cmp_offset - (here->bits ? 1 : 0), SEEK_SET);
     if (ret == -1)
         goto extract_ret;
     if (here->bits) {
@@ -334,7 +335,7 @@ static int zran_extract(zran_index_t *index,
     (void)inflateSetDictionary(&strm, here->window, WINSIZE);
 
     /* skip uncompressed bytes until offset reached, then satisfy request */
-    offset -= here->out;
+    offset -= here->uncmp_offset;
     strm.avail_in = 0;
     skip = 1;                               /* while skipping to offset */
     do {
@@ -586,6 +587,7 @@ static struct PyMemberDef zran_ZIndex_members[] = {
     {NULL}
 };
 
+
 static PyTypeObject zran_ZIndex_type = {
     PyVarObject_HEAD_INIT(NULL, 0)
     "zran.ZIndex",                   /* tp_name */
@@ -635,6 +637,7 @@ static PyModuleDef zran_module = {
     -1,
     NULL, NULL, NULL, NULL, NULL
 };
+
 
 PyMODINIT_FUNC PyInit_zran(void) {
     PyObject *m;

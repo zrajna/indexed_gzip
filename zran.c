@@ -139,6 +139,36 @@ static void zran_index_dealloc(zran_index_t *index) {
 };
 
 
+static zran_point_t * zran_index_get_point_at(zran_index_t *index,
+                                              off_t         offset,
+                                              char          compressed) {
+
+    zran_point_t *prev;
+    zran_point_t *curr;
+    int           i;
+
+    prev = index->list;
+
+    // TODO use bsearch instead of shitty linear search
+    for (i = 1; i < index->size; i++) {
+        
+        curr = &(index->list[i]);
+        
+        if (compressed) {
+            if (curr->cmp_offset > offset) 
+                return prev;
+                
+        }
+        else {
+            if (curr->uncmp_offset > offset) 
+                return prev;
+        }
+    }
+
+    return NULL;
+}
+
+
 /* Add an entry to the access point list. */
 static int zran_add_point(zran_index_t  *index,
                           int            bits,
@@ -282,13 +312,41 @@ build_index_error:
     return ret;
 };
 
-/* Use the index to read len bytes from offset into buf, return bytes read or
-   negative for error (Z_DATA_ERROR or Z_MEM_ERROR).  If data is requested past
-   the end of the uncompressed data, then extract() will return a value less
-   than len, indicating how much as actually read into buf.  This function
-   should not return a data error unless the file was modified since the index
-   was generated.  extract() may also return Z_ERRNO if there is an error on
-   reading or seeking the input file. */
+
+/*
+ * Seek to the approximate location of the specified offest into the 
+ * uncompressed data stream. 
+ *
+ * If whence is not equal to SEEK_SET, returns -1.
+ */ 
+static int zran_seek(zran_index_t *index,
+                     FILE         *in,
+                     off_t         offset,
+                     int           whence) {
+
+    zran_point_t *seek_point;
+
+    zran_log("zran_seek(%lld, %i)\n", offset, whence);
+
+    if (whence != SEEK_SET) {
+        return -1;
+    }
+
+    seek_point = zran_index_get_point_at(index, offset, 0);
+
+    if (seek_point == NULL) {
+        return -1;
+    }
+
+    offset = seek_point->cmp_offset;
+
+    if (seek_point->bits > 0)
+        offset -= 1;
+    
+    return fseeko(in, offset, SEEK_SET);
+}
+
+
 static int zran_extract(zran_index_t *index,
                         FILE *in,
                         off_t offset,
@@ -447,7 +505,7 @@ int main(int argc, char **argv)
     fprintf(stderr, "zran: built index with %d access points\n", len);
 
     /* use index by reading some bytes from an arbitrary offset */
-    offset = (index.list[index.have - 1].out << 1) / 3;
+    offset = (index.list[index.have - 1].uncmp_offset << 1) / 3;
     len = zran_extract(&index, in, offset, buf, CHUNK);
     if (len < 0)
         fprintf(stderr, "zran: extraction failed: %s error\n",

@@ -33,7 +33,9 @@ def md5(data):
 
 def testfile(name, fid, createfunc, length, offsets, loud):
 
-    print('Testing {}...'.format(name))
+    title = 'Testing {}'.format(name)
+    print('\n\n{}\n{}\n\n'.format(title,
+                                  '=' * len(title)))
 
     fid.seek(0)
 
@@ -49,17 +51,20 @@ def testfile(name, fid, createfunc, length, offsets, loud):
     hashtimes = []
     hashes    = []
 
-    for offset in offsets:
+    for i, offset in enumerate(offsets):
 
         if loud:
-            print('  seeking to {}...'.format(offset))
+            print('{: 3d}: seeking to {}...'.format(i, offset))
+        else:
+            print('\r{: 3d}: reading {:0.2f}MB from location {}...'.format(
+                i, length / 1048576, offset), end='')
 
         seekstart = time.time()
         fileobj.seek(offset)
         seekend   = time.time()
 
         if loud:
-            print('  reading {} bytes...'.format(length), end='')
+            print('     reading {:0.2f}MB...'.format(length / 1048576), end='')
 
         readstart = time.time()
         data      = fileobj.read(length)
@@ -75,27 +80,34 @@ def testfile(name, fid, createfunc, length, offsets, loud):
         hashes   .append(md5(data))
 
         if loud:
-            # startbytes = ''.join(['{:02x}'.format(b) for b in data[:5]])
-            # endbytes   = ''.join(['{:02x}'.format(b) for b in data[-5:]])
-            # print('{} ... {} [{}]'.format(startbytes, endbytes, len(data)), end=', ')
-            print(hashes[-1])
+            print('data hash: {}\n'.format(hashes[-1]))
 
+    totalhashstart = time.time()
+    totalhash      = ''.join(it.chain(*hashes)).encode('ascii')
+    datahash       = md5(totalhash)
+    totalhashend   = time.time()
+ 
     createtime = createend - createstart
-    seektime   = sum(seektimes) / len(seektimes)
-    readtime   = sum(readtimes) / len(readtimes)
-    hashtime   = sum(hashtimes) / len(hashtimes)
-    totaltime  = createtime + sum(seektimes) + sum(readtimes) + sum(hashtimes)
-    totalhash  = ''.join(it.chain(*hashes)).encode('ascii')
-    datahash   = md5(totalhash)
+    seektime   = sum(seektimes)
+    readtime   = sum(readtimes)
+    hashtime   = sum(hashtimes) + (totalhashend - totalhashstart)
+    totaltime  = createtime + seektime + readtime + hashtime
 
-    print('  done!')
-    print('  {} Total time:  {:0.2f} sec'       .format(name, totaltime))
-    print('  create time: {:0.2f} sec'          .format(createtime))
-    print('  md5 time:    {:0.2f} sec'          .format(hashtime))
-    print('  data md5:    {}'                   .format(datahash))
-    print('  Average times over {} seeks/reads:'.format(numseeks))
-    print('    seek time: {:0.2f} sec'          .format(seektime))
-    print('    read time: {:0.2f} sec'          .format(readtime))
+    print('  done!\n\n')
+
+    subtitle = '{} summary'.format(name)
+    print('{}\n{}\n'.format(subtitle, '-' * len(subtitle)))
+          
+    print('Total time:  {:0.2f} sec'          .format(totaltime))
+    print('Create time: {:0.2f} sec'          .format(createtime))
+    print('Seek time:   {:0.2f} sec'          .format(seektime))
+    print('Read time:   {:0.2f} sec'          .format(readtime))
+    print('MD5 time:    {:0.2f} sec'          .format(hashtime))
+    print('Data MD5:    {}'                   .format(datahash))
+    print()
+    print('Average times over {} seeks/reads:'.format(numseeks))
+    print('  seek time: {:0.2f} sec'          .format(seektime / numseeks))
+    print('  read time: {:0.2f} sec'          .format(readtime / numseeks))
     
 
 if len(sys.argv) not in (2, 3, 4, 5):
@@ -113,7 +125,7 @@ if len(sys.argv) >= 4: loud     = bool(sys.argv[3])
 if len(sys.argv) >= 5: seed     = int( sys.argv[4])
 
 
-print('Seeding random with {}'.format(seed))
+print('Random seed: {}'.format(seed))
 random.seed(seed)
 
 

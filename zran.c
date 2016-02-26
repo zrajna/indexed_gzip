@@ -20,10 +20,11 @@ void zran_new(zran_index_t *index) {
 
     zran_log("zran_new\n");
 
-    index->span = 0;
-    index->have = 0;
-    index->size = 0;
-    index->list = NULL;
+    index->span              = 0;
+    index->have              = 0;
+    index->size              = 0;
+    index->uncmp_seek_offset = 0;
+    index->list              = NULL;
 };
 
 
@@ -146,10 +147,22 @@ int zran_add_point(zran_index_t  *index,
                    int            bits,
                    off_t          cmp_offset,
                    off_t          uncmp_offset,
-                   unsigned       left,
+                   unsigned       nbytes,
                    unsigned char *window) {
 
-    zran_log("zran_add_point(%i, %lld <-> %lld)\n", index->have, cmp_offset, uncmp_offset);
+    zran_log("zran_add_point(%i, %lld <-> %lld, "
+             "[%02x %02x %02x %02x ... %02x %02x %02x %02x])\n",
+             index->have,
+             cmp_offset,
+             uncmp_offset,
+             window[0],
+             window[1],
+             window[2],
+             window[3],
+             window[nbytes - 4],
+             window[nbytes - 3],
+             window[nbytes - 2],
+             window[nbytes - 1]);
 
     zran_point_t *next;
 
@@ -164,13 +177,14 @@ int zran_add_point(zran_index_t  *index,
     next               = index->list + index->have;
     next->bits         = bits;
     next->cmp_offset   = cmp_offset;
+    next->nbytes       = nbytes;
     next->uncmp_offset = uncmp_offset;
     
-    if (left)
-        memcpy(next->window, window + WINSIZE - left, left);
+    if (nbytes)
+        memcpy(next->window, window + WINSIZE - nbytes, nbytes);
     
-    if (left < WINSIZE)
-        memcpy(next->window + left, window, WINSIZE - left);
+    if (nbytes < WINSIZE)
+        memcpy(next->window + nbytes, window, WINSIZE - nbytes);
     
     index->have++;
 
@@ -193,6 +207,9 @@ int zran_build_full_index(zran_index_t *index, FILE *in) {
     z_stream strm;
     unsigned char input[CHUNK];
     unsigned char window[WINSIZE];
+
+    memset(input,  0, CHUNK);
+    memset(window, 0, WINSIZE);
 
     zran_log("zran_build_full_index\n");
 
@@ -223,6 +240,17 @@ int zran_build_full_index(zran_index_t *index, FILE *in) {
             goto build_index_error;
         }
         strm.next_in = input;
+
+        zran_log("Compressed block (%i bytes): [%02x %02x %02x %02x ... %02x %02x %02x %02x]\n",
+                 strm.avail_in,
+                 input[0],
+                 input[1],
+                 input[2],
+                 input[3],
+                 input[strm.avail_in - 4],
+                 input[strm.avail_in - 3],
+                 input[strm.avail_in - 2],
+                 input[strm.avail_in - 1]);
 
         /* process all of that, or until end of stream */
         do {
@@ -275,6 +303,7 @@ int zran_build_full_index(zran_index_t *index, FILE *in) {
     
     /* clean up and return index (release unused entries in list) */
     inflateEnd(&strm);
+    
     return index->size;
 
     /* return error */
@@ -318,7 +347,9 @@ int zran_seek(zran_index_t  *index,
 
     zran_log("Seeking to compressed stream offset %lld\n", offset);
 
-    *point = seek_point;
+    if (point != NULL) {
+        *point = seek_point;
+    }
 
     return fseeko(in, offset, SEEK_SET);
 }
@@ -397,7 +428,7 @@ int zran_read(zran_index_t  *index,
             goto fail;
     }
 
-    zran_log("InflateSetDictionary( %i %i %i ...)\n",
+    zran_log("InflateSetDictionary( %02x %02x %02x ...)\n",
              point->window[0],
              point->window[1],
              point->window[2]);
@@ -477,8 +508,12 @@ int zran_read(zran_index_t  *index,
 
     len = skip ? 0 : len - strm.avail_out;
 
-    index->uncmp_seek_offset += len;
-
+    zran_seek(index,
+              in,
+              index->uncmp_seek_offset + len,
+              SEEK_SET,
+              NULL);
+    
     return len;
 
     /* clean up and return bytes read or error */

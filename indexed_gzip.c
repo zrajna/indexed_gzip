@@ -112,6 +112,15 @@ fail:
 };
 
 
+static PyObject * IndexedGzipFile_close(IndexedGzipFile *self,
+                                        PyObject        *args,
+                                        PyObject        *kwargs) {
+
+    // TODO
+    Py_RETURN_NONE;
+}
+
+
 static void IndexedGzipFile_dealloc(IndexedGzipFile *self) {
     
     zran_dealloc(&(self->index));
@@ -126,7 +135,9 @@ static void IndexedGzipFile_dealloc(IndexedGzipFile *self) {
 //
 // TODO support whence != 0
 //
-static PyObject * IndexedGzipFile_seek(IndexedGzipFile *self, PyObject *args) {
+static PyObject * IndexedGzipFile_seek(IndexedGzipFile *self,
+                                       PyObject        *args,
+                                       PyObject        *kwargs) {
 
     long          offset  = 0;
     long          whence  = 0;
@@ -160,7 +171,9 @@ fail:
 
 
 // bytes = read(len)
-static PyObject * IndexedGzipFile_read(IndexedGzipFile *self, PyObject *args) {
+static PyObject * IndexedGzipFile_read(IndexedGzipFile *self,
+                                       PyObject        *args,
+                                       PyObject        *kwargs) {
 
     long           len        = 0;
     long           bytes_read = 0;
@@ -226,8 +239,9 @@ static struct PyMemberDef IndexedGzipFile_members[] = {
 
 
 static struct PyMethodDef IndexedGzipFile_methods[] = {
-    {"seek", (PyCFunction)IndexedGzipFile_seek, METH_VARARGS, "seek(offset, whence)"},
-    {"read", (PyCFunction)IndexedGzipFile_read, METH_VARARGS, "read(len)"},
+    {"seek",  (PyCFunction)IndexedGzipFile_seek,  METH_VARARGS | METH_KEYWORDS, "seek(offset, whence)"},
+    {"read",  (PyCFunction)IndexedGzipFile_read,  METH_VARARGS | METH_KEYWORDS, "read(len)"},
+    {"close", (PyCFunction)IndexedGzipFile_close, METH_VARARGS | METH_KEYWORDS, "close()"},
     
     {NULL}
 };

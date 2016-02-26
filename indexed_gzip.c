@@ -162,9 +162,10 @@ fail:
 // bytes = read(len)
 static PyObject * IndexedGzipFile_read(IndexedGzipFile *self, PyObject *args) {
 
-    long           len   = 0;
-    unsigned char *buf   = NULL;
-    PyObject      *bytes = NULL;
+    long           len        = 0;
+    long           bytes_read = 0;
+    unsigned char *buf        = NULL;
+    PyObject      *bytes      = NULL;
 
     if (!PyArg_ParseTuple(args, "|l", &len)) {
         goto fail;
@@ -176,20 +177,22 @@ static PyObject * IndexedGzipFile_read(IndexedGzipFile *self, PyObject *args) {
         goto fail;
     }
 
-    buf = malloc(len);
+    buf = calloc(1, len);
 
     if (buf == NULL) {
         goto fail;
     }
 
-    if (zran_read(&(self->index),
-                  self->fid,
-                  buf,
-                  len) < 0) {
+    bytes_read = zran_read(&(self->index),
+                           self->fid,
+                           buf,
+                           len);
+
+    if (bytes_read < 0) {
         goto fail;
     }
-
-    bytes = Py_BuildValue("y#", buf, len);
+    
+    bytes = Py_BuildValue("y#", buf, bytes_read);
 
     if (bytes == NULL) {
         goto fail;

@@ -126,18 +126,18 @@ zran_point_t * zran_get_point_at(zran_index_t *index,
             else                bit = 0;
             
             if (curr->cmp_offset > offset + bit) 
-                return prev;
+                break;
                 
         }
         else {
             if (curr->uncmp_offset > offset) 
-                return prev;
+                break;
         }
 
         prev = curr;
     }
 
-    return NULL;
+    return prev;
 }
 
 
@@ -453,7 +453,6 @@ int zran_read(zran_index_t  *index,
             zran_log("    discard:   %u\n", discard[0]);
             
             ch = inflate(&strm, Z_NO_FLUSH);
-            zran_log("Inflate called\n");
 
             if (ch == Z_STREAM_END)
                 break;

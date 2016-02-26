@@ -163,7 +163,7 @@ fail:
 static PyObject * IndexedGzipFile_read(IndexedGzipFile *self, PyObject *args) {
 
     long           len   = 0;
-    unsigned char *bytes = NULL;
+    unsigned char *buf   = NULL;
     PyObject      *bytes = NULL;
 
     if (!PyArg_ParseTuple(args, "|l", &len)) {
@@ -224,7 +224,8 @@ static struct PyMemberDef IndexedGzipFile_members[] = {
 
 static struct PyMethodDef IndexedGzipFile_methods[] = {
     {"seek", (PyCFunction)IndexedGzipFile_seek, METH_VARARGS, "seek(offset, whence)"},
-    //{"read", (PyCFunction)IndexedGzipFile_read, METH_VARARGS, "read(len)"},
+    {"read", (PyCFunction)IndexedGzipFile_read, METH_VARARGS, "read(len)"},
+    
     {NULL}
 };
 

@@ -34,11 +34,15 @@ int _zran_add_point(zran_index_t  *index,
 
 
 
-int zran_init(zran_index_t *index, int spacing) {
+int zran_init(zran_index_t *index, int spacing, int window_size) {
 
     zran_log("zran_init (%i)\n", spacing);
 
+    if (spacing     <= 0) spacing     = 1048576;
+    if (window_size <= 0) window_size = 32768;
+
     index->spacing           = spacing;
+    index->window_size       = window_size;
     index->npoints           = 0;
     index->size              = 8;
     index->uncmp_seek_offset = 0;
@@ -94,7 +98,18 @@ int _zran_free_unused(zran_index_t *index) {
 /* Deallocate an index built by build_index() */
 void zran_free(zran_index_t *index) {
 
+    int           i;
+    zran_point_t *pt;
+
     zran_log("zran_free\n");
+
+    for (i = 0; i < index->npoints; i++) {
+        pt = &(index->list[i]);
+
+        if (pt->data != NULL) {
+            free(pt->data);
+        }
+    }
     
     if (index->list != NULL) {
         free(index->list);
@@ -167,31 +182,43 @@ int _zran_add_point(zran_index_t  *index,
              data[nbytes - 2],
              data[nbytes - 1]);
 
-    zran_point_t *next;
+    unsigned char *point_data = NULL;
+    zran_point_t  *next       = NULL;
 
     /* if list is full, make it bigger */
     if (index->npoints == index->size) {
         if (_zran_expand(index) != 0) {
-            return -1;
+            goto fail;
         }
     }
+
+    point_data = calloc(1, index->window_size);
+    if (point_data == NULL)
+        goto fail;
 
     /* fill in entry and increment how many we have */
     next               = index->list + index->npoints;
     next->bits         = bits;
     next->cmp_offset   = cmp_offset;
     next->nbytes       = nbytes;
+    next->data         = point_data;
     next->uncmp_offset = uncmp_offset;
     
     if (nbytes)
-        memcpy(next->data, data + WINSIZE - nbytes, nbytes);
+        memcpy(point_data, data + index->window_size - nbytes, nbytes);
     
-    if (nbytes < WINSIZE)
-        memcpy(next->data + nbytes, data, WINSIZE - nbytes);
+    if (nbytes < index->window_size)
+        memcpy(point_data + nbytes, data, index->window_size - nbytes);
     
     index->npoints++;
 
     return 0;
+
+fail:
+    if (point_data != NULL) 
+        free(point_data);
+    
+    return -1;
 };
 
 
@@ -204,15 +231,20 @@ int _zran_add_point(zran_index_t  *index,
    of memory, Z_DATA_ERROR for an error in the input file, or Z_ERRNO for a
    file read error.  On success, *built points to the resulting index. */
 int zran_build_index(zran_index_t *index, FILE *in) {
-    int ret;
-    off_t totin, totout;        /* our own total counters to avoid 4GB limit */
-    off_t last;                 /* totout value of last access point */
-    z_stream strm;
-    unsigned char input[CHUNK];
-    unsigned char data[WINSIZE];
+    int            ret;
+    off_t          totin;
+    off_t          totout; /* our own total counters to avoid 4GB limit */
+    off_t          last;   /* totout value of last access point */
+    z_stream       strm;
+    unsigned char  input[CHUNK];
+    unsigned char *window = NULL;
+
+    window = calloc(1, index->window_size);
+
+    if (window == NULL)
+        goto fail;
 
     memset(input, 0, CHUNK);
-    memset(data,  0, WINSIZE);
 
     zran_log("zran_build_full_index\n");
 
@@ -251,11 +283,11 @@ int zran_build_index(zran_index_t *index, FILE *in) {
         strm.avail_in = fread(input, 1, CHUNK, in);
         if (ferror(in)) {
             ret = Z_ERRNO;
-            goto build_index_error;
+            goto fail;
         }
         if (strm.avail_in == 0) {
             ret = Z_DATA_ERROR;
-            goto build_index_error;
+            goto fail;
         }
         strm.next_in = input;
 
@@ -274,8 +306,8 @@ int zran_build_index(zran_index_t *index, FILE *in) {
         do {
             /* reset sliding window if necessary */
             if (strm.avail_out == 0) {
-                strm.avail_out = WINSIZE;
-                strm.next_out = data;
+                strm.avail_out = index->window_size;
+                strm.next_out = window;
             }
 
             /* inflate until out of input, output, or at end of block --
@@ -288,7 +320,7 @@ int zran_build_index(zran_index_t *index, FILE *in) {
             if (ret == Z_NEED_DICT)
                 ret = Z_DATA_ERROR;
             if (ret == Z_MEM_ERROR || ret == Z_DATA_ERROR)
-                goto build_index_error;
+                goto fail;
             if (ret == Z_STREAM_END)
                 break;
 
@@ -305,9 +337,9 @@ int zran_build_index(zran_index_t *index, FILE *in) {
                 (totout == 0 || totout - last > index->spacing)) {
 
                 if (_zran_add_point(index, strm.data_type & 7, totin,
-                                    totout, strm.avail_out, data) != 0) {
+                                    totout, strm.avail_out, window) != 0) {
                     ret = Z_MEM_ERROR;
-                    goto build_index_error;
+                    goto fail;
                 }
                 last = totout;
             }
@@ -316,20 +348,27 @@ int zran_build_index(zran_index_t *index, FILE *in) {
 
     if (_zran_free_unused(index) != 0) {
         ret = Z_MEM_ERROR;
-        goto build_index_error;
+        goto fail;
     }
+
+    zran_log("\rBuilding index 100%%... done.\n");
     
     /* clean up and return index (release unused entries in list) */
     inflateEnd(&strm);
-
-    zran_log("\rBuilding index 100%%... done.\n");
+    free(window);
     
     return index->size;
 
     /* return error */
-build_index_error:
-    (void)inflateEnd(&strm);
-    return ret;
+fail:
+    
+    if (window != NULL) {
+        free(window);
+        window = NULL;
+    }
+    
+    inflateEnd(&strm);
+    return -1;
 };
 
 
@@ -380,17 +419,20 @@ int zran_read(zran_index_t  *index,
               unsigned char *buf,
               int            len) {
 
-    int           ch;
-    off_t         uncmp_offset;
-    off_t         cmp_offset;
-    int           skip;
-    z_stream      strm;
-    zran_point_t *point;
-    unsigned char input[CHUNK];
-    unsigned char discard[WINSIZE];
+    int            ch;
+    off_t          uncmp_offset;
+    off_t          cmp_offset;
+    int            skip;
+    z_stream       strm;
+    zran_point_t  *point;
+    unsigned char  input[CHUNK];
+    unsigned char *discard = NULL;
 
-    memset(input,   0, CHUNK);
-    memset(discard, 0, WINSIZE); 
+    memset(input, 0, CHUNK);
+
+    discard = calloc(1, index->window_size);
+    if (discard == NULL)
+        goto fail;
 
     zran_log("zran_read(%i)\n", len);
 
@@ -452,7 +494,7 @@ int zran_read(zran_index_t  *index,
              point->data[0],
              point->data[1],
              point->data[2]);
-    if (inflateSetDictionary(&strm, point->data, WINSIZE) != Z_OK)
+    if (inflateSetDictionary(&strm, point->data, index->window_size) != Z_OK)
         goto fail;
 
     /* skip uncompressed bytes until offset reached, then satisfy request */
@@ -469,10 +511,10 @@ int zran_read(zran_index_t  *index,
             strm.next_out = buf;
             skip = 0;                       /* only do this once */
         }
-        if (uncmp_offset > WINSIZE) {             /* skip WINSIZE bytes */
-            strm.avail_out = WINSIZE;
+        if (uncmp_offset > index->window_size) {             /* skip WINSIZE bytes */
+            strm.avail_out = index->window_size;
             strm.next_out = discard;
-            uncmp_offset -= WINSIZE;
+            uncmp_offset -= index->window_size;
         }
         else if (uncmp_offset != 0) {             /* last skip */
             strm.avail_out = (unsigned)uncmp_offset;
@@ -522,9 +564,7 @@ int zran_read(zran_index_t  *index,
     } while (skip);
 
     /* compute number of uncompressed bytes read after offset */
-    zran_log("Call inflateEnd\n");
     inflateEnd(&strm);
-    zran_log("inflateEnd called\n");
 
     len = skip ? 0 : len - strm.avail_out;
 
@@ -533,13 +573,19 @@ int zran_read(zran_index_t  *index,
               index->uncmp_seek_offset + len,
               SEEK_SET,
               NULL);
+
+    free(discard);
     
     return len;
 
     /* clean up and return bytes read or error */
 fail:
-    zran_log("(fail) Call inflateEnd\n");
+    
+    if (discard != NULL) {
+        free(discard);
+        discard = NULL;
+    }
+    
     inflateEnd(&strm);
-    zran_log("(fail) inflateEnd called\n");
     return -1; 
 }

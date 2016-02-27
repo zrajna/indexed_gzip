@@ -59,7 +59,7 @@ static PyObject * IndexedGzipFile_new(PyTypeObject *type,
 };
 
 
-// ZIndex(spacing=1048576)
+// ZIndex(spacing=0, window_size=0, init_index=False)
 //
 // todo: ZIndex(spacing, filename=None, fid=None, init_index=False)
 //
@@ -67,31 +67,38 @@ static int IndexedGzipFile_init(IndexedGzipFile *self,
                                 PyObject        *args,
                                 PyObject        *kwargs) {
 
-    PyObject *py_fid     = NULL;
-    FILE     *fid        = NULL;
-    int       spacing    = -1;
-    char      init_index = -1;
+    PyObject *py_fid      = NULL;
+    FILE     *fid         = NULL;
+    int       spacing     = -1;
+    int       window_size = -1;
+    char      init_index  = -1;
 
     igz_log("IndexedGzipFile_init\n");
 
-    static char *kwlist[] = {"fid", "spacing", "init_index", NULL};
+    static char *kwlist[] = {"fid",
+                             "spacing",
+                             "window_size",
+                             "init_index",
+                             NULL};
     
     if (!PyArg_ParseTupleAndKeywords(args,
                                      kwargs,
-                                     "O|$ip",
+                                     "O|$iip",
                                      kwlist,
                                      &py_fid,
                                      &spacing,
+                                     &window_size,
                                      &init_index)) {
         goto fail;
     }
 
-    if (spacing    < 0) { spacing    = 1048576; }
-    if (init_index < 0) { init_index = 0;       }
+    if (spacing     < 0) { spacing     = 0; }
+    if (window_size < 0) { window_size = 0; }
+    if (init_index  < 0) { init_index  = 0; }
 
     fid = fdopen(PyObject_AsFileDescriptor(py_fid), "rb");
 
-    zran_init(&(self->index), spacing);
+    zran_init(&(self->index), spacing, window_size);
 
     self->py_fid  = py_fid;
     self->fid     = fid;

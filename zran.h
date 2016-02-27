@@ -6,8 +6,9 @@
 
 #include <stdlib.h>
 
+// TODO #include <stdint.h>
 
-#define WINSIZE 32768U      /* sliding window size */
+
 #define CHUNK   16384       /* file input buffer size */
 
 
@@ -26,7 +27,7 @@ struct _zran_point {
     off_t          cmp_offset;   /* offset in input file of first full byte */
     int            bits;         /* number of bits (1-7) from byte at in - 1, or 0 */
     int            nbytes; 
-    unsigned char data[WINSIZE];         /* preceding chunk of uncompressed data */
+    unsigned char *data;         /* preceding chunk of uncompressed data */
 };
 
 
@@ -34,6 +35,7 @@ struct _zran_point {
 struct _zran_index {
 
     int           spacing;
+    unsigned int  window_size;
   
     int           npoints; /* number of list entries filled in */
     int           size;    /* number of list entries allocated */
@@ -43,7 +45,8 @@ struct _zran_index {
 };
 
 
-int  zran_init(zran_index_t *index, int spacing);
+// Pass in spacing=0, window_size=0 to use default values.
+int  zran_init(zran_index_t *index, int spacing, int window_size);
 
 void zran_free(zran_index_t *index);
 

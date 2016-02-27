@@ -5,40 +5,43 @@
  *
  */
 
+
 #include <stdlib.h>
 #include <stdint.h>
 
 
-struct _zran_point;
 struct _zran_index;
+struct _zran_point;
 
 
-typedef struct _zran_point zran_point_t;
 typedef struct _zran_index zran_index_t;
+typedef struct _zran_point zran_point_t;
 
-
-/* index point entry */
-struct _zran_point {
-    
-    uint64_t  uncmp_offset; /* corresponding offset in uncompressed data */
-    uint64_t  cmp_offset;   /* offset in input file of first full byte */
-    uint8_t   bits;         /* number of bits (1-7) from byte at in - 1, or 0 */
-    uint32_t  nbytes; 
-    uint8_t  *data;         /* preceding chunk of uncompressed data */
-};
-
-
-/* access point list */
+/* 
+ * 
+ */
 struct _zran_index {
 
-    /* Spacing size in bytes, relative to the compressed 
+    /*
+     * Handle to the compressed file.
+     */
+    FILE         *fd;
+
+    /*
+     * Size of the compressed file. This 
+     * is calculated in zran_init.
+     */
+    size_t        compressed_size;
+    
+    /* 
+     * Spacing size in bytes, relative to the compressed 
      * data stream, between adjacent index points 
      */
     uint32_t      spacing;
 
     /*
      * Number of bytes of uncompressed data to store
-     * for each index point. This should be a minimum
+     * for each index point. This must be a minimum
      * of 32768 bytes.
      */
     uint32_t      window_size;
@@ -72,20 +75,32 @@ struct _zran_index {
 };
 
 
-//TODO pass in file on init, and store in index
-//     struct. Remove it from other functions
+/* 
+ *
+ */
+struct _zran_point {
+    
+    uint64_t  uncmp_offset; /* corresponding offset in uncompressed data */
+    uint64_t  cmp_offset;   /* offset in input file of first full byte */
+    uint8_t   bits;         /* number of bits (1-7) from byte at in - 1, or 0 */
+    uint32_t  nbytes; 
+    uint8_t  *data;         /* preceding chunk of uncompressed data */
+};
+
+
 
 // Pass in spacing=0, window_size=0, readbuf_size=0 to use default values.
 int  zran_init(zran_index_t *index,
+               FILE         *fd,
                uint32_t      spacing,
                uint32_t      window_size,
                uint32_t      readbuf_size);
 
+
 void zran_free(zran_index_t *index);
 
 
-int zran_build_index(zran_index_t *index,
-                     FILE         *in);
+int zran_build_index(zran_index_t *index);
 
 
 // Should I use stdint types for the below
@@ -93,14 +108,12 @@ int zran_build_index(zran_index_t *index,
 // used by fseek and read?
 
 int zran_seek(zran_index_t  *index,
-              FILE          *in,
               off_t          offset,
               int            whence,
               zran_point_t **point);
 
 
 size_t zran_read(zran_index_t  *index,
-                 FILE          *in,
                  uint8_t       *buf,
                  size_t         len);
 

@@ -20,7 +20,6 @@ typedef struct _IndexedGzipFile {
     PyObject_HEAD
     
     PyObject    *py_fid;
-    FILE        *fid;
     int          spacing; 
     int          npoints;
     int          size;
@@ -42,7 +41,7 @@ static PyObject * IndexedGzipFile_new(PyTypeObject *type,
     if (self == NULL) 
         goto fail;
 
-    self->fid     = NULL;
+    self->py_fid  = NULL;
     self->spacing = 0;
     self->npoints = 0;
     self->size    = 0;
@@ -102,19 +101,22 @@ static int IndexedGzipFile_init(IndexedGzipFile *self,
 
     fid = fdopen(PyObject_AsFileDescriptor(py_fid), "rb");
 
-    if (zran_init(&(self->index), spacing, window_size, readbuf_size) != 0) {
+    if (zran_init(&(self->index),
+                  fid,
+                  spacing,
+                  window_size,
+                  readbuf_size) != 0) {
         goto fail;
     }
 
     self->py_fid  = py_fid;
-    self->fid     = fid;
     self->spacing = self->index.spacing;
     self->npoints = self->index.npoints;
     self->size    = self->index.size;
  
 
     if (init_index != 0) {
-        zran_build_index(&(self->index), self->fid);
+        zran_build_index(&(self->index));
     }
 
     return 0;
@@ -138,7 +140,7 @@ static void IndexedGzipFile_dealloc(IndexedGzipFile *self) {
     
     zran_free(&(self->index));
 
-    self->fid     = NULL;
+    self->py_fid  = NULL;
     self->spacing = 0;
     self->npoints = 0;
     self->size    = 0;
@@ -165,11 +167,7 @@ static PyObject * IndexedGzipFile_seek(IndexedGzipFile *self,
 
     whence = 0;
 
-    if (zran_seek(&(self->index),
-                  self->fid,
-                  offset,
-                  whence,
-                  &point) < 0) {
+    if (zran_seek(&(self->index), offset, whence, &point) < 0) {
         goto fail;
     }
 
@@ -209,10 +207,7 @@ static PyObject * IndexedGzipFile_read(IndexedGzipFile *self,
         goto fail;
     }
 
-    bytes_read = zran_read(&(self->index),
-                           self->fid,
-                           buf,
-                           len);
+    bytes_read = zran_read(&(self->index), buf, len);
 
     if (bytes_read < 0) {
         goto fail;
@@ -248,7 +243,7 @@ static struct PyMemberDef IndexedGzipFile_members[] = {
     //      to be stored on the IndexedGzipFile struct - their getters
     //      could just access the zran_index->attribute directly.
     //      
-    {"fid",     T_OBJECT_EX, offsetof(IndexedGzipFile, fid),     0, "fid"},
+    {"fid",     T_OBJECT_EX, offsetof(IndexedGzipFile, py_fid),  0, "fid"},
     {"spacing", T_INT,       offsetof(IndexedGzipFile, spacing), 0, "spacing"},
     {"points",  T_INT,       offsetof(IndexedGzipFile, npoints), 0, "npoints"},
     {"size",    T_INT,       offsetof(IndexedGzipFile, size),    0, "size"},

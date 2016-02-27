@@ -40,9 +40,8 @@
  * Returns 0 on success, non-0 on failure.
  */
 static int _zran_expand_index(
-    zran_index_t *index, /* The index                         */
-    FILE         *in,    /* The compressed file being indexed */
-    off_t         until  /* Expand the index to this point    */
+    zran_index_t *index, /* The index                      */
+    off_t         until  /* Expand the index to this point */
 );
 
 
@@ -60,12 +59,14 @@ static int            _zran_add_point(        zran_index_t *index,
 
 
 int zran_init(zran_index_t *index,
+              FILE         *fd,
               uint32_t      spacing,
               uint32_t      window_size,
               uint32_t      readbuf_size)
 {
 
     zran_point_t *point_list = NULL;
+    int64_t       compressed_size;
 
     zran_log("zran_init(%u, %u, %u)\n", spacing, window_size, readbuf_size);
 
@@ -76,11 +77,31 @@ int zran_init(zran_index_t *index,
     if (window_size < 32768)
         goto fail;
 
+    /*
+     * Calculate the size of the compressed file
+     */
+    if (fseeko(fd, 0, SEEK_END) != 0)
+        goto fail;
+        
+    compressed_size = ftello(fd);
+
+    if (compressed_size < 0)
+        goto fail;
+
+    if (fseeko(fd, 0, SEEK_SET) != 0)
+        goto fail;
+
+    /*
+     * Allocate some initial space 
+     * for the index point list
+     */
     point_list = calloc(1, sizeof(zran_point_t) * 8);
     if (point_list == NULL) {
         goto fail;
     }
 
+    index->fd                = fd;
+    index->compressed_size   = compressed_size;
     index->spacing           = spacing;
     index->window_size       = window_size;
     index->readbuf_size      = readbuf_size;
@@ -157,6 +178,7 @@ void zran_free(zran_index_t *index) {
         free(index->list);
     }
     
+    index->fd                = NULL;
     index->spacing           = 0;
     index->window_size       = 0;
     index->readbuf_size      = 0;
@@ -166,12 +188,12 @@ void zran_free(zran_index_t *index) {
     index->uncmp_seek_offset = 0;
 };
 
-int zran_build_index(zran_index_t *index, FILE *in)
+int zran_build_index(zran_index_t *index)
 {
 
     /* TODO zran_invalidate_index(index, 0); */
 
-    return _zran_expand_index(index, in, 0);
+    return _zran_expand_index(index, 0);
 }
 
 
@@ -274,7 +296,7 @@ fail:
 };
 
 
-int _zran_expand_index(zran_index_t *index, FILE *in, off_t until)
+int _zran_expand_index(zran_index_t *index, off_t until)
 {
 
     /* Used to store return values */
@@ -312,14 +334,7 @@ int _zran_expand_index(zran_index_t *index, FILE *in, off_t until)
      * we'll set it to the compressed file size.
      */
     if (until <= 0) {
-
-        if (fseeko(in, 0, SEEK_END) != 0)
-            goto fail;
-        
-        until = ftello(in);
-
-        if (until < 0)
-            goto fail;
+        until = index->compressed_size;
     }
 
     /* 
@@ -368,7 +383,7 @@ int _zran_expand_index(zran_index_t *index, FILE *in, off_t until)
         last_uncmp_offset = 0;
     }
 
-    if (fseek(in, cmp_offset, SEEK_SET) != 0)
+    if (fseek(index->fd, cmp_offset, SEEK_SET) != 0)
         goto fail;
 
     /* 
@@ -384,10 +399,10 @@ int _zran_expand_index(zran_index_t *index, FILE *in, off_t until)
     do {
 
         /* Read a block of compressed data */
-        ret = fread(input, 1, index->readbuf_size, in);
+        ret = fread(input, 1, index->readbuf_size, index->fd);
 
-        if (ret <= 0)   goto fail;
-        if (ferror(in)) goto fail;
+        if (ret <= 0)          goto fail;
+        if (ferror(index->fd)) goto fail;
 
         /* 
          * Process the block of compressed 
@@ -495,7 +510,6 @@ fail:
  * If whence is not equal to SEEK_SET, returns -1.
  */ 
 int zran_seek(zran_index_t  *index,
-              FILE          *in,
               off_t          offset,
               int            whence,
               zran_point_t **point) {
@@ -526,12 +540,11 @@ int zran_seek(zran_index_t  *index,
         *point = seek_point;
     }
 
-    return fseeko(in, offset, SEEK_SET);
+    return fseeko(index->fd, offset, SEEK_SET);
 }
 
 
 size_t zran_read(zran_index_t *index,
-                 FILE         *in,
                  uint8_t      *buf,
                  size_t        len) {
 
@@ -560,7 +573,7 @@ size_t zran_read(zran_index_t *index,
 
     // Get the current location
     // in the compressed stream.
-    cmp_offset   = ftello(in);
+    cmp_offset   = ftello(index->fd);
     uncmp_offset = index->uncmp_seek_offset;
              
     zran_log("Offsets: compressed=%lld, uncompressed=%lld\n",
@@ -596,7 +609,7 @@ size_t zran_read(zran_index_t *index,
     // not byte-aligned with the
     // uncompressed location.
     if (point->bits) {
-        ch = getc(in);
+        ch = getc(index->fd);
         if (ch == -1) 
             goto fail;
 
@@ -643,8 +656,8 @@ size_t zran_read(zran_index_t *index,
         /* uncompress until avail_out filled, or end of stream */
         do {
             if (strm.avail_in == 0) {
-                strm.avail_in = fread(input, 1, index->readbuf_size, in);
-                if (ferror(in)) {
+                strm.avail_in = fread(input, 1, index->readbuf_size, index->fd);
+                if (ferror(index->fd)) {
                     goto fail;
                 }
                 if (strm.avail_in == 0) {
@@ -688,7 +701,6 @@ size_t zran_read(zran_index_t *index,
 
     /* Update the current seek position */
     zran_seek(index,
-              in,
               index->uncmp_seek_offset + len,
               SEEK_SET,
               NULL);

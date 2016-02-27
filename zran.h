@@ -1,11 +1,14 @@
 #ifndef __ZRAN_H__
 #define __ZRAN_H__
+/*
+ *
+ */
 
 #include <stdlib.h>
 
 
 #define WINSIZE 32768U      /* sliding window size */
-#define CHUNK 16384         /* file input buffer size */
+#define CHUNK   16384       /* file input buffer size */
 
 
 struct _zran_point;
@@ -37,35 +40,13 @@ struct _zran_index {
     off_t         uncmp_seek_offset;
 };
 
-void zran_new(zran_index_t *index);
+
+int  zran_init(zran_index_t *index, int span);
+
+void zran_free(zran_index_t *index);
 
 
-int zran_init(zran_index_t *index, int span);
-
-
-int zran_expand(zran_index_t *index);
-
-
-int zran_free_unused(zran_index_t *index);
-
-
-void zran_dealloc(zran_index_t *index);
-
-
-zran_point_t * zran_get_point_at(zran_index_t *index,
-                                 off_t         offset,
-                                 char          compressed);
-
-
-int zran_add_point(zran_index_t  *index,
-                   int            bits,
-                   off_t          cmp_offset,
-                   off_t          uncmp_offset,
-                   unsigned       left,
-                   unsigned char *window);
-
-
-int zran_build_full_index(zran_index_t *index, FILE *in);
+int zran_build_index(zran_index_t *index, FILE *in);
 
 
 int zran_seek(zran_index_t  *index,
@@ -80,11 +61,5 @@ int zran_read(zran_index_t  *index,
               unsigned char *buf,
               int            len);
 
-
-int zran_extract(zran_index_t  *index,
-                 FILE          *in,
-                 off_t          offset,
-                 unsigned char *buf,
-                 int            len);
 
 #endif /* __ZRAN_H__ */

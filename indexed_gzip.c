@@ -42,8 +42,6 @@ static PyObject * IndexedGzipFile_new(PyTypeObject *type,
     if (self == NULL) 
         goto fail;
 
-    zran_new(&(self->index));
-
     self->fid            = NULL;
     self->span           = 0;
     self->size           = 0;
@@ -102,7 +100,7 @@ static int IndexedGzipFile_init(IndexedGzipFile *self,
     self->available_size = self->index.have;
 
     if (init_index != 0) {
-        zran_build_full_index(&(self->index), self->fid);
+        zran_build_index(&(self->index), self->fid);
     }
 
     return 0;
@@ -123,7 +121,7 @@ static PyObject * IndexedGzipFile_close(IndexedGzipFile *self,
 
 static void IndexedGzipFile_dealloc(IndexedGzipFile *self) {
     
-    zran_dealloc(&(self->index));
+    zran_free(&(self->index));
 
     self->fid            = NULL;
     self->span           = 0;

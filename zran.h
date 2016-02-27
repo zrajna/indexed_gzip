@@ -42,15 +42,38 @@ struct _zran_index {
      * of 32768 bytes.
      */
     uint32_t      window_size;
+
+    /*
+     * Size, in bytes, of buffer used to store 
+     * compressed data read from disk.
+     */ 
     uint32_t      readbuf_size;
-  
-    uint32_t      npoints; /* number of list entries filled in */
-    uint32_t      size;    /* number of list entries allocated */
-    zran_point_t *list;    /* allocated list */
-  
+
+    /* 
+     * Number of index points that have been created.
+     */
+    uint32_t      npoints;
+
+    /*
+     * Number of index points that can be stored.
+     */
+    uint32_t      size;
+
+    /*
+     * List of index points.
+     */
+    zran_point_t *list;
+
+    /*
+     * Most recently requested seek location 
+     * into the uncompressed data stream.
+     */
     uint64_t      uncmp_seek_offset;
 };
 
+
+//TODO pass in file on init, and store in index
+//     struct. Remove it from other functions
 
 // Pass in spacing=0, window_size=0, readbuf_size=0 to use default values.
 int  zran_init(zran_index_t *index,

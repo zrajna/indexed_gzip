@@ -1,3 +1,7 @@
+/*
+ *
+ */
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -17,21 +21,42 @@
 #endif
 
 
-int _zran_expand(     zran_index_t *index);
-int _zran_free_unused(zran_index_t *index);
+/*
+ * TODO
+ * something like this:
+ * 
+ * static int _zran_invalidate_index(zran_index_t *index, off_t from);
+ */
 
 
-zran_point_t * _zran_get_point_at(zran_index_t *index,
-                                  uint64_t      offset,
-                                  uint8_t       compressed);
+/*
+ * Expands the index from its current end-point
+ * until the given offset (which must be specified 
+ * relative to the compressed data stream).
+ *
+ * If the offset is <= 0, the index is expanded to 
+ * cover the entire file (i.e. it is fully built).
+ *
+ * Returns 0 on success, non-0 on failure.
+ */
+static int _zran_expand_index(
+    zran_index_t *index, /* The index                         */
+    FILE         *in,    /* The compressed file being indexed */
+    off_t         until  /* Expand the index to this point    */
+);
 
 
-int _zran_add_point(zran_index_t *index,
-                    uint8_t       bits,
-                    off_t         cmp_offset,
-                    off_t         uncmp_offset,
-                    uint32_t      nbytes,
-                    uint8_t      *data);
+static int            _zran_expand_point_list(zran_index_t *index);
+static int            _zran_free_unused(      zran_index_t *index);
+static zran_point_t * _zran_get_point_at(     zran_index_t *index,
+                                              uint64_t      offset,
+                                              uint8_t       compressed);
+static int            _zran_add_point(        zran_index_t *index,
+                                              uint8_t       bits,
+                                              off_t         cmp_offset,
+                                              off_t         uncmp_offset,
+                                              uint32_t      nbytes,
+                                              uint8_t      *data);
 
 
 int zran_init(zran_index_t *index,
@@ -73,11 +98,11 @@ fail:
 };
 
 
-int _zran_expand(zran_index_t *index) {
+int _zran_expand_point_list(zran_index_t *index) {
 
     uint32_t new_size = index->size * 2;
 
-    zran_log("_zran_expand (%i -> %i)\n", index->size, new_size);
+    zran_log("_zran_expand_point_list(%i -> %i)\n", index->size, new_size);
     
     zran_point_t *new_list = realloc(index->list,
                                      sizeof(zran_point_t) * new_size);
@@ -140,6 +165,14 @@ void zran_free(zran_index_t *index) {
     index->list              = NULL;
     index->uncmp_seek_offset = 0;
 };
+
+int zran_build_index(zran_index_t *index, FILE *in)
+{
+
+    /* TODO zran_invalidate_index(index, 0); */
+
+    return _zran_expand_index(index, in, 0);
+}
 
 
 zran_point_t * _zran_get_point_at(zran_index_t *index,
@@ -206,7 +239,7 @@ int _zran_add_point(zran_index_t  *index,
 
     /* if list is full, make it bigger */
     if (index->npoints == index->size) {
-        if (_zran_expand(index) != 0) {
+        if (_zran_expand_point_list(index) != 0) {
             goto fail;
         }
     }
@@ -241,153 +274,216 @@ fail:
 };
 
 
-/* Make one entire pass through the compressed stream and build an index, with
-   access points about every span bytes of uncompressed output -- span is
-   chosen to balance the speed of random access against the memory requirements
-   of the list, about 32K bytes per access point.  Note that data after the end
-   of the first zlib or gzip stream in the file is ignored.  build_index()
-   returns the number of access points on success (>= 1), Z_MEM_ERROR for out
-   of memory, Z_DATA_ERROR for an error in the input file, or Z_ERRNO for a
-   file read error.  On success, *built points to the resulting index. */
-int zran_build_index(zran_index_t *index, FILE *in) {
+int _zran_expand_index(zran_index_t *index, FILE *in, off_t until)
+{
+
+    /* Used to store return values */
     int            ret;
-    off_t          totin;
-    off_t          totout; /* our own total counters to avoid 4GB limit */
-    off_t          last;   /* totout value of last access point */
+
+    /* 
+     * Counters to keep track of where we are 
+     * in both the compressed and uncompressed 
+     * streams.
+     */
+    off_t          cmp_offset;
+    off_t          uncmp_offset;
+
+    /* 
+     * The uncompressed offset of the last 
+     * index point that was created.
+     */
+    off_t          last_uncmp_offset;
+
+    /* Zlib stream struct */
     z_stream       strm;
+
+    /* Buffers to store compresed and uncompressed data */
     uint8_t       *input  = NULL;
     uint8_t       *window = NULL;
+
+    /* 
+     * This stores the base2 logarithm of the window 
+     * size - it is needed to initialise zlib inflation.
+     */
+    int windowBits = (int)round(log10(index->window_size) / log10(2));
+
+    /*
+     * If until <= 0, we build the full index, so
+     * we'll set it to the compressed file size.
+     */
+    if (until <= 0) {
+
+        if (fseeko(in, 0, SEEK_END) != 0)
+            goto fail;
+        
+        until = ftello(in);
+
+        if (until < 0)
+            goto fail;
+    }
+
+    /* 
+     * Allocate memory for the data 
+     * buffers, bail on failure.
+     */
+    input = calloc(1, index->readbuf_size);
+    if (input == NULL)
+        goto fail;
 
     window = calloc(1, index->window_size);
     if (window == NULL)
         goto fail;
 
-    input = calloc(1, index->readbuf_size);
-    if (input == NULL)
-        goto fail; 
+    zran_log("zran_expand_index(%lld)\n", until);
 
-    zran_log("zran_build_full_index\n");
-
-    /* initialize inflate */
-    strm.zalloc = Z_NULL;
-    strm.zfree = Z_NULL;
-    strm.opaque = Z_NULL;
+    /* 
+     * Initialise the zlib struct for inflation
+     */
+    strm.zalloc   = Z_NULL;
+    strm.zfree    = Z_NULL;
+    strm.opaque   = Z_NULL;
     strm.avail_in = 0;
-    strm.next_in = Z_NULL;
-    ret = inflateInit2(&strm, 47);      /* automatic zlib or gzip decoding */
-    
-    if (ret != Z_OK)
+    strm.next_in  = Z_NULL;
+
+    /* Configure for automatic zlib or gzip decoding */
+    if (inflateInit2(&strm, windowBits + 32) != Z_OK)
         goto fail;
 
-    /* inflate the input, maintain a sliding window, and build an index -- this
-       also validates the integrity of the compressed data using the check
-       information at the end of the gzip or zlib stream */
-    totin = totout = last = 0;
-    strm.avail_out = 0;
+    /*
+     * We start from the compressed data location
+     * that correspods to the most recently added
+     * point in the index.
+     */
+    if (index->size > 0) {
+        
+        cmp_offset        = index->list[index->size - 1].cmp_offset;
+        uncmp_offset      = index->list[index->size - 1].uncmp_offset;
+        last_uncmp_offset = uncmp_offset;
+    }
 
-    #ifdef ZRAN_VERBOSE
-    off_t compressed_size  = 0;
-    off_t current_location = 0;
-    fseek(in, -1, SEEK_END);
-    compressed_size = ftello(in);
-    fseek(in, 0, SEEK_SET);
-    #endif
-    
+    /* Or the beginning of the file, if the index is empty. */
+    else {
+        cmp_offset        = 0;
+        uncmp_offset      = 0;
+        last_uncmp_offset = 0;
+    }
+
+    if (fseek(in, cmp_offset, SEEK_SET) != 0)
+        goto fail;
+
+    /* 
+     * Continue until the specified offset 
+     * (stored in until), or the end of the 
+     * stream is reached.  We initialise
+     * avail_out to 0, in case we are at 
+     * the beginning of the compressed file,
+     * in which case inflate() will process
+     * the file header.
+     */
+    strm.avail_out = 0;
     do {
 
-        #ifdef ZRAN_VERBOSE
-        current_location = ftello(in);
-        zran_log("\rBuilding index %0.0f%%...", 100.0 * current_location / compressed_size);
-        #endif
-        
-        /* get some compressed data from input file */
-        strm.avail_in = fread(input, 1, index->readbuf_size, in);
-        if (ferror(in)) {
-            ret = Z_ERRNO;
-            goto fail;
-        }
-        if (strm.avail_in == 0) {
-            ret = Z_DATA_ERROR;
-            goto fail;
-        }
-        strm.next_in = input;
+        /* Read a block of compressed data */
+        ret = fread(input, 1, index->readbuf_size, in);
 
-        zran_log("Compressed block (%i bytes): [%02x %02x %02x %02x ... %02x %02x %02x %02x]\n",
-                 strm.avail_in,
-                 input[0],
-                 input[1],
-                 input[2],
-                 input[3],
-                 input[strm.avail_in - 4],
-                 input[strm.avail_in - 3],
-                 input[strm.avail_in - 2],
-                 input[strm.avail_in - 1]);
+        if (ret <= 0)   goto fail;
+        if (ferror(in)) goto fail;
 
-        /* process all of that, or until end of stream */
+        /* 
+         * Process the block of compressed 
+         * data that we just read in.
+         */
+        strm.avail_in = ret;
+        strm.next_in  = input;
         do {
+
             /* reset sliding window if necessary */
             if (strm.avail_out == 0) {
                 strm.avail_out = index->window_size;
-                strm.next_out = window;
+                strm.next_out  = window;
             }
 
-            /* inflate until out of input, output, or at end of block --
+            /* 
+             * inflate until out of input, output, or at end of block --
                update the total input and output counters */
-            totin += strm.avail_in;
-            totout += strm.avail_out;
-            ret = inflate(&strm, Z_BLOCK);      /* return at end of block */
-            totin -= strm.avail_in;
-            totout -= strm.avail_out;
-            if (ret == Z_NEED_DICT)
-                ret = Z_DATA_ERROR;
-            if (ret == Z_MEM_ERROR || ret == Z_DATA_ERROR)
-                goto fail;
-            if (ret == Z_STREAM_END)
-                break;
+            cmp_offset   += strm.avail_in;
+            uncmp_offset += strm.avail_out;
 
-            /* if at end of block, consider adding an index entry (note that if
-               data_type indicates an end-of-block, then all of the
-               uncompressed data from that block has been delivered, and none
-               of the compressed data after that block has been consumed,
-               except for up to seven bits) -- the totout == 0 provides an
-               entry point after the zlib or gzip header, and assures that the
-               index always has at least one access point; we avoid creating an
-               access point after the last block by checking bit 6 of data_type
+            /* 
+             * Inflate the block - the decompressed 
+             * data is stored in the window buffer.
              */
-            if ((strm.data_type & 128) && !(strm.data_type & 64) &&
-                (totout == 0 || totout - last > index->spacing)) {
+            ret = inflate(&strm, Z_BLOCK);
 
-                if (_zran_add_point(index, strm.data_type & 7, totin,
-                                    totout, strm.avail_out, window) != 0) {
-                    ret = Z_MEM_ERROR;
+            /*
+             * Adjust our offsets according to what
+             * was actually decompressed.
+             */
+            cmp_offset   -= strm.avail_in;
+            uncmp_offset -= strm.avail_out;
+
+            /* 
+             * Break at the end of the stream, or 
+             * when we've expanded the index far 
+             * enough.
+             */
+            if      (ret == Z_STREAM_END) break;
+            else if (ret != Z_OK)         goto fail;
+            if      (cmp_offset >= until) break;
+
+            /* 
+             * If at end of a deflate block, consider adding an index entry
+             * (note that if data_type indicates an end-of-block, then all of
+             * the uncompressed data from that block has been delivered, and
+             * none of the compressed data after that block has been consumed,
+             * except for up to seven bits) -- the uncmp_offset == 0 provides
+             * an entry point after the zlib or gzip header, and ensures that
+             * the index always has at least one index point. We avoid
+             * creating an index point after the last block by checking bit 6
+             * of data_type.
+             */
+            if ( (strm.data_type & 128) &&
+                !(strm.data_type & 64)  &&
+                (uncmp_offset == 0 ||
+                 uncmp_offset - last_uncmp_offset > index->spacing)) {
+
+                if (_zran_add_point(index,
+                                    strm.data_type & 7,
+                                    cmp_offset,
+                                    uncmp_offset,
+                                    strm.avail_out,
+                                    window) != 0) {
                     goto fail;
                 }
-                last = totout;
+                
+                last_uncmp_offset = uncmp_offset;
             }
         } while (strm.avail_in != 0);
-    } while (ret != Z_STREAM_END);
+        
+    } while (ret != Z_STREAM_END && cmp_offset < until);
 
+    /*
+     * The index may have over-allocated 
+     * space for storing index points, so 
+     * here we free the unused memory.
+     */
     if (_zran_free_unused(index) != 0) {
-        ret = Z_MEM_ERROR;
         goto fail;
     }
-
-    zran_log("\rBuilding index 100%%... done.\n");
     
-    /* clean up and return index (release unused entries in list) */
+    /* 
+     * Tell zlib we're finished, free
+     * the data buffers, and return 
+     */
     inflateEnd(&strm);
     free(window);
     free(input);
-    
-    return index->size;
+    return 0;
 
-    /* return error */
 fail:
-    
+    inflateEnd(&strm);
     if (window != NULL) free(window);
     if (input  != NULL) free(input);
-    
-    inflateEnd(&strm);
     return -1;
 };
 

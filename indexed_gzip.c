@@ -5,7 +5,7 @@
 #include "zran.h"
 
 
-#define IDXGZIP_VERBOSE
+//#define IDXGZIP_VERBOSE
 
 
 #ifdef IDXGZIP_VERBOSE
@@ -21,9 +21,9 @@ typedef struct _IndexedGzipFile {
     
     PyObject    *py_fid;
     FILE        *fid;
-    int          span; 
+    int          spacing; 
+    int          npoints;
     int          size;
-    int          available_size;
     zran_index_t index;
   
 } IndexedGzipFile;
@@ -42,10 +42,10 @@ static PyObject * IndexedGzipFile_new(PyTypeObject *type,
     if (self == NULL) 
         goto fail;
 
-    self->fid            = NULL;
-    self->span           = 0;
-    self->size           = 0;
-    self->available_size = 0;
+    self->fid     = NULL;
+    self->spacing = 0;
+    self->npoints = 0;
+    self->size    = 0;
 
     return (PyObject *)self;
 
@@ -59,9 +59,9 @@ static PyObject * IndexedGzipFile_new(PyTypeObject *type,
 };
 
 
-// ZIndex(span=1048576)
+// ZIndex(spacing=1048576)
 //
-// todo: ZIndex(span, filename=None, fid=None, init_index=False)
+// todo: ZIndex(spacing, filename=None, fid=None, init_index=False)
 //
 static int IndexedGzipFile_init(IndexedGzipFile *self,
                                 PyObject        *args,
@@ -69,35 +69,36 @@ static int IndexedGzipFile_init(IndexedGzipFile *self,
 
     PyObject *py_fid     = NULL;
     FILE     *fid        = NULL;
-    int       span       = -1;
+    int       spacing    = -1;
     char      init_index = -1;
 
     igz_log("IndexedGzipFile_init\n");
 
-    static char *kwlist[] = {"fid", "span", "init_index", NULL};
+    static char *kwlist[] = {"fid", "spacing", "init_index", NULL};
     
     if (!PyArg_ParseTupleAndKeywords(args,
                                      kwargs,
                                      "O|$ip",
                                      kwlist,
                                      &py_fid,
-                                     &span,
+                                     &spacing,
                                      &init_index)) {
         goto fail;
     }
 
-    if (span       < 0) { span       = 1048576; }
+    if (spacing    < 0) { spacing    = 1048576; }
     if (init_index < 0) { init_index = 0;       }
 
     fid = fdopen(PyObject_AsFileDescriptor(py_fid), "rb");
 
-    zran_init(&(self->index), span);
+    zran_init(&(self->index), spacing);
 
-    self->py_fid         = py_fid;
-    self->fid            = fid;
-    self->span           = self->index.span;
-    self->size           = self->index.size;
-    self->available_size = self->index.have;
+    self->py_fid  = py_fid;
+    self->fid     = fid;
+    self->spacing = self->index.spacing;
+    self->npoints = self->index.npoints;
+    self->size    = self->index.size;
+ 
 
     if (init_index != 0) {
         zran_build_index(&(self->index), self->fid);
@@ -123,10 +124,10 @@ static void IndexedGzipFile_dealloc(IndexedGzipFile *self) {
     
     zran_free(&(self->index));
 
-    self->fid            = NULL;
-    self->span           = 0;
-    self->size           = 0;
-    self->available_size = 0;
+    self->fid     = NULL;
+    self->spacing = 0;
+    self->npoints = 0;
+    self->size    = 0;
 };
 
 // seek(self, offset, whence)
@@ -228,10 +229,15 @@ fail:
 
 static struct PyMemberDef IndexedGzipFile_members[] = {
 
-    {"fid",            T_OBJECT_EX, offsetof(IndexedGzipFile, fid),            0, "fid"},
-    {"span",           T_INT,       offsetof(IndexedGzipFile, span),           0, "span"},
-    {"size",           T_INT,       offsetof(IndexedGzipFile, size),           0, "size"},
-    {"available_size", T_INT,       offsetof(IndexedGzipFile, available_size), 0, "available_size"},
+    // TODO replace attributes with getters (so they are read only).
+    //      The zran_index attributes (e.g. 'spacing' do not need
+    //      to be stored on the IndexedGzipFile struct - their getters
+    //      could just access the zran_index->attribute directly.
+    //      
+    {"fid",     T_OBJECT_EX, offsetof(IndexedGzipFile, fid),     0, "fid"},
+    {"spacing", T_INT,       offsetof(IndexedGzipFile, spacing), 0, "spacing"},
+    {"points",  T_INT,       offsetof(IndexedGzipFile, npoints), 0, "npoints"},
+    {"size",    T_INT,       offsetof(IndexedGzipFile, size),    0, "size"},
     {NULL}
 };
 

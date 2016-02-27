@@ -22,8 +22,10 @@
 
 
 /*
- * TODO
- * something like this:
+ * TODO If/when you add write capability, you'll need
+ *      something like this, to mark a location in the 
+ *      index after which all index points should be 
+ *      discarded.
  * 
  * static int _zran_invalidate_index(zran_index_t *index, off_t from);
  */
@@ -45,17 +47,93 @@ static int _zran_expand_index(
 );
 
 
-static int            _zran_expand_point_list(zran_index_t *index);
-static int            _zran_free_unused(      zran_index_t *index);
-static zran_point_t * _zran_get_point_at(     zran_index_t *index,
-                                              uint64_t      offset,
-                                              uint8_t       compressed);
-static int            _zran_add_point(        zran_index_t *index,
-                                              uint8_t       bits,
-                                              off_t         cmp_offset,
-                                              off_t         uncmp_offset,
-                                              uint32_t      nbytes,
-                                              uint8_t      *data);
+/*
+ * Expands the capacity of the memory used to store 
+ * the index ilst.
+ *
+ * Returns 0 on success, non-0 on failure.
+ */
+static int _zran_expand_point_list(
+    zran_index_t *index /* The index */
+);
+
+
+/*
+ * Reduces the capacity of the memory used to store
+ * the index list, so that it is only as big as 
+ * necessary.
+ *
+ * Returns 0 on success, non-0 on failure.
+ */
+static int _zran_free_unused(
+    zran_index_t *index  /* The index */
+);
+
+
+/*
+ * Searches for the zran_point corresponding to the given 
+ * offset, which may be specified as being relative to 
+ * the start of the compressed data, or the uncompressed 
+ * data.
+ *
+ * Returns:
+ *
+ *   - 0 on success
+ *
+ *   - A negative number if something goes wrong.
+ *
+ *   - A positive number to indicate that an index 
+ *     covering the speciied offset has not yet been 
+ *     created.
+ */
+static int _zran_get_point_at(
+    zran_index_t  *index,      /* The index */
+    
+    uint64_t       offset,     /* The desired offset into the compressed 
+                                  or uncompressed data stream */
+    
+    uint8_t        compressed, /* Pass in 0 or non-0 to indicate that the 
+                                  offset is relative to the uncompressed 
+                                  or compressed data streams, respectively. */
+    
+    zran_point_t **point       /* If an index point corresponding to the 
+                                  specified offset is identified, this 
+                                  pointer will be updated to point to it. */
+);
+
+
+/*
+ * Estimate an offset in the compressed / uncompressed data stream
+ * corresponding to the given offset, which is specified in the 
+ * uncompressed / compressed data stream.  If the given offset is 
+ * specified relative to the compressed data stream, the returned 
+ * value is a location in the uncompressed data stream which 
+ * approximately corresponds to the given offset.
+ */
+static uint64_t _zran_estimate_offset(
+    zran_index_t *index,      /* The index */
+    
+    uint64_t      offset,     /* The offset for which a corresponding 
+                                 offset is to be estimated. */
+    
+    uint8_t       compressed  /* Pass in 0 or non-0 to indicate that the
+                                 given offset is specified relative to the 
+                                 uncompressed or compressed stream, 
+                                 respectively. */
+);
+
+
+/*
+ *
+ */
+static int _zran_add_point(
+    zran_index_t *index,
+    uint8_t       bits,
+    off_t         cmp_offset,
+    off_t         uncmp_offset,
+    uint32_t      nbytes,
+    uint8_t      *data
+);
 
 
 int zran_init(zran_index_t *index,
@@ -197,18 +275,70 @@ int zran_build_index(zran_index_t *index)
 }
 
 
-zran_point_t * _zran_get_point_at(zran_index_t *index,
-                                  uint64_t      offset,
-                                  uint8_t       compressed) {
-
+int _zran_get_point_at(
+    zran_index_t  *index,
+    uint64_t       offset,
+    uint8_t        compressed,
+    zran_point_t **point)
+{
+    uint64_t      cmp_max;
+    uint64_t      uncmp_max;
+    zran_point_t *last;
     zran_point_t *prev;
     zran_point_t *curr;
     uint8_t       bit;
     uint32_t      i;
 
-    prev = index->list;
+    *point = NULL;
 
-    // TODO use bsearch instead of shitty linear search
+    /*
+     * Figure out how much of the compressed and 
+     * uncompressed data the index currently covers.
+     */
+    if (index->size == 0) { 
+        cmp_max   = 0;
+        uncmp_max = 0;
+    }
+    
+    /*
+     * We can't be exact with these limits, because 
+     * the index points are only approximately spaced
+     * throughout the data. So we'll err on the side 
+     * of caution, and add a bit of padding to the 
+     * limits.
+     *
+     * TODO A bad compressed offset is easily checked 
+     *      against the file size, but a bad uncompressed
+     *      offset (i.e. one larger than the size of the 
+     *      uncompressed data) cannot easily be checked.
+     *     
+     *      What happens when we pass a bad uncompressed
+     *      offset in? This needs testing.
+     */
+    else {
+        last      = &(index->list[index->size - 1]);
+        uncmp_max = last->uncmp_offset + index->spacing * 1.1;
+        cmp_max   = last->cmp_offset   + index->spacing;
+    }
+
+    /* 
+     * Bad input, or out of the current index range.
+     */
+    if ( compressed && offset >= index->compressed_size) goto fail;
+    if ( compressed && offset >= cmp_max)                goto not_created;
+    if (!compressed && offset >= uncmp_max)              goto not_created;
+
+    /* 
+     * We should have an index point 
+     * which corresponds to this offset, 
+     * so let's search for it.
+     * 
+     * TODO Use bsearch instead of this 
+     *      linear search. All you have
+     *      to do is define one (or two)
+     *      point comparison functions.
+     */
+    prev = index->list;
     for (i = 1; i < index->size; i++) {
         
         curr = &(index->list[i]);
@@ -230,8 +360,47 @@ zran_point_t * _zran_get_point_at(zran_index_t *index,
         prev = curr;
     }
 
-    return prev;
+    *point = prev;
+    return 0;
+
+fail:
+    *point = NULL;
+    return -1;
+    
+not_created:
+    *point = NULL; 
+    return 1;
 }
+
+
+uint64_t _zran_estimate_offset(
+    zran_index_t *index,
+    uint64_t      offset,
+    uint8_t       compressed)
+{
+
+    zran_point_t *last;
+
+    if (index->size == 0) last = NULL;
+    else                  last = &(index->list[index->size - 1]);
+
+    /*
+     * We have no reference. At least one
+     * index point needs to be created.
+     */
+    if (last == NULL)
+        return offset * 2.0;
+
+    /*
+     * I'm just assuming a roughly linear correspondence
+     * between compressed/uncompressed. 
+     */
+    if (compressed)
+        return round((float)offset * (last->cmp_offset / last->uncmp_offset));
+    else
+        return round((float)offset * (last->uncmp_offset / last->cmp_offset));
+}
+                          
 
 
 /* Add an entry to the access point list. */
@@ -504,8 +673,8 @@ fail:
 
 
 /*
- * Seek to the approximate location of the specified offest into the 
- * uncompressed data stream. 
+ * Seek to the approximate location of the specified offset into 
+ * the uncompressed data stream. 
  *
  * If whence is not equal to SEEK_SET, returns -1.
  */ 
@@ -514,18 +683,42 @@ int zran_seek(zran_index_t  *index,
               int            whence,
               zran_point_t **point) {
 
+    int           result;
     zran_point_t *seek_point;
 
     zran_log("zran_seek(%lld, %i)\n", offset, whence);
 
     if (whence != SEEK_SET) {
-        return -1;
+        goto fail;
     }
 
-    seek_point = _zran_get_point_at(index, offset, 0);
+    result = _zran_get_point_at(index, offset, 0, &seek_point);
 
-    if (seek_point == NULL) {
-        return -1;
+    /* 
+     * get point failed - something has gone wrong 
+     */
+    if (result < 0)
+        goto fail;
+
+    /* 
+     * get point returned success, but didn't 
+     * give me a point. Something has gone wrong. 
+     */
+    if (result == 0 && seek_point == NULL) {
+        goto fail;
+    }
+
+    /*
+     * get point says that an index point for 
+     * this offset doesn't yet exist. So let's
+     * expand the index.
+     *
+     * TODO Maybe it is better to return a code
+     *      and let the caller decide whether or 
+     *      not to expand the index.
+     */
+    if (result > 0) {
+        // _expand_
     }
 
     index->uncmp_seek_offset = offset;
@@ -541,6 +734,9 @@ int zran_seek(zran_index_t  *index,
     }
 
     return fseeko(index->fd, offset, SEEK_SET);
+    
+fail:
+    return -1;
 }
 
 
@@ -586,7 +782,7 @@ size_t zran_read(zran_index_t *index,
     // Get the current index point
     // that corresponds to this
     // location.
-    point = _zran_get_point_at(index, cmp_offset, 1);
+    _zran_get_point_at(index, cmp_offset, 1, &point);
 
     if (point == NULL) 
         return -1;

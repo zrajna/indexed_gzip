@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
 #include "zlib.h"
 
@@ -21,25 +22,24 @@ int _zran_free_unused(zran_index_t *index);
 
 
 zran_point_t * _zran_get_point_at(zran_index_t *index,
-                                  off_t         offset,
-                                  char          compressed);
+                                  uint64_t      offset,
+                                  uint8_t       compressed);
 
 
-int _zran_add_point(zran_index_t  *index,
-                    int            bits,
-                    off_t          cmp_offset,
-                    off_t          uncmp_offset,
-                    unsigned       left,
-                    unsigned char *data);
+int _zran_add_point(zran_index_t *index,
+                    uint8_t       bits,
+                    off_t         cmp_offset,
+                    off_t         uncmp_offset,
+                    uint32_t      nbytes,
+                    uint8_t      *data);
 
 
-
-int zran_init(zran_index_t *index, int spacing, int window_size) {
+int zran_init(zran_index_t *index, uint32_t spacing, uint32_t window_size) {
 
     zran_log("zran_init (%i)\n", spacing);
 
-    if (spacing     <= 0) spacing     = 1048576;
-    if (window_size <= 0) window_size = 32768;
+    if (spacing     == 0) spacing     = 1048576;
+    if (window_size == 0) window_size = 32768;
 
     index->spacing           = spacing;
     index->window_size       = window_size;
@@ -58,7 +58,7 @@ int zran_init(zran_index_t *index, int spacing, int window_size) {
 
 int _zran_expand(zran_index_t *index) {
 
-    int new_size = index->size * 2;
+    uint32_t new_size = index->size * 2;
 
     zran_log("_zran_expand (%i -> %i)\n", index->size, new_size);
     
@@ -98,7 +98,7 @@ int _zran_free_unused(zran_index_t *index) {
 /* Deallocate an index built by build_index() */
 void zran_free(zran_index_t *index) {
 
-    int           i;
+    uint32_t      i;
     zran_point_t *pt;
 
     zran_log("zran_free\n");
@@ -124,13 +124,13 @@ void zran_free(zran_index_t *index) {
 
 
 zran_point_t * _zran_get_point_at(zran_index_t *index,
-                                  off_t         offset,
-                                  char          compressed) {
+                                  uint64_t      offset,
+                                  uint8_t       compressed) {
 
     zran_point_t *prev;
     zran_point_t *curr;
-    int           bit;
-    int           i;
+    uint8_t       bit;
+    uint32_t      i;
 
     prev = index->list;
 
@@ -162,11 +162,11 @@ zran_point_t * _zran_get_point_at(zran_index_t *index,
 
 /* Add an entry to the access point list. */
 int _zran_add_point(zran_index_t  *index,
-                    int            bits,
+                    uint8_t        bits,
                     off_t          cmp_offset,
                     off_t          uncmp_offset,
-                    unsigned       nbytes,
-                    unsigned char *data) {
+                    uint32_t       nbytes,
+                    uint8_t       *data) {
 
     zran_log("_zran_add_point(%i, %lld <-> %lld, "
              "[%02x %02x %02x %02x ... %02x %02x %02x %02x])\n",
@@ -182,8 +182,8 @@ int _zran_add_point(zran_index_t  *index,
              data[nbytes - 2],
              data[nbytes - 1]);
 
-    unsigned char *point_data = NULL;
-    zran_point_t  *next       = NULL;
+    uint8_t      *point_data = NULL;
+    zran_point_t *next       = NULL;
 
     /* if list is full, make it bigger */
     if (index->npoints == index->size) {
@@ -236,8 +236,8 @@ int zran_build_index(zran_index_t *index, FILE *in) {
     off_t          totout; /* our own total counters to avoid 4GB limit */
     off_t          last;   /* totout value of last access point */
     z_stream       strm;
-    unsigned char  input[CHUNK];
-    unsigned char *window = NULL;
+    uint8_t        input[CHUNK];
+    uint8_t       *window = NULL;
 
     window = calloc(1, index->window_size);
 
@@ -255,8 +255,9 @@ int zran_build_index(zran_index_t *index, FILE *in) {
     strm.avail_in = 0;
     strm.next_in = Z_NULL;
     ret = inflateInit2(&strm, 47);      /* automatic zlib or gzip decoding */
+    
     if (ret != Z_OK)
-        return ret;
+        goto fail;
 
     /* inflate the input, maintain a sliding window, and build an index -- this
        also validates the integrity of the compressed data using the check
@@ -414,19 +415,19 @@ int zran_seek(zran_index_t  *index,
 }
 
 
-int zran_read(zran_index_t  *index,
-              FILE          *in,
-              unsigned char *buf,
-              int            len) {
+size_t zran_read(zran_index_t *index,
+                 FILE         *in,
+                 uint8_t      *buf,
+                 size_t        len) {
 
-    int            ch;
-    off_t          uncmp_offset;
-    off_t          cmp_offset;
-    int            skip;
-    z_stream       strm;
-    zran_point_t  *point;
-    unsigned char  input[CHUNK];
-    unsigned char *discard = NULL;
+    int           ch;
+    off_t         uncmp_offset;
+    off_t         cmp_offset;
+    int           skip;
+    z_stream      strm;
+    zran_point_t *point;
+    uint8_t       input[CHUNK];
+    uint8_t      *discard = NULL;
 
     memset(input, 0, CHUNK);
 
@@ -437,7 +438,7 @@ int zran_read(zran_index_t  *index,
     zran_log("zran_read(%i)\n", len);
 
     // silly input
-    if (len < 0)
+    if (len == 0)
         return 0;
 
     // Get the current location

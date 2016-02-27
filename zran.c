@@ -34,25 +34,42 @@ int _zran_add_point(zran_index_t *index,
                     uint8_t      *data);
 
 
-int zran_init(zran_index_t *index, uint32_t spacing, uint32_t window_size) {
+int zran_init(zran_index_t *index,
+              uint32_t      spacing,
+              uint32_t      window_size,
+              uint32_t      readbuf_size)
+{
 
-    zran_log("zran_init (%i)\n", spacing);
+    zran_point_t *point_list = NULL;
 
-    if (spacing     == 0) spacing     = 1048576;
-    if (window_size == 0) window_size = 32768;
+    zran_log("zran_init(%u, %u, %u)\n", spacing, window_size, readbuf_size);
+
+    if (spacing      == 0) spacing      = 1048576;
+    if (window_size  == 0) window_size  = 32768;
+    if (readbuf_size == 0) readbuf_size = 16384;
+
+    if (window_size < 32768)
+        goto fail;
+
+    point_list = calloc(1, sizeof(zran_point_t) * 8);
+    if (point_list == NULL) {
+        goto fail;
+    }
 
     index->spacing           = spacing;
     index->window_size       = window_size;
+    index->readbuf_size      = readbuf_size;
     index->npoints           = 0;
     index->size              = 8;
     index->uncmp_seek_offset = 0;
-    index->list              = malloc(sizeof(zran_point_t) * index->size);
-        
-    if (index->list == NULL) {
-        return -1;
-    }
+    index->list              = point_list;
     
     return 0;
+
+fail:
+    if (point_list == NULL)
+        free(point_list);
+    return -1;
 };
 
 
@@ -116,6 +133,8 @@ void zran_free(zran_index_t *index) {
     }
     
     index->spacing           = 0;
+    index->window_size       = 0;
+    index->readbuf_size      = 0;
     index->npoints           = 0;
     index->size              = 0;
     index->list              = NULL;
@@ -236,15 +255,16 @@ int zran_build_index(zran_index_t *index, FILE *in) {
     off_t          totout; /* our own total counters to avoid 4GB limit */
     off_t          last;   /* totout value of last access point */
     z_stream       strm;
-    uint8_t        input[CHUNK];
+    uint8_t       *input  = NULL;
     uint8_t       *window = NULL;
 
     window = calloc(1, index->window_size);
-
     if (window == NULL)
         goto fail;
 
-    memset(input, 0, CHUNK);
+    input = calloc(1, index->readbuf_size);
+    if (input == NULL)
+        goto fail; 
 
     zran_log("zran_build_full_index\n");
 
@@ -281,7 +301,7 @@ int zran_build_index(zran_index_t *index, FILE *in) {
         #endif
         
         /* get some compressed data from input file */
-        strm.avail_in = fread(input, 1, CHUNK, in);
+        strm.avail_in = fread(input, 1, index->readbuf_size, in);
         if (ferror(in)) {
             ret = Z_ERRNO;
             goto fail;
@@ -357,16 +377,15 @@ int zran_build_index(zran_index_t *index, FILE *in) {
     /* clean up and return index (release unused entries in list) */
     inflateEnd(&strm);
     free(window);
+    free(input);
     
     return index->size;
 
     /* return error */
 fail:
     
-    if (window != NULL) {
-        free(window);
-        window = NULL;
-    }
+    if (window != NULL) free(window);
+    if (input  != NULL) free(input);
     
     inflateEnd(&strm);
     return -1;
@@ -426,11 +445,13 @@ size_t zran_read(zran_index_t *index,
     int           skip;
     z_stream      strm;
     zran_point_t *point;
-    uint8_t       input[CHUNK];
+    uint8_t      *input   = NULL;
     uint8_t      *discard = NULL;
 
-    memset(input, 0, CHUNK);
-
+    input = calloc(1, index->readbuf_size);
+    if (input == NULL)
+        goto fail; 
+    
     discard = calloc(1, index->window_size);
     if (discard == NULL)
         goto fail;
@@ -526,7 +547,7 @@ size_t zran_read(zran_index_t *index,
         /* uncompress until avail_out filled, or end of stream */
         do {
             if (strm.avail_in == 0) {
-                strm.avail_in = fread(input, 1, CHUNK, in);
+                strm.avail_in = fread(input, 1, index->readbuf_size, in);
                 if (ferror(in)) {
                     goto fail;
                 }
@@ -569,23 +590,21 @@ size_t zran_read(zran_index_t *index,
 
     len = skip ? 0 : len - strm.avail_out;
 
+    /* Update the current seek position */
     zran_seek(index,
               in,
               index->uncmp_seek_offset + len,
               SEEK_SET,
               NULL);
 
+    free(input);
     free(discard);
-    
     return len;
 
-    /* clean up and return bytes read or error */
 fail:
-    
-    if (discard != NULL) {
-        free(discard);
-        discard = NULL;
-    }
+
+    if (input   != NULL) free(input);
+    if (discard != NULL) free(discard);
     
     inflateEnd(&strm);
     return -1; 

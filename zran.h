@@ -9,9 +9,6 @@
 #include <stdint.h>
 
 
-#define CHUNK   16384       /* file input buffer size */
-
-
 struct _zran_point;
 struct _zran_index;
 
@@ -20,7 +17,7 @@ typedef struct _zran_point zran_point_t;
 typedef struct _zran_index zran_index_t;
 
 
-/* access point entry */
+/* index point entry */
 struct _zran_point {
     
     uint64_t  uncmp_offset; /* corresponding offset in uncompressed data */
@@ -34,8 +31,18 @@ struct _zran_point {
 /* access point list */
 struct _zran_index {
 
+    /* Spacing size in bytes, relative to the compressed 
+     * data stream, between adjacent index points 
+     */
     uint32_t      spacing;
+
+    /*
+     * Number of bytes of uncompressed data to store
+     * for each index point. This should be a minimum
+     * of 32768 bytes.
+     */
     uint32_t      window_size;
+    uint32_t      readbuf_size;
   
     uint32_t      npoints; /* number of list entries filled in */
     uint32_t      size;    /* number of list entries allocated */
@@ -45,10 +52,11 @@ struct _zran_index {
 };
 
 
-// Pass in spacing=0, window_size=0 to use default values.
+// Pass in spacing=0, window_size=0, readbuf_size=0 to use default values.
 int  zran_init(zran_index_t *index,
                uint32_t      spacing,
-               uint32_t      window_size);
+               uint32_t      window_size,
+               uint32_t      readbuf_size);
 
 void zran_free(zran_index_t *index);
 

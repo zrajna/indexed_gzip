@@ -67,38 +67,44 @@ static int IndexedGzipFile_init(IndexedGzipFile *self,
                                 PyObject        *args,
                                 PyObject        *kwargs) {
 
-    PyObject *py_fid      = NULL;
-    FILE     *fid         = NULL;
-    int       spacing     = -1;
-    int       window_size = -1;
-    char      init_index  = -1;
+    PyObject *py_fid       = NULL;
+    FILE     *fid          = NULL;
+    int       spacing      = -1;
+    int       window_size  = -1;
+    int       readbuf_size = -1;
+    char      init_index   = -1;
 
     igz_log("IndexedGzipFile_init\n");
 
     static char *kwlist[] = {"fid",
+                             "init_index",
                              "spacing",
                              "window_size",
-                             "init_index",
+                             "readbuf_size",
                              NULL};
     
     if (!PyArg_ParseTupleAndKeywords(args,
                                      kwargs,
-                                     "O|$iip",
+                                     "O|$piii",
                                      kwlist,
                                      &py_fid,
+                                     &init_index,
                                      &spacing,
                                      &window_size,
-                                     &init_index)) {
+                                     &readbuf_size)) {
         goto fail;
     }
 
-    if (spacing     < 0) { spacing     = 0; }
-    if (window_size < 0) { window_size = 0; }
-    if (init_index  < 0) { init_index  = 0; }
+    if (init_index   < 0) init_index   = 0;
+    if (spacing      < 0) spacing      = 0;
+    if (window_size  < 0) window_size  = 0;
+    if (readbuf_size < 0) readbuf_size = 0;
 
     fid = fdopen(PyObject_AsFileDescriptor(py_fid), "rb");
 
-    zran_init(&(self->index), spacing, window_size);
+    if (zran_init(&(self->index), spacing, window_size, readbuf_size) != 0) {
+        goto fail;
+    }
 
     self->py_fid  = py_fid;
     self->fid     = fid;
@@ -114,6 +120,7 @@ static int IndexedGzipFile_init(IndexedGzipFile *self,
     return 0;
 
 fail:
+    PyErr_SetString(PyExc_RuntimeError, "mub");
     return -1;
 };
 

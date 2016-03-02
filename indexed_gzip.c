@@ -105,7 +105,8 @@ static int IndexedGzipFile_init(IndexedGzipFile *self,
                   fid,
                   spacing,
                   window_size,
-                  readbuf_size) != 0) {
+                  readbuf_size,
+                  0) != 0) {
         goto fail;
     }
 

@@ -21,7 +21,7 @@ def create_gz(fid):
 
 
 def create_igz(fid):
-    return igzip.IndexedGzipFile(fid, init_index=True) 
+    return igzip.IndexedGzipFile(fid) # , init_index=True) 
 
 
 def md5(data):
@@ -108,6 +108,8 @@ def testfile(name, fid, createfunc, length, offsets, loud):
     print('Average times over {} seeks/reads:'.format(numseeks))
     print('  seek time: {:0.2f} sec'          .format(seektime / numseeks))
     print('  read time: {:0.2f} sec'          .format(readtime / numseeks))
+
+    return datahash
     
 
 if len(sys.argv) not in (2, 3, 4, 5):
@@ -142,5 +144,8 @@ with open(infile, 'rb') as fid:
 
     random.shuffle(offsets)
     
-    testfile("gzip.GzipFile",         fid, create_gz,  length, offsets, loud)
-    testfile("igzip.IndexedGzipFile", fid, create_igz, length, offsets, loud)
+    gzhash  = testfile("gzip.GzipFile",         fid, create_gz,  length, offsets, loud)
+    igzhash = testfile("igzip.IndexedGzipFile", fid, create_igz, length, offsets, loud)
+
+    if gzhash == igzhash: print('\nPASS')
+    else:                 print('\nFAIL')

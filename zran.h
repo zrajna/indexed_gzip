@@ -17,6 +17,13 @@ struct _zran_point;
 typedef struct _zran_index zran_index_t;
 typedef struct _zran_point zran_point_t;
 
+
+enum {
+  ZRAN_AUTO_BUILD = 1,
+
+};
+  
+
 /* 
  * 
  */
@@ -72,6 +79,11 @@ struct _zran_index {
      * into the uncompressed data stream.
      */
     uint64_t      uncmp_seek_offset;
+
+    /* 
+     * Flags passed to zran_init
+     */
+    uint16_t      flags;
 };
 
 
@@ -79,13 +91,20 @@ struct _zran_index {
  *
  */
 struct _zran_point {
-    
-    uint64_t  uncmp_offset; /* corresponding offset in uncompressed data */
-    uint64_t  cmp_offset;   /* offset in input file of first full byte */
-    uint8_t   bits;         /* number of bits (1-7) from byte at in - 1, or 0 */
-    uint32_t  nbytes; 
-    uint8_t  *data;         /* preceding chunk of uncompressed data */
+
+    /* corresponding offset in uncompressed data */
+    uint64_t  uncmp_offset;
+
+    /* offset in input file of first full byte */
+    uint64_t  cmp_offset;
+
+    /* number of bits (1-7) from byte at in - 1, or 0 */
+    uint8_t   bits;
+
+    /* preceding chunk of uncompressed data */
+    uint8_t  *data;
 };
+
 
 
 
@@ -94,7 +113,8 @@ int  zran_init(zran_index_t *index,
                FILE         *fd,
                uint32_t      spacing,
                uint32_t      window_size,
-               uint32_t      readbuf_size);
+               uint32_t      readbuf_size,
+               uint16_t      flags);
 
 
 void zran_free(zran_index_t *index);

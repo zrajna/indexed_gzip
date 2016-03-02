@@ -7,6 +7,7 @@
 
 from __future__ import print_function
 
+import os.path      as op
 import                 sys
 import                 time
 import                 hashlib
@@ -109,7 +110,7 @@ def testfile(name, fid, createfunc, length, offsets, loud):
     print('  seek time: {:0.2f} sec'          .format(seektime / numseeks))
     print('  read time: {:0.2f} sec'          .format(readtime / numseeks))
 
-    return datahash
+    return totaltime, datahash
     
 
 if len(sys.argv) not in (2, 3, 4, 5):
@@ -143,9 +144,24 @@ with open(infile, 'rb') as fid:
     numseeks = len(offsets)
 
     random.shuffle(offsets)
-    
-    gzhash  = testfile("gzip.GzipFile",         fid, create_gz,  length, offsets, loud)
-    igzhash = testfile("igzip.IndexedGzipFile", fid, create_igz, length, offsets, loud)
 
-    if gzhash == igzhash: print('\nPASS')
-    else:                 print('\nFAIL')
+    try:
+        gztime,  gzhash  = testfile("gzip.GzipFile",         fid, create_gz,  length, offsets, loud)
+        igztime, igzhash = testfile("igzip.IndexedGzipFile", fid, create_igz, length, offsets, loud)
+        
+        if gzhash == igzhash: result = 'PASS'
+        else:                 result = 'FAIL'
+
+        print('\n{:5d} {:20s} {:15d} [gz: {:0.2f} seconds] [igz: {:0.2f} seconds] {}'.format(
+            numseeks,
+            op.basename(infile),
+            seed,
+            gztime,
+            igztime,
+            result))
+
+    except:
+        print('\n{:5d} {:20s} {:15d} CRASH'.format(
+            numseeks,
+            op.basename(infile),
+            seed))

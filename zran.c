@@ -113,6 +113,28 @@ static uint64_t _zran_estimate_offset(
 );
 
 
+/*
+ * Used by _zran_expand_index, and _zran_read. Initialises zlib to start
+ * decompressing/inflating from the specified compressed data offset.
+ * Returns:
+ *   - 0 for success.
+ * 
+ *   - < 0 to indicate failure.
+ *
+ *   - > 0 to indicate tha the file position has been adjusted by this amount.
+ */
+static int _zran_init_zlib_inflate(
+    zran_index_t *index,      /* The index */
+    
+    z_stream     *stream,     /* Pointer to a z_stream struct */
+    
+    uint64_t      cmp_offset, /* Current location in the compressed stream */
+    
+    zran_point_t *point       /* If not at the beginning of the stream, a
+                                 pointer to the index point corresponding to
+                                 the current location mus be passed in. */
+);  
+
 
 /*
  * Expands the index from its current end-point until the given offset (which
@@ -524,6 +546,93 @@ fail:
 };
 
 
+/* Initialise the given z_stream struct for decompression/inflation. */
+int _zran_init_zlib_inflate(zran_index_t *index,
+                            z_stream     *stream,
+                            uint64_t      cmp_offset,
+                            zran_point_t *point)
+{
+
+    int ret;
+    int adjust_offset;
+    int windowBits;
+    
+    /* 
+     * Calculate the  base2 logarithm 
+     * of the window size - it is needed 
+     * to initialise zlib inflation.
+     */
+    windowBits    = (int)round(log10(index->window_size) / log10(2)); 
+    adjust_offset = 0;
+
+    /* Initialise the zlib struct for inflation */
+    stream->zalloc   = Z_NULL;
+    stream->zfree    = Z_NULL;
+    stream->opaque   = Z_NULL;
+    stream->avail_in = 0;
+    stream->next_in  = Z_NULL;
+
+    /* Bad input */
+    if (cmp_offset != 0 && point == NULL)
+        goto fail;
+
+    /* 
+     * If we're starting from the beginning 
+     * of the file, we tell inflateInit2 to 
+     * expect a file header
+     */
+    if (cmp_offset == 0) {
+        if (inflateInit2(stream, windowBits + 32) != Z_OK) {
+            goto fail;
+        }
+    }
+    
+    /* 
+     * Otherwise, we configure for raw inflation, 
+     * and initialise the inflation dictionary
+     * from the uncompressed data associated with
+     * the index point.
+     */
+    else {
+        if (inflateInit2(stream, -windowBits) != Z_OK) {
+            goto fail;
+        }
+
+        /* The starting index point is not 
+         * byte-aligned, so we'll insert 
+         * the initial bits into the inflate 
+         * stream using inflatePrime
+         */
+        if (point->bits > 0) {
+
+            adjust_offset = 1;
+            ret           = getc(index->fd);
+            
+            if (ret == -1) 
+                goto fail;
+
+            if (inflatePrime(stream,
+                             point->bits, ret >> (8 - point->bits)) != Z_OK)
+                goto fail;
+        }
+
+        /*
+         * Initialise the inflate stream 
+         * with the index point data.
+         */
+        if (inflateSetDictionary(stream,
+                                 point->data,
+                                 index->window_size) != Z_OK)
+            goto fail; 
+    }
+
+    return adjust_offset;
+
+fail:
+    return -1;
+}
+
+
 /*
  * Expands the index to encompass the compressed offset specified by 'until'.
  */
@@ -562,13 +671,6 @@ int _zran_expand_index(zran_index_t *index, uint64_t until)
     /* Buffers to store compresed and uncompressed data */
     uint8_t       *input  = NULL;
     uint8_t       *window = NULL;
-
-    /* 
-     * This stores the base2 logarithm 
-     * of the window size - it is needed 
-     * to initialise zlib inflation.
-     */
-    int windowBits = (int)round(log10(index->window_size) / log10(2));
 
     /*
      * If until == 0, we build the full 
@@ -647,58 +749,18 @@ int _zran_expand_index(zran_index_t *index, uint64_t until)
     }
 
     /* Initialise the zlib struct for inflation */
-    strm.zalloc   = Z_NULL;
-    strm.zfree    = Z_NULL;
-    strm.opaque   = Z_NULL;
-    strm.avail_in = 0;
-    strm.next_in  = Z_NULL;
+    ret = _zran_init_zlib_inflate(index,
+                                  &strm,
+                                  cmp_offset,
+                                  start);
 
     /* 
-     * If we're starting from the beginning 
-     * of the file, we tell inflateInit2 to 
-     * expect a file header
+     * _zran_init_zlib_inflate will 
+     * return > 0 to indicate that it 
+     * has adjusted the file location.
      */
-    if (cmp_offset == 0) {
-        if (inflateInit2(&strm, windowBits + 32) != Z_OK) {
-            goto fail;
-        }
-    }
-    
-    /* 
-     * Otherwise, we configure for raw inflation, 
-     * and initialise the inflation dictionary
-     * from the uncompressed data associated with
-     * the index point.
-     */
-    else {
-        if (inflateInit2(&strm, -windowBits) != Z_OK) {
-            goto fail;
-        }
-
-        /* The starting index point is not 
-         * byte-aligned, so we'll insert 
-         * the initial bits into the inflate 
-         * stream using inflatePrime
-         */
-        if (start->bits > 0) {
-
-            cmp_offset += 1;
-            ret         = getc(index->fd);
-            
-            if (ret == -1) 
-                goto fail;
-
-            if (inflatePrime(&strm, start->bits, ret >> (8 - start->bits)) != Z_OK)
-                goto fail;
-        }
-
-        /*
-         * Initialise the inflate stream 
-         * with the index point data.
-         */
-        if (inflateSetDictionary(&strm, start->data, index->window_size) != Z_OK)
-            goto fail;        
-    }
+    if (ret < 0) goto fail;
+    else         cmp_offset += ret;
 
     /* 
      * Continue until the specified offset 
@@ -949,13 +1011,6 @@ size_t zran_read(zran_index_t *index,
     uint8_t      *input   = NULL;
     uint8_t      *discard = NULL;
 
-    /* 
-     * This stores the base2 logarithm 
-     * of the window size - it is needed 
-     * to initialise zlib inflation.
-     */
-    int windowBits = (int)round(log10(index->window_size) / log10(2)); 
-
     if (len == 0)
         return 0;
     
@@ -1009,44 +1064,19 @@ size_t zran_read(zran_index_t *index,
     if (point == NULL) 
         goto fail;
 
-    /* 
-     * Initialise zlib for inflation
-     */
-    strm.zalloc   = Z_NULL;
-    strm.zfree    = Z_NULL;
-    strm.opaque   = Z_NULL;
-    strm.avail_in = 0;
-    strm.next_in  = Z_NULL;
-
-    if (inflateInit2(&strm, -windowBits) != Z_OK)
-        goto fail;
-
-    /*
-     * The compressed location is
-     * not byte-aligned with the
-     * uncompressed location - we 
-     * insert the initial bits
-     * into the inflate stream
-     * using inflatePrime.
-     */
-    if (point->bits) {
-        
-        ret = getc(index->fd);
-        
-        if (ret == -1) 
-            goto fail;
-
-        if (inflatePrime(&strm, point->bits, ret >> (8 - point->bits)) != Z_OK)
-            goto fail;
-    }
+    /* Initialise zlib for inflation */
+    ret = _zran_init_zlib_inflate(index,
+                                  &strm,
+                                  cmp_offset,
+                                  point);
 
     /* 
-     * Initialise inflation with 
-     * the unncompressed data from 
-     * this index point.
+     * The init function will return > 0 
+     * to indicate that it has adjusted 
+     * the file location.
      */
-    if (inflateSetDictionary(&strm, point->data, index->window_size) != Z_OK)
-        goto fail;
+    if (ret < 0) goto fail;
+    else         cmp_offset += ret;
 
     /* 
      * Read and decompress data from the 

@@ -152,7 +152,7 @@ with open(infile, 'rb') as fid:
         if gzhash == igzhash: result = 'PASS'
         else:                 result = 'FAIL'
 
-        print('\n{:5d} {:20s} {:15d} [gz: {:0.2f} seconds] [igz: {:0.2f} seconds] {}'.format(
+        print('\n{:5d} {:<20s} {:15d} [gz: {:0.2f} seconds] [igz: {:0.2f} seconds] {}'.format(
             numseeks,
             op.basename(infile),
             seed,
@@ -161,7 +161,7 @@ with open(infile, 'rb') as fid:
             result))
 
     except:
-        print('\n{:5d} {:20s} {:15d} CRASH'.format(
+        print('\n{:5d} {:<20s} {:15d} CRASH'.format(
             numseeks,
             op.basename(infile),
             seed))

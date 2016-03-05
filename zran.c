@@ -58,10 +58,6 @@ static int _zran_free_unused(
  * specified as being relative to the start of the compressed data, or the
  * uncompressed data.
  *
- * If this index has been created with the ZRAN_AUTO_BUILD flag, and the
- * requested offset is not covered by the index, this function will call
- * _zran_expand_index to expand the index to to cover the requested offset.
- * 
  * Returns:
  *
  *   - 0 on success. 
@@ -69,8 +65,7 @@ static int _zran_free_unused(
  *   - A negative number if something goes wrong.
  *
  *   - A positive number to indicate that an index covering the specified
- *     offset has not yet been created (unless the index has been created with
- *     the ZRAN_AUTO_BUILD flag).
+ *     offset has not yet been created.
  */
 static int _zran_get_point_at(
     zran_index_t  *index,      /* The index */
@@ -85,6 +80,26 @@ static int _zran_get_point_at(
     zran_point_t **point       /* If an index point corresponding to the
                                   specified offset is identified, this pointer
                                   will be updated to point to it. */
+);
+
+
+/* 
+ * If the index has been created without the ZRAN_AUTO_BUILD flag, this
+ * function is identical to the _zran_get_point_at function.
+ *
+ * If the index has been created with the ZRAN_AUTO_BUILD flag, and the
+ * requested offset is beyond the current range of the index, the index will
+ * be expanded to encompass it.
+ *
+ * The input arguments and return values are identical to the
+ * _zran_get_point_at function, however if the index has been built with the
+ * ZRAN_AUTO_BUILD flag, this function will never return a positive number.
+ */
+static int _zran_get_point_with_expand(
+    zran_index_t  *index,      /* The index                           */
+    uint64_t       offset,     /* Desired offset                      */
+    uint8_t        compressed, /* Compressed or uncompressed offset   */
+    zran_point_t **point       /* Place to store the identified point */
 );
 
 
@@ -231,6 +246,7 @@ int zran_init(zran_index_t *index,
 
     /* initialise the index struct */
     index->fd                = fd;
+    index->flags             = flags;
     index->compressed_size   = compressed_size;
     index->spacing           = spacing;
     index->window_size       = window_size;
@@ -319,6 +335,7 @@ void zran_free(zran_index_t *index) {
     index->list              = NULL;
     index->uncmp_seek_offset = 0;
 };
+
 
 /* (Re-)Builds the full index. */
 int zran_build_index(zran_index_t *index, uint64_t from, uint64_t until)
@@ -432,6 +449,76 @@ not_created:
 
 
 /* 
+ * Get the index point corresponding to the given offset, expanding 
+ * the index as needed if ZRAN_AUTO_BUILD is active.
+ */
+int _zran_get_point_with_expand(zran_index_t  *index,
+                                uint64_t       offset,
+                                uint8_t        compressed,
+                                zran_point_t **point)
+{
+    
+    int      result;
+    uint64_t expand;
+
+    zran_log("_zran_get_point_with_expand(%llu, %u, autobuild=%u)\n",
+             offset,
+             compressed,
+             index->flags & ZRAN_AUTO_BUILD);
+
+    if ((index->flags & ZRAN_AUTO_BUILD) == 0) {
+        return _zran_get_point_at(index, offset, compressed, point);
+    }
+
+    /*
+     * See if there is an index point that 
+     * covers the specified offset. If there;s
+     * not, we're going to expand the index
+     * until there is.
+     */
+    result = _zran_get_point_at(index, offset, 0, point);
+    while (result > 0) {
+    
+        /*
+         * If result > 0, get_point says that an index 
+         * point for this offset doesn't yet exist. So 
+         * let's expand the index.
+         *
+         * Guess how far we need to expand the index,
+         * and expand it by that much.
+         */
+        expand = _zran_estimate_offset(index, offset, 0);
+
+        if (_zran_expand_index(index, expand) != 0)
+            goto fail;
+
+        result = _zran_get_point_at(index, offset, 0, point); 
+    }
+
+    /* 
+     * get point failed - something has gone wrong 
+     */
+    if (result < 0) {
+        goto fail;
+    }
+
+    /* 
+     * get point returned success, 
+     * but didn't give me a point. 
+     * This should never happen.
+     */ 
+    if (result == 0 && point == NULL) {
+        goto fail;
+    }
+
+    return 0;
+
+fail:
+    return -1;
+}
+
+
+/* 
  * Given an offset in one stream, estimates the corresponding offset into the 
  * other stream.
  */
@@ -479,7 +566,7 @@ uint64_t _zran_estimate_offset(
                           
 
 
-/* Add an entry to the access point list. */
+/* Add a new point to the index. */
 int _zran_add_point(zran_index_t  *index,
                     uint8_t        bits,
                     uint64_t       cmp_offset,
@@ -894,10 +981,10 @@ fail:
 int zran_seek(zran_index_t  *index,
               off_t          offset,
               int            whence,
-              zran_point_t **point) {
+              zran_point_t **point)
+{
 
     int           result;
-    uint64_t      expand;
     zran_point_t *seek_point;
 
     zran_log("zran_seek(%lld, %i)\n", offset, whence);
@@ -907,54 +994,14 @@ int zran_seek(zran_index_t  *index,
     }
 
     /*
-     * See if there is an index point that 
-     * covers the specified offset. If there;s
-     * not, we're going to expand the index
-     * until there is.
-     *
-     * TODO Maybe it is better to return a code
-     *      and let the caller decide whether or 
-     *      not to expand the index. 
-     *
-     * TODO Honour the ZRAN_AUTO_BUILD flag - 
-     *      actually, this makes the above TODO
-     *      obsolete.
+     * Get the index point that 
+     * corresponds to this offset.
      */
-    result = _zran_get_point_at(index, offset, 0, &seek_point);
-    while (result > 0) {
+    result = _zran_get_point_with_expand(index, offset, 0, &seek_point);
+
+    if      (result < 0) goto fail;
+    else if (result > 0) goto not_covered_by_index;
     
-        /*
-         * If result > 0, get point says that an index 
-         * point for this offset doesn't yet exist. So 
-         * let's expand the index.
-         *
-         * Guess how far we need to expand the index,
-         * and expand it by that much.
-         */
-        expand = _zran_estimate_offset(index, offset, 0);
-
-        if (_zran_expand_index(index, expand) != 0)
-            goto fail;
-
-        result = _zran_get_point_at(index, offset, 0, &seek_point); 
-    }
-
-    /* 
-     * get point failed - something has gone wrong 
-     */
-    if (result < 0) {
-        goto fail;
-    }
-
-    /* 
-     * get point returned success, 
-     * but didn't give me a point. 
-     * This should never happen.
-     */ 
-    if (result == 0 && seek_point == NULL) {
-        goto fail;
-    } 
-
     index->uncmp_seek_offset = offset;
     offset                   = seek_point->cmp_offset;
 
@@ -978,13 +1025,15 @@ int zran_seek(zran_index_t  *index,
     
 fail:
     return -1;
+not_covered_by_index:
+    return 1;
 }
 
 
 /* Read len bytes from the uncompressed data stream, storing them in buf. */
-size_t zran_read(zran_index_t *index,
-                 uint8_t      *buf,
-                 size_t        len) {
+int zran_read(zran_index_t *index,
+              uint8_t      *buf,
+              size_t        len) {
 
     /* Used to store/check return values. */
     int           ret;

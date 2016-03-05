@@ -106,7 +106,7 @@ static int IndexedGzipFile_init(IndexedGzipFile *self,
                   spacing,
                   window_size,
                   readbuf_size,
-                  0) != 0) {
+                  ZRAN_AUTO_BUILD) != 0) {
         goto fail;
     }
 

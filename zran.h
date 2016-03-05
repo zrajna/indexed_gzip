@@ -17,7 +17,7 @@ struct _zran_point;
 typedef struct _zran_index zran_index_t;
 typedef struct _zran_point zran_point_t;
 
-
+/* Specified as bit-masks, not bit locations. */
 enum {
   ZRAN_AUTO_BUILD = 1,
 
@@ -92,16 +92,35 @@ struct _zran_index {
  */
 struct _zran_point {
 
-    /* corresponding offset in uncompressed data */
+
+    /* 
+     * Location of this point in the compressed data 
+     * stream. This is the location of the first full 
+     * byte of compressed data - if  the compressed 
+     * and uncompressed locations are not byte-aligned, 
+     * the bits field below specifies the bit offset.
+     */
+    uint64_t  cmp_offset;
+ 
+    /* 
+     * Corresponding location of this point 
+     * in the uncompressed data stream.
+     */
     uint64_t  uncmp_offset;
 
-    /* offset in input file of first full byte */
-    uint64_t  cmp_offset;
-
-    /* number of bits (1-7) from byte at in - 1, or 0 */
+    /* 
+     * If this point is not byte-aligned, this specifies
+     * the number of bits, in the compressed stream,
+     * back from cmp_offset, that the uncompressed data
+     * starts.
+     */
     uint8_t   bits;
 
-    /* preceding chunk of uncompressed data */
+    /* 
+     * Chunk of uncompressed data preceeding this point.
+     * This is required to initialise decompression from
+     * this point onwards.
+     */
     uint8_t  *data;
 };
 
@@ -126,19 +145,34 @@ int zran_build_index(zran_index_t *index,
 );
 
 
-// Should I use stdint types for the below
-// functions? Or should I just use the types
-// used by fseek and read?
-
+/*
+ *
+ * Returns:
+ *    - 0 for success.
+ * 
+ *    - < 0 to indicate failure.
+ *   
+ *    - > 0 to indicate that the index does not cover the requested offset 
+ *      (will never happen if ZRAN_AUTO_BUILD is active).
+ */
 int zran_seek(zran_index_t  *index,
               off_t          offset,
               int            whence,
               zran_point_t **point);
 
-
-size_t zran_read(zran_index_t  *index,
-                 uint8_t       *buf,
-                 size_t         len);
+/*
+ *
+ * Returns:
+ *   - Number of bytes read for success.
+ *   
+ *   - -1 to indicate that the index does not cover the requested region
+ *     (will never happen if ZRAN_AUTO_BUILD is active). 
+ *
+ *   - < -1 to indicate failure.
+ */
+int zran_read(zran_index_t  *index,
+              uint8_t       *buf,
+              size_t         len);
 
 
 #endif /* __ZRAN_H__ */

@@ -120,7 +120,10 @@ int  zran_init(zran_index_t *index,
 void zran_free(zran_index_t *index);
 
 
-int zran_build_index(zran_index_t *index);
+int zran_build_index(zran_index_t *index,
+                     uint64_t      from,
+                     uint64_t      until
+);
 
 
 // Should I use stdint types for the below

@@ -321,12 +321,12 @@ void zran_free(zran_index_t *index) {
 };
 
 /* (Re-)Builds the full index. */
-int zran_build_index(zran_index_t *index)
+int zran_build_index(zran_index_t *index, uint64_t from, uint64_t until)
 {
 
-    /* TODO zran_invalidate_index(index, 0); */
+    /* _zran_invalidate_index(index, from); */
 
-    return _zran_expand_index(index, 0);
+    return _zran_expand_index(index, until);
 }
 
 

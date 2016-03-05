@@ -117,7 +117,7 @@ static int IndexedGzipFile_init(IndexedGzipFile *self,
  
 
     if (init_index != 0) {
-        zran_build_index(&(self->index));
+        zran_build_index(&(self->index), 0, 0);
     }
 
     return 0;

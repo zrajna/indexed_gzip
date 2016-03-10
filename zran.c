@@ -27,9 +27,9 @@
  *
  * Returns 0 on success, non-0 on failure.
  */
-int _zran_invalidate_index(
+static int _zran_invalidate_index(
     zran_index_t *index, /* The index                       */
-    off_t         from   /* Offset into the compressed data */
+    uint64_t      from   /* Offset into the compressed data */
 );
 
 
@@ -339,7 +339,7 @@ void zran_free(zran_index_t *index) {
 
 
 /* Discard all points in the index after the specified compressed offset. */
-static int _zran_invalidate_index(zran_index_t *index, off_t from)
+int _zran_invalidate_index(zran_index_t *index, uint64_t from)
 {
     uint64_t      i;
     zran_point_t *p;

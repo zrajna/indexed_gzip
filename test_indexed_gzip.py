@@ -22,7 +22,7 @@ def create_gz(fid):
 
 
 def create_igz(fid):
-    return igzip.IndexedGzipFile(fid) # , init_index=True) 
+    return igzip.IndexedGzipFile(fid)
 
 
 def md5(data):

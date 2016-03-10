@@ -22,12 +22,15 @@
 
 
 /*
- * TODO If/when you add write capability, you'll need something like this, to
- *      mark a location in the index after which all index points should be
- *      discarded.
- * 
- * static int _zran_invalidate_index(zran_index_t *index, off_t from);
+ * Discards all points in the index which come after the specfiied
+ * compresesd offset.
+ *
+ * Returns 0 on success, non-0 on failure.
  */
+int _zran_invalidate_index(
+    zran_index_t *index, /* The index                       */
+    off_t         from   /* Offset into the compressed data */
+);
 
 
 /*
@@ -49,8 +52,6 @@ static int _zran_expand_point_list(
 static int _zran_free_unused(
     zran_index_t *index  /* The index */
 );
-
-/* TODO int _zran_compare_points(zran_point_t *p1, zran_point_t *p2); */
 
 
 /*
@@ -337,11 +338,43 @@ void zran_free(zran_index_t *index) {
 };
 
 
+/* Discard all points in the index after the specified compressed offset. */
+static int _zran_invalidate_index(zran_index_t *index, off_t from)
+{
+    uint64_t      i;
+    zran_point_t *p;
+
+    if (index->npoints == 0)
+        return 0;
+            
+    for (i = 0; i < index->npoints; i++) {
+
+        p = &(index->list[i]);
+
+        if (p->cmp_offset >= from) 
+            break;
+    }
+
+    /* 
+     * The index doesn't cover 
+     * the requested offest 
+     */
+    if (i == index->npoints)
+        return 0;
+
+    if (i <= 1) index->npoints = 0;
+    else        index->npoints = i - 1;
+    
+    return _zran_free_unused(index);
+}
+
+
 /* (Re-)Builds the full index. */
 int zran_build_index(zran_index_t *index, uint64_t from, uint64_t until)
 {
-
-    /* _zran_invalidate_index(index, from); */
+    
+    if (_zran_invalidate_index(index, from) != 0)
+        return -1;
 
     return _zran_expand_index(index, until);
 }
@@ -407,11 +440,6 @@ int _zran_get_point_at(
      * We should have an index point 
      * which corresponds to this offset, 
      * so let's search for it.
-     * 
-     * TODO Use bsearch instead of this 
-     *      linear search. All you have
-     *      to do is define one (or two)
-     *      point comparison functions.
      */
     prev = index->list;
     for (i = 1; i < index->npoints; i++) {
@@ -476,7 +504,7 @@ int _zran_get_point_with_expand(zran_index_t  *index,
      * not, we're going to expand the index
      * until there is.
      */
-    result = _zran_get_point_at(index, offset, 0, point);
+    result = _zran_get_point_at(index, offset, compressed, point);
     while (result > 0) {
     
         /*
@@ -487,12 +515,16 @@ int _zran_get_point_with_expand(zran_index_t  *index,
          * Guess how far we need to expand the index,
          * and expand it by that much.
          */
-        expand = _zran_estimate_offset(index, offset, 0);
+        if (compressed == 0)
+            expand = _zran_estimate_offset(index, offset, 0);
+        else
+            expand = offset;
 
-        if (_zran_expand_index(index, expand) != 0)
+        if (_zran_expand_index(index, expand) != 0) {
             goto fail;
+        }
 
-        result = _zran_get_point_at(index, offset, 0, point); 
+        result = _zran_get_point_at(index, offset, compressed, point); 
     }
 
     /* 
@@ -669,6 +701,7 @@ int _zran_init_zlib_inflate(zran_index_t *index,
      * expect a file header
      */
     if (cmp_offset == 0) {
+        zran_log("zlib_init_zlib_inflate(0, n/a, n/a, %u + 32)\n", windowBits);
         if (inflateInit2(stream, windowBits + 32) != Z_OK) {
             goto fail;
         }
@@ -681,6 +714,12 @@ int _zran_init_zlib_inflate(zran_index_t *index,
      * the index point.
      */
     else {
+        zran_log("zlib_init_zlib_inflate(%llu, %llu, %llu), -%u\n",
+                 cmp_offset,
+                 point->cmp_offset,
+                 point->uncmp_offset,
+                 windowBits);
+        
         if (inflateInit2(stream, -windowBits) != Z_OK) {
             goto fail;
         }
@@ -1103,15 +1142,10 @@ int zran_read(zran_index_t *index,
      * point that corresponds to 
      * this location.
      */
-    _zran_get_point_at(index, cmp_offset, 1, &point);
+    ret = _zran_get_point_with_expand(index, cmp_offset, 1, &point);
 
-    /* 
-     * TODO Check return value, expand 
-     *      index if necessary (and if 
-     *      ZRAN_AUTO_BULD flag is set).
-     */
-    if (point == NULL) 
-        goto fail;
+    if (ret < 0) goto fail;
+    if (ret > 0) goto not_covered_by_index;
 
     /* Initialise zlib for inflation */
     ret = _zran_init_zlib_inflate(index,
@@ -1256,11 +1290,20 @@ int zran_read(zran_index_t *index,
     free(discard);
     return len;
 
+
+not_covered_by_index:
+
+    if (input   != NULL) free(input);
+    if (discard != NULL) free(discard);
+    
+    inflateEnd(&strm);
+    return -1;
+
 fail:
 
     if (input   != NULL) free(input);
     if (discard != NULL) free(discard);
     
     inflateEnd(&strm);
-    return -1; 
+    return -2;
 }

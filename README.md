@@ -123,11 +123,11 @@ If you don't want to look at the numbers:
     file seeks.
 
   * `IndexedGzipFile`: Total time is pretty much constant, regardless of the
-     number of file seeks.
+    number of file seeks.
 
-         > This is not entirely true - total time will increase linearly with
-         > respect to decompression/file I/O time, but for the file sizes/seek
-         > times shown, the time taken to perform these steps is negligible.
+    > This is not entirely true - total time will increase linearly with
+    > respect to decompression/file I/O time, but for the file sizes/seek
+    > times shown, the time taken to perform these steps is negligible.
 
 
 | Compressed file size (MB) | Uncompressed file size (MB) | Number of seeks | `GzipFile` time | `IndexedGzipFile` time |

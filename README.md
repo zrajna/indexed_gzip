@@ -61,8 +61,8 @@ Initial work on `indexed_gzip` took place at
 
 As of March 2016, `indexed_gzip` is still under development, and is not ready
 for use. The [zran](zran.c) module is reasonably tidy and well documented, but
-the [indexed_gzip](indexed_gzip.c) python extension is minimal, and needs a
-lot of work before I would be happy for it to be used in anger.
+needs testing. The [indexed_gzip](indexed_gzip.c) python extension is minimal, 
+and needs a lot of work before I would be happy for it to be used in anger.
 
 
 With these warning out of the way, you can use `indexed_gzip` in a Python 3 

@@ -166,7 +166,7 @@ If you don't want to look at the numbers:
 
 
 
-## Licence
+## License
 
 
 `indexed_gzip` inherits the [zlib](http://www.zlib.net) license, available for

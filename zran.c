@@ -1,5 +1,12 @@
 /*
+ * zran.c - indexed access to gzip files.
  * 
+ * See zran.h for documentation.
+ *
+ * Most of this code has been adapted from the zran example, written by Mark
+ * Alder, which ships with the zlib source code.
+ *
+ * Author: Paul McCarthy <pauldmccarthy@gmail.com>
  */
 #include <math.h>
 #include <stdio.h>
@@ -11,7 +18,11 @@
 #include "zran.h"
 
 
-//#define ZRAN_VERBOSE
+/*
+ * Turn this on to make noise.
+ * 
+ * #define ZRAN_VERBOSE 
+ */
 
 
 #ifdef ZRAN_VERBOSE

@@ -233,6 +233,14 @@ int zran_init(zran_index_t *index,
     if (window_size < 32768)
         goto fail;
 
+    /* 
+     * window_size bytes of uncompressed data are stored with each seek point
+     * in the index. So it's a bit silly to have the distance between
+     * consecutive points less than the window size.
+     */
+    if (spacing <= window_size)
+      goto fail;
+
     /*
      * Calculate the size of the compressed file
      */
@@ -1082,7 +1090,7 @@ not_covered_by_index:
 
 /* Read len bytes from the uncompressed data stream, storing them in buf. */
 int zran_read(zran_index_t *index,
-              uint8_t      *buf,
+              void         *buf,
               size_t        len) {
 
     /* Used to store/check return values. */

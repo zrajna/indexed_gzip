@@ -220,7 +220,7 @@ int zran_seek(
  */
 int zran_read(
   zran_index_t  *index, /* The index                 */
-  uint8_t       *buf,   /* Buffer to store len bytes */
+  void          *buf,   /* Buffer to store len bytes */
   size_t         len    /* Number of bytes to read   */
 );
 

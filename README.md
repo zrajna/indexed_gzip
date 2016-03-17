@@ -13,7 +13,7 @@
 ## Overview
 
 
-The `indexed_gzip` project is a Python 3 extension which aims to provide a
+The `indexed_gzip` project is a Python extension which aims to provide a
 drop-in replacement for the built-in Python `gzip.GzipFile` class, the
 `IndexedGzipFile`.
 
@@ -65,16 +65,19 @@ needs testing. The [indexed_gzip](indexed_gzip.c) python extension is minimal,
 and needs a lot of work before I would be happy for it to be used in anger.
 
 
-With these warning out of the way, you can use `indexed_gzip` in a Python 3 
+With these warning out of the way, you can use `indexed_gzip` in a Python 
 environment right now, by following these instructions:
 
 
-1. Compile the python extension:
+1. Make sure you have [cython](http://cython.org/) installed. This is currently
+   required, but will eventually not be necessary.
+
+2. Compile the python extension:
     ```sh
     python setup.py build_ext --inplace
     ```
 
-2. Use the `indexed_gzip` module in your Python code:
+3. Use the `indexed_gzip` module in your Python code:
     ```python
     import indexed_gzip as igzip
 

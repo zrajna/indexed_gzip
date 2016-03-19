@@ -59,18 +59,12 @@ Initial work on `indexed_gzip` took place at
 ## Usage
 
 
-As of March 2016, `indexed_gzip` is still under development, and is not ready
-for use. The [zran](zran.c) module is reasonably tidy and well documented, but
-needs testing. The [indexed_gzip](indexed_gzip.c) python extension is minimal, 
-and needs a lot of work before I would be happy for it to be used in anger.
+As of March 2016, `indexed_gzip` is still under development, and has undergone
+minimal testing.  With this warning out of the way, you can use `indexed_gzip`
+in a Python environment right now, by following these instructions:
 
 
-With these warning out of the way, you can use `indexed_gzip` in a Python 
-environment right now, by following these instructions:
-
-
-1. Make sure you have [cython](http://cython.org/) installed. This is currently
-   required, but will eventually not be necessary.
+1. Make sure you have [cython](http://cython.org/) installed. 
 
 2. Compile the python extension:
     ```sh
@@ -81,10 +75,12 @@ environment right now, by following these instructions:
     ```python
     import indexed_gzip as igzip
 
-    # The file handle must be opened
-    # in read-only binary mode. Write
-    # support is currently non-existent.
-    myfile = igzip.IndexedGzipFile(open('big_file.gz', 'rb'))
+    # You can create an IndexedGzipFile instance
+    # by specifying a file name, or an open file
+    # handle. For the latter use, the file handle
+    # must be opened in read-only binary mode.
+    # Write support is currently non-existent.
+    myfile = igzip.IndexedGzipFile('big_file.gz')
 
     some_offset_into_uncompressed_data = 234195
 

@@ -1,74 +1,173 @@
-from libc.stdio cimport *
+#
+# The IndexedGzipFile class.
+#
+# Author: Paul McCarthy <pauldmccarthy@gmail.com>
+# 
 
-from cpython.mem cimport PyMem_Malloc, PyMem_Realloc, PyMem_Free
+from libc.stdio  cimport (SEEK_SET,
+                          FILE,
+                          fdopen)
 
-cdef extern from "stdio.h":
-    ctypedef void *FILE
-    FILE *fdopen(int, const char *)
-    int SEEK_SET
-
+from cpython.mem cimport (PyMem_Malloc,
+                          PyMem_Realloc,
+                          PyMem_Free)
 
 cimport zran
 
 
-class NotCoveredError(object):
+class NotCoveredError(Exception):
+    """Exception raised by the IndexedGzipFile when an attempt is made to seek
+    to/read from a location that is not covered by the index. This exception
+    will never be raised if the IndexedGzipFile was created with
+    auto_build=True.
+    """
     pass
-    
+
+
+class ZranError(Exception):
+    """Exception raised by the IndexedGzipFile when the zran library signals
+    an error.
+    """
+    pass
 
 
 cdef class IndexedGzipFile:
+    """The IndexedGzipFile class allows for fast random access of a gzip file
+    by using the zran library to build and maintain an index of seek points
+    into the file.
+    """
+
+    
     cdef zran.zran_index_t index
+    """A reference to the zran_index struct. """
+
+    
+    cdef bint auto_build
+    """Flag which is set to True if the file index is built automatically on
+    seeks/reads.
+    """
+
+    
+    cdef bint own_file
+    """Flag which is set to True if the user specified a file name instead of
+    an open file handle. In this case, the IndexedGzipFile is responsible for
+    closing the file handle when it is destroyed.
+    """
+
+    
+    cdef FILE *cfid
+    """A reference to the C file handle. """
+
+    
+    cdef object pyfid
+    """A reference to the python file handle. """
+    
 
     def __cinit__(self,
-                  fid,
+                  fid=None,
+                  filename=None,
+                  auto_build=True,
                   spacing=1048576,
                   window_size=32768,
-                  readbuf_size=16384,
-                  auto_build=False):
+                  readbuf_size=16384):
+        """Create an IndexedGzipFile. The file may be specified either with an
+        open file handle, or with a filename. If the former, the file must have
+        been opened in 'rb' mode.
 
-        cdef FILE *cfid
-        cdef int flags
-
-        if auto_build:
-            flags = zran.ZRAN_AUTO_BUILD
-
-        cfid = fdopen(fid.fileno(), 'rb')
+        :arg fid:          Open file handle.
         
-        if zran.zran_init(&self.index,
-                          cfid,
-                          spacing,
-                          window_size,
-                          readbuf_size,
-                          flags):
-            raise RuntimeError()
+        :arg filename:     File name.
+        
+        :arg auto_build:   If True (the default), the index is automatically 
+                           built on seeks/reads.
+        
+        :arg spacing:      Number of bytes between index seek points.
+        
+        :arg window_size:  Number of bytes of uncompressed data stored with
+                           each seek point.
+        
+        :arg readbuf_size: Size of buffer in bytes for storing compressed data
+                           read in from the file.
+        """
+
+        if fid is None and filename is None:
+
+            raise ValueError('One of fid or filename must be specified')
+
+        if fid is not None and fid.mode != 'rb':
+            raise ValueError('The gzip file must be opened in '
+                             'read-only binary ("rb") mode')
+
+        self.own_file   = fid is None
+        self.auto_build = auto_build
+        
+        if self.own_file: self.pyfid = open(filename, 'rb')
+        else:             self.pyfid = fid
+
+        self.cfid = fdopen(fid.fileno(), 'rb')
+
+        if self.auto_build: flags = zran.ZRAN_AUTO_BUILD
+        else:               flags = 0
+        
+        if zran.zran_init(index=&self.index,
+                          fd=self.cfid,
+                          spacing=spacing,
+                          window_size=window_size,
+                          readbuf_size=readbuf_size,
+                          flags=flags):
+            raise ZranError('zran_init returned error')
+
+
+    def build_full_index(self):
+        """Re-builds the full file index. """
+        
+        if zran.zran_build_index(&self.index, 0, 0) != 0:
+            raise ZranError('zran_build_index returned error')
 
 
     def seek(self, offset):
+        """Seeks to the specified position in the uncompressed data stream.
+
+        If this IndexedGzipFile was created with auto_build=False, and the
+        requested offset is not covered by the index, a NotCoveredError is
+        raised.
+        """
 
         ret = zran.zran_seek(&self.index, offset, SEEK_SET, NULL)
 
         if ret < 0:
-            raise RuntimeError()
+            raise ZranError('zran_seek returned error')
+        
         elif ret > 0:
-            raise NotCoveredError()
+            raise NotCoveredError('Index does not cover '
+                                  'offset {}'.format(offset))
         
 
     def read(self, nbytes):
+        """Reads up to nbytes bytes from the uncompressed data stream. """
 
         cdef void *buf = PyMem_Malloc(nbytes);
 
         if not buf:
-            raise MemoryError()
+            raise MemoryError('PyMem_Malloc fail')
 
         ret = zran.zran_read(&self.index, buf, nbytes)
 
         if ret <= 0:
             PyMem_Free(buf)
 
-        if   ret <  -1: raise RuntimeError() 
-        elif ret == -1: raise NotCoveredError()
-        elif ret ==  0: pybuf = bytes()
-        elif ret >   0:
+        if ret < -1:
+            raise ZranError('zran_read returned error')
+        
+        elif ret == -1:
+            raise NotCoveredError('Index does not cover current offset')
+
+        # 0 bytes read
+        elif ret ==  0:
+            pybuf = bytes()
+
+        # Some bytes read
+        elif ret > 0:
             buf   = PyMem_Realloc(buf, ret)
             pybuf = <bytes>(<char *>buf)[:ret]
 
@@ -76,4 +175,11 @@ cdef class IndexedGzipFile:
 
     
     def __dealloc__(self):
+        """Frees the memory used by this IndexedGzipFile. If a file name was
+        passed to __cinit__, the file handle is closed.
+        """
+        
         zran.zran_free(&self.index)
+
+        if self.own_file:
+            self.pyfid.close()

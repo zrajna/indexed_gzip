@@ -4,8 +4,8 @@
 /*
  * The zran module is an adaptation of the zran example, written by Mark
  * Alder, which ships with the zlib source code. It allows the creation
- * of an index into a compressed file, which is used to improve random
- * seek/read access to the uncompressed data.
+ * of an index into a compressed file, which is used to improve the speed 
+ * of random seek/read access to the uncompressed data.
  *
  * Author: Paul McCarthy <pauldmccarthy@gmail.com>
  */
@@ -169,14 +169,15 @@ void zran_free(
 
 /*
  * (Re-)Builds the index to cover the given range, which must be 
- * specified relative to the compressed data stream.
+ * specified relative to the compressed data stream. Pass in 0
+ * for both offsets to re-build the full index.
  * 
  * Returns 0 on success, non-0 on failure.
  */
 int zran_build_index(
   zran_index_t *index, /* The index */
-  uint64_t      from,  /* Build the inde from this point */
-  uint64_t      until  /* Build the inde to this point   */
+  uint64_t      from,  /* Build the index from this point */
+  uint64_t      until  /* Build the index to this point   */
 );
 
 

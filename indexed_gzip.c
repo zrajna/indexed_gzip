@@ -251,6 +251,8 @@ static CYTHON_INLINE float __PYX_NAN() {
 #define __PYX_HAVE_API__indexed_gzip
 #include "string.h"
 #include "stdio.h"
+#include "stdint.h"
+#include "sys/types.h"
 #include "zran.h"
 #ifdef _OPENMP
 #include <omp.h>
@@ -466,16 +468,20 @@ static const char *__pyx_f[] = {
 /*--- Type declarations ---*/
 struct __pyx_obj_12indexed_gzip_IndexedGzipFile;
 
-/* "indexed_gzip.pyx":19
+/* "indexed_gzip.pyx":34
  * 
  * 
  * cdef class IndexedGzipFile:             # <<<<<<<<<<<<<<
- *     cdef zran.zran_index_t index
- * 
+ *     """The IndexedGzipFile class allows for fast random access of a gzip file
+ *     by using the zran library to build and maintain an index of seek points
  */
 struct __pyx_obj_12indexed_gzip_IndexedGzipFile {
   PyObject_HEAD
   zran_index_t index;
+  int auto_build;
+  int own_file;
+  FILE *cfid;
+  PyObject *pyfid;
 };
 
 
@@ -574,6 +580,23 @@ static CYTHON_INLINE PyObject* __Pyx_PyObject_Call(PyObject *func, PyObject *arg
 #define __Pyx_PyObject_Call(func, arg, kw) PyObject_Call(func, arg, kw)
 #endif
 
+static CYTHON_INLINE void __Pyx_ErrRestore(PyObject *type, PyObject *value, PyObject *tb);
+static CYTHON_INLINE void __Pyx_ErrFetch(PyObject **type, PyObject **value, PyObject **tb);
+
+static void __Pyx_Raise(PyObject *type, PyObject *value, PyObject *tb, PyObject *cause);
+
+#include <string.h>
+
+static CYTHON_INLINE int __Pyx_PyBytes_Equals(PyObject* s1, PyObject* s2, int equals);
+
+static CYTHON_INLINE int __Pyx_PyUnicode_Equals(PyObject* s1, PyObject* s2, int equals);
+
+#if PY_MAJOR_VERSION >= 3
+#define __Pyx_PyString_Equals __Pyx_PyUnicode_Equals
+#else
+#define __Pyx_PyString_Equals __Pyx_PyBytes_Equals
+#endif
+
 #if CYTHON_COMPILING_IN_CPYTHON
 static CYTHON_INLINE PyObject* __Pyx_PyObject_CallMethO(PyObject *func, PyObject *arg);
 #endif
@@ -586,14 +609,13 @@ static CYTHON_INLINE PyObject* __Pyx_PyObject_CallNoArg(PyObject *func);
 #define __Pyx_PyObject_CallNoArg(func) __Pyx_PyObject_Call(func, __pyx_empty_tuple, NULL)
 #endif
 
-static CYTHON_INLINE void __Pyx_ErrRestore(PyObject *type, PyObject *value, PyObject *tb);
-static CYTHON_INLINE void __Pyx_ErrFetch(PyObject **type, PyObject **value, PyObject **tb);
-
-static void __Pyx_Raise(PyObject *type, PyObject *value, PyObject *tb, PyObject *cause);
-
 static CYTHON_INLINE PyObject *__Pyx_GetModuleGlobalName(PyObject *name);
 
 static CYTHON_INLINE void __Pyx_RaiseUnboundLocalError(const char *varname);
+
+static void __Pyx_WriteUnraisable(const char *name, int clineno,
+                                  int lineno, const char *filename,
+                                  int full_traceback, int nogil);
 
 static PyObject *__Pyx_CalculateMetaclass(PyTypeObject *metaclass, PyObject *bases);
 
@@ -621,11 +643,15 @@ static void __Pyx_AddTraceback(const char *funcname, int c_line,
 
 static CYTHON_INLINE int __Pyx_PyInt_As_int(PyObject *);
 
-static CYTHON_INLINE long __Pyx_PyInt_As_long(PyObject *);
+static CYTHON_INLINE uint32_t __Pyx_PyInt_As_uint32_t(PyObject *);
+
+static CYTHON_INLINE off_t __Pyx_PyInt_As_off_t(PyObject *);
 
 static CYTHON_INLINE size_t __Pyx_PyInt_As_size_t(PyObject *);
 
 static CYTHON_INLINE PyObject* __Pyx_PyInt_From_long(long value);
+
+static CYTHON_INLINE long __Pyx_PyInt_As_long(PyObject *);
 
 static int __Pyx_check_binary_version(void);
 
@@ -638,6 +664,10 @@ static int __Pyx_InitStrings(__Pyx_StringTabEntry *t);
 
 /* Module declarations from 'cpython.mem' */
 
+/* Module declarations from 'libc.stdint' */
+
+/* Module declarations from 'posix.types' */
+
 /* Module declarations from 'zran' */
 
 /* Module declarations from 'indexed_gzip' */
@@ -646,71 +676,117 @@ static PyTypeObject *__pyx_ptype_12indexed_gzip_IndexedGzipFile = 0;
 int __pyx_module_is_main_indexed_gzip = 0;
 
 /* Implementation of 'indexed_gzip' */
-static PyObject *__pyx_builtin_object;
-static PyObject *__pyx_builtin_RuntimeError;
+static PyObject *__pyx_builtin_Exception;
+static PyObject *__pyx_builtin_ValueError;
+static PyObject *__pyx_builtin_open;
 static PyObject *__pyx_builtin_MemoryError;
 static char __pyx_k_rb[] = "rb";
 static char __pyx_k_doc[] = "__doc__";
 static char __pyx_k_fid[] = "fid";
 static char __pyx_k_main[] = "__main__";
+static char __pyx_k_mode[] = "mode";
+static char __pyx_k_open[] = "open";
 static char __pyx_k_test[] = "__test__";
+static char __pyx_k_close[] = "close";
 static char __pyx_k_fileno[] = "fileno";
+static char __pyx_k_format[] = "format";
 static char __pyx_k_module[] = "__module__";
-static char __pyx_k_object[] = "object";
 static char __pyx_k_prepare[] = "__prepare__";
 static char __pyx_k_spacing[] = "spacing";
+static char __pyx_k_filename[] = "filename";
 static char __pyx_k_qualname[] = "__qualname__";
+static char __pyx_k_Exception[] = "Exception";
+static char __pyx_k_ZranError[] = "ZranError";
 static char __pyx_k_metaclass[] = "__metaclass__";
+static char __pyx_k_ValueError[] = "ValueError";
 static char __pyx_k_auto_build[] = "auto_build";
 static char __pyx_k_MemoryError[] = "MemoryError";
 static char __pyx_k_window_size[] = "window_size";
-static char __pyx_k_RuntimeError[] = "RuntimeError";
 static char __pyx_k_indexed_gzip[] = "indexed_gzip";
 static char __pyx_k_readbuf_size[] = "readbuf_size";
 static char __pyx_k_NotCoveredError[] = "NotCoveredError";
+static char __pyx_k_PyMem_Malloc_fail[] = "PyMem_Malloc fail";
+static char __pyx_k_zran_init_returned_error[] = "zran_init returned error";
+static char __pyx_k_zran_read_returned_error[] = "zran_read returned error";
+static char __pyx_k_zran_seek_returned_error[] = "zran_seek returned error";
+static char __pyx_k_Index_does_not_cover_offset[] = "Index does not cover offset {}";
+static char __pyx_k_The_gzip_file_must_be_opened_in[] = "The gzip file must be opened in read-only binary (\"rb\") mode";
+static char __pyx_k_zran_build_index_returned_error[] = "zran_build_index returned error";
+static char __pyx_k_Exception_raised_by_the_IndexedG[] = "Exception raised by the IndexedGzipFile when an attempt is made to seek\n    to/read from a location that is not covered by the index. This exception\n    will never be raised if the IndexedGzipFile was created with\n    auto_build=True.\n    ";
+static char __pyx_k_Index_does_not_cover_current_off[] = "Index does not cover current offset";
+static char __pyx_k_One_of_fid_or_filename_must_be_s[] = "One of fid or filename must be specified";
+static char __pyx_k_Exception_raised_by_the_IndexedG_2[] = "Exception raised by the IndexedGzipFile when the zran library signals\n    an error.\n    ";
+static PyObject *__pyx_n_s_Exception;
+static PyObject *__pyx_kp_s_Exception_raised_by_the_IndexedG;
+static PyObject *__pyx_kp_s_Exception_raised_by_the_IndexedG_2;
+static PyObject *__pyx_kp_s_Index_does_not_cover_current_off;
+static PyObject *__pyx_kp_s_Index_does_not_cover_offset;
 static PyObject *__pyx_n_s_MemoryError;
 static PyObject *__pyx_n_s_NotCoveredError;
-static PyObject *__pyx_n_s_RuntimeError;
+static PyObject *__pyx_kp_s_One_of_fid_or_filename_must_be_s;
+static PyObject *__pyx_kp_s_PyMem_Malloc_fail;
+static PyObject *__pyx_kp_s_The_gzip_file_must_be_opened_in;
+static PyObject *__pyx_n_s_ValueError;
+static PyObject *__pyx_n_s_ZranError;
 static PyObject *__pyx_n_s_auto_build;
+static PyObject *__pyx_n_s_close;
 static PyObject *__pyx_n_s_doc;
 static PyObject *__pyx_n_s_fid;
+static PyObject *__pyx_n_s_filename;
 static PyObject *__pyx_n_s_fileno;
+static PyObject *__pyx_n_s_format;
 static PyObject *__pyx_n_s_indexed_gzip;
 static PyObject *__pyx_n_s_main;
 static PyObject *__pyx_n_s_metaclass;
+static PyObject *__pyx_n_s_mode;
 static PyObject *__pyx_n_s_module;
-static PyObject *__pyx_n_s_object;
+static PyObject *__pyx_n_s_open;
 static PyObject *__pyx_n_s_prepare;
 static PyObject *__pyx_n_s_qualname;
+static PyObject *__pyx_n_s_rb;
 static PyObject *__pyx_n_s_readbuf_size;
 static PyObject *__pyx_n_s_spacing;
 static PyObject *__pyx_n_s_test;
 static PyObject *__pyx_n_s_window_size;
-static int __pyx_pf_12indexed_gzip_15IndexedGzipFile___cinit__(struct __pyx_obj_12indexed_gzip_IndexedGzipFile *__pyx_v_self, PyObject *__pyx_v_fid, PyObject *__pyx_v_spacing, PyObject *__pyx_v_window_size, PyObject *__pyx_v_readbuf_size, PyObject *__pyx_v_auto_build); /* proto */
-static PyObject *__pyx_pf_12indexed_gzip_15IndexedGzipFile_2seek(struct __pyx_obj_12indexed_gzip_IndexedGzipFile *__pyx_v_self, PyObject *__pyx_v_offset); /* proto */
-static PyObject *__pyx_pf_12indexed_gzip_15IndexedGzipFile_4read(struct __pyx_obj_12indexed_gzip_IndexedGzipFile *__pyx_v_self, PyObject *__pyx_v_nbytes); /* proto */
-static void __pyx_pf_12indexed_gzip_15IndexedGzipFile_6__dealloc__(struct __pyx_obj_12indexed_gzip_IndexedGzipFile *__pyx_v_self); /* proto */
+static PyObject *__pyx_kp_s_zran_build_index_returned_error;
+static PyObject *__pyx_kp_s_zran_init_returned_error;
+static PyObject *__pyx_kp_s_zran_read_returned_error;
+static PyObject *__pyx_kp_s_zran_seek_returned_error;
+static int __pyx_pf_12indexed_gzip_15IndexedGzipFile___cinit__(struct __pyx_obj_12indexed_gzip_IndexedGzipFile *__pyx_v_self, PyObject *__pyx_v_fid, PyObject *__pyx_v_filename, PyObject *__pyx_v_auto_build, PyObject *__pyx_v_spacing, PyObject *__pyx_v_window_size, PyObject *__pyx_v_readbuf_size); /* proto */
+static PyObject *__pyx_pf_12indexed_gzip_15IndexedGzipFile_2build_full_index(struct __pyx_obj_12indexed_gzip_IndexedGzipFile *__pyx_v_self); /* proto */
+static PyObject *__pyx_pf_12indexed_gzip_15IndexedGzipFile_4seek(struct __pyx_obj_12indexed_gzip_IndexedGzipFile *__pyx_v_self, PyObject *__pyx_v_offset); /* proto */
+static PyObject *__pyx_pf_12indexed_gzip_15IndexedGzipFile_6read(struct __pyx_obj_12indexed_gzip_IndexedGzipFile *__pyx_v_self, PyObject *__pyx_v_nbytes); /* proto */
+static void __pyx_pf_12indexed_gzip_15IndexedGzipFile_8__dealloc__(struct __pyx_obj_12indexed_gzip_IndexedGzipFile *__pyx_v_self); /* proto */
 static PyObject *__pyx_tp_new_12indexed_gzip_IndexedGzipFile(PyTypeObject *t, PyObject *a, PyObject *k); /*proto*/
 static PyObject *__pyx_int_16384;
 static PyObject *__pyx_int_32768;
 static PyObject *__pyx_int_1048576;
+static PyObject *__pyx_tuple_;
+static PyObject *__pyx_tuple__2;
+static PyObject *__pyx_tuple__3;
+static PyObject *__pyx_tuple__4;
+static PyObject *__pyx_tuple__5;
+static PyObject *__pyx_tuple__6;
+static PyObject *__pyx_tuple__7;
+static PyObject *__pyx_tuple__8;
 
-/* "indexed_gzip.pyx":22
- *     cdef zran.zran_index_t index
+/* "indexed_gzip.pyx":66
+ * 
  * 
  *     def __cinit__(self,             # <<<<<<<<<<<<<<
- *                   fid,
- *                   spacing=1048576,
+ *                   fid=None,
+ *                   filename=None,
  */
 
 /* Python wrapper */
 static int __pyx_pw_12indexed_gzip_15IndexedGzipFile_1__cinit__(PyObject *__pyx_v_self, PyObject *__pyx_args, PyObject *__pyx_kwds); /*proto*/
 static int __pyx_pw_12indexed_gzip_15IndexedGzipFile_1__cinit__(PyObject *__pyx_v_self, PyObject *__pyx_args, PyObject *__pyx_kwds) {
   PyObject *__pyx_v_fid = 0;
+  PyObject *__pyx_v_filename = 0;
+  PyObject *__pyx_v_auto_build = 0;
   PyObject *__pyx_v_spacing = 0;
   PyObject *__pyx_v_window_size = 0;
   PyObject *__pyx_v_readbuf_size = 0;
-  PyObject *__pyx_v_auto_build = 0;
   int __pyx_lineno = 0;
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
@@ -718,24 +794,43 @@ static int __pyx_pw_12indexed_gzip_15IndexedGzipFile_1__cinit__(PyObject *__pyx_
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("__cinit__ (wrapper)", 0);
   {
-    static PyObject **__pyx_pyargnames[] = {&__pyx_n_s_fid,&__pyx_n_s_spacing,&__pyx_n_s_window_size,&__pyx_n_s_readbuf_size,&__pyx_n_s_auto_build,0};
-    PyObject* values[5] = {0,0,0,0,0};
-    values[1] = ((PyObject *)__pyx_int_1048576);
-    values[2] = ((PyObject *)__pyx_int_32768);
-    values[3] = ((PyObject *)__pyx_int_16384);
+    static PyObject **__pyx_pyargnames[] = {&__pyx_n_s_fid,&__pyx_n_s_filename,&__pyx_n_s_auto_build,&__pyx_n_s_spacing,&__pyx_n_s_window_size,&__pyx_n_s_readbuf_size,0};
+    PyObject* values[6] = {0,0,0,0,0,0};
 
-    /* "indexed_gzip.pyx":27
- *                   window_size=32768,
- *                   readbuf_size=16384,
- *                   auto_build=False):             # <<<<<<<<<<<<<<
+    /* "indexed_gzip.pyx":67
  * 
- *         cdef FILE *cfid
+ *     def __cinit__(self,
+ *                   fid=None,             # <<<<<<<<<<<<<<
+ *                   filename=None,
+ *                   auto_build=True,
  */
-    values[4] = ((PyObject *)Py_False);
+    values[0] = ((PyObject *)Py_None);
+
+    /* "indexed_gzip.pyx":68
+ *     def __cinit__(self,
+ *                   fid=None,
+ *                   filename=None,             # <<<<<<<<<<<<<<
+ *                   auto_build=True,
+ *                   spacing=1048576,
+ */
+    values[1] = ((PyObject *)Py_None);
+
+    /* "indexed_gzip.pyx":69
+ *                   fid=None,
+ *                   filename=None,
+ *                   auto_build=True,             # <<<<<<<<<<<<<<
+ *                   spacing=1048576,
+ *                   window_size=32768,
+ */
+    values[2] = ((PyObject *)Py_True);
+    values[3] = ((PyObject *)__pyx_int_1048576);
+    values[4] = ((PyObject *)__pyx_int_32768);
+    values[5] = ((PyObject *)__pyx_int_16384);
     if (unlikely(__pyx_kwds)) {
       Py_ssize_t kw_args;
       const Py_ssize_t pos_args = PyTuple_GET_SIZE(__pyx_args);
       switch (pos_args) {
+        case  6: values[5] = PyTuple_GET_ITEM(__pyx_args, 5);
         case  5: values[4] = PyTuple_GET_ITEM(__pyx_args, 4);
         case  4: values[3] = PyTuple_GET_ITEM(__pyx_args, 3);
         case  3: values[2] = PyTuple_GET_ITEM(__pyx_args, 2);
@@ -747,65 +842,74 @@ static int __pyx_pw_12indexed_gzip_15IndexedGzipFile_1__cinit__(PyObject *__pyx_
       kw_args = PyDict_Size(__pyx_kwds);
       switch (pos_args) {
         case  0:
-        if (likely((values[0] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_fid)) != 0)) kw_args--;
-        else goto __pyx_L5_argtuple_error;
+        if (kw_args > 0) {
+          PyObject* value = PyDict_GetItem(__pyx_kwds, __pyx_n_s_fid);
+          if (value) { values[0] = value; kw_args--; }
+        }
         case  1:
         if (kw_args > 0) {
-          PyObject* value = PyDict_GetItem(__pyx_kwds, __pyx_n_s_spacing);
+          PyObject* value = PyDict_GetItem(__pyx_kwds, __pyx_n_s_filename);
           if (value) { values[1] = value; kw_args--; }
         }
         case  2:
         if (kw_args > 0) {
-          PyObject* value = PyDict_GetItem(__pyx_kwds, __pyx_n_s_window_size);
+          PyObject* value = PyDict_GetItem(__pyx_kwds, __pyx_n_s_auto_build);
           if (value) { values[2] = value; kw_args--; }
         }
         case  3:
         if (kw_args > 0) {
-          PyObject* value = PyDict_GetItem(__pyx_kwds, __pyx_n_s_readbuf_size);
+          PyObject* value = PyDict_GetItem(__pyx_kwds, __pyx_n_s_spacing);
           if (value) { values[3] = value; kw_args--; }
         }
         case  4:
         if (kw_args > 0) {
-          PyObject* value = PyDict_GetItem(__pyx_kwds, __pyx_n_s_auto_build);
+          PyObject* value = PyDict_GetItem(__pyx_kwds, __pyx_n_s_window_size);
           if (value) { values[4] = value; kw_args--; }
+        }
+        case  5:
+        if (kw_args > 0) {
+          PyObject* value = PyDict_GetItem(__pyx_kwds, __pyx_n_s_readbuf_size);
+          if (value) { values[5] = value; kw_args--; }
         }
       }
       if (unlikely(kw_args > 0)) {
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "__cinit__") < 0)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 22; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "__cinit__") < 0)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 66; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
       }
     } else {
       switch (PyTuple_GET_SIZE(__pyx_args)) {
+        case  6: values[5] = PyTuple_GET_ITEM(__pyx_args, 5);
         case  5: values[4] = PyTuple_GET_ITEM(__pyx_args, 4);
         case  4: values[3] = PyTuple_GET_ITEM(__pyx_args, 3);
         case  3: values[2] = PyTuple_GET_ITEM(__pyx_args, 2);
         case  2: values[1] = PyTuple_GET_ITEM(__pyx_args, 1);
         case  1: values[0] = PyTuple_GET_ITEM(__pyx_args, 0);
-        break;
+        case  0: break;
         default: goto __pyx_L5_argtuple_error;
       }
     }
     __pyx_v_fid = values[0];
-    __pyx_v_spacing = values[1];
-    __pyx_v_window_size = values[2];
-    __pyx_v_readbuf_size = values[3];
-    __pyx_v_auto_build = values[4];
+    __pyx_v_filename = values[1];
+    __pyx_v_auto_build = values[2];
+    __pyx_v_spacing = values[3];
+    __pyx_v_window_size = values[4];
+    __pyx_v_readbuf_size = values[5];
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("__cinit__", 0, 1, 5, PyTuple_GET_SIZE(__pyx_args)); {__pyx_filename = __pyx_f[0]; __pyx_lineno = 22; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
+  __Pyx_RaiseArgtupleInvalid("__cinit__", 0, 0, 6, PyTuple_GET_SIZE(__pyx_args)); {__pyx_filename = __pyx_f[0]; __pyx_lineno = 66; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
   __pyx_L3_error:;
   __Pyx_AddTraceback("indexed_gzip.IndexedGzipFile.__cinit__", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
   return -1;
   __pyx_L4_argument_unpacking_done:;
-  __pyx_r = __pyx_pf_12indexed_gzip_15IndexedGzipFile___cinit__(((struct __pyx_obj_12indexed_gzip_IndexedGzipFile *)__pyx_v_self), __pyx_v_fid, __pyx_v_spacing, __pyx_v_window_size, __pyx_v_readbuf_size, __pyx_v_auto_build);
+  __pyx_r = __pyx_pf_12indexed_gzip_15IndexedGzipFile___cinit__(((struct __pyx_obj_12indexed_gzip_IndexedGzipFile *)__pyx_v_self), __pyx_v_fid, __pyx_v_filename, __pyx_v_auto_build, __pyx_v_spacing, __pyx_v_window_size, __pyx_v_readbuf_size);
 
-  /* "indexed_gzip.pyx":22
- *     cdef zran.zran_index_t index
+  /* "indexed_gzip.pyx":66
+ * 
  * 
  *     def __cinit__(self,             # <<<<<<<<<<<<<<
- *                   fid,
- *                   spacing=1048576,
+ *                   fid=None,
+ *                   filename=None,
  */
 
   /* function exit code */
@@ -813,156 +917,308 @@ static int __pyx_pw_12indexed_gzip_15IndexedGzipFile_1__cinit__(PyObject *__pyx_
   return __pyx_r;
 }
 
-static int __pyx_pf_12indexed_gzip_15IndexedGzipFile___cinit__(struct __pyx_obj_12indexed_gzip_IndexedGzipFile *__pyx_v_self, PyObject *__pyx_v_fid, PyObject *__pyx_v_spacing, PyObject *__pyx_v_window_size, PyObject *__pyx_v_readbuf_size, PyObject *__pyx_v_auto_build) {
-  FILE *__pyx_v_cfid;
-  int __pyx_v_flags;
+static int __pyx_pf_12indexed_gzip_15IndexedGzipFile___cinit__(struct __pyx_obj_12indexed_gzip_IndexedGzipFile *__pyx_v_self, PyObject *__pyx_v_fid, PyObject *__pyx_v_filename, PyObject *__pyx_v_auto_build, PyObject *__pyx_v_spacing, PyObject *__pyx_v_window_size, PyObject *__pyx_v_readbuf_size) {
+  long __pyx_v_flags;
   int __pyx_r;
   __Pyx_RefNannyDeclarations
   int __pyx_t_1;
-  PyObject *__pyx_t_2 = NULL;
-  PyObject *__pyx_t_3 = NULL;
+  int __pyx_t_2;
+  int __pyx_t_3;
   PyObject *__pyx_t_4 = NULL;
-  int __pyx_t_5;
-  int __pyx_t_6;
+  PyObject *__pyx_t_5 = NULL;
+  PyObject *__pyx_t_6 = NULL;
   int __pyx_t_7;
+  uint32_t __pyx_t_8;
+  uint32_t __pyx_t_9;
+  uint32_t __pyx_t_10;
   int __pyx_lineno = 0;
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__cinit__", 0);
 
-  /* "indexed_gzip.pyx":32
- *         cdef int flags
+  /* "indexed_gzip.pyx":93
+ *         """
  * 
- *         if auto_build:             # <<<<<<<<<<<<<<
- *             flags = zran.ZRAN_AUTO_BUILD
+ *         if fid is None and filename is None:             # <<<<<<<<<<<<<<
  * 
+ *             raise ValueError('One of fid or filename must be specified')
  */
-  __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_v_auto_build); if (unlikely(__pyx_t_1 < 0)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 32; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_2 = (__pyx_v_fid == Py_None);
+  __pyx_t_3 = (__pyx_t_2 != 0);
+  if (__pyx_t_3) {
+  } else {
+    __pyx_t_1 = __pyx_t_3;
+    goto __pyx_L4_bool_binop_done;
+  }
+  __pyx_t_3 = (__pyx_v_filename == Py_None);
+  __pyx_t_2 = (__pyx_t_3 != 0);
+  __pyx_t_1 = __pyx_t_2;
+  __pyx_L4_bool_binop_done:;
   if (__pyx_t_1) {
 
-    /* "indexed_gzip.pyx":33
+    /* "indexed_gzip.pyx":95
+ *         if fid is None and filename is None:
  * 
- *         if auto_build:
- *             flags = zran.ZRAN_AUTO_BUILD             # <<<<<<<<<<<<<<
+ *             raise ValueError('One of fid or filename must be specified')             # <<<<<<<<<<<<<<
  * 
- *         cfid = fdopen(fid.fileno(), 'rb')
+ *         if fid is not None and fid.mode != 'rb':
  */
-    __pyx_v_flags = ZRAN_AUTO_BUILD;
+    __pyx_t_4 = __Pyx_PyObject_Call(__pyx_builtin_ValueError, __pyx_tuple_, NULL); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 95; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __Pyx_GOTREF(__pyx_t_4);
+    __Pyx_Raise(__pyx_t_4, 0, 0, 0);
+    __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
+    {__pyx_filename = __pyx_f[0]; __pyx_lineno = 95; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
 
-    /* "indexed_gzip.pyx":32
- *         cdef int flags
+    /* "indexed_gzip.pyx":93
+ *         """
  * 
- *         if auto_build:             # <<<<<<<<<<<<<<
- *             flags = zran.ZRAN_AUTO_BUILD
+ *         if fid is None and filename is None:             # <<<<<<<<<<<<<<
  * 
+ *             raise ValueError('One of fid or filename must be specified')
  */
   }
 
-  /* "indexed_gzip.pyx":35
- *             flags = zran.ZRAN_AUTO_BUILD
+  /* "indexed_gzip.pyx":97
+ *             raise ValueError('One of fid or filename must be specified')
  * 
- *         cfid = fdopen(fid.fileno(), 'rb')             # <<<<<<<<<<<<<<
- * 
- *         if zran.zran_init(&self.index,
+ *         if fid is not None and fid.mode != 'rb':             # <<<<<<<<<<<<<<
+ *             raise ValueError('The gzip file must be opened in '
+ *                              'read-only binary ("rb") mode')
  */
-  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_v_fid, __pyx_n_s_fileno); if (unlikely(!__pyx_t_3)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 35; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
-  __Pyx_GOTREF(__pyx_t_3);
-  __pyx_t_4 = NULL;
-  if (CYTHON_COMPILING_IN_CPYTHON && likely(PyMethod_Check(__pyx_t_3))) {
-    __pyx_t_4 = PyMethod_GET_SELF(__pyx_t_3);
-    if (likely(__pyx_t_4)) {
-      PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_3);
-      __Pyx_INCREF(__pyx_t_4);
+  __pyx_t_2 = (__pyx_v_fid != Py_None);
+  __pyx_t_3 = (__pyx_t_2 != 0);
+  if (__pyx_t_3) {
+  } else {
+    __pyx_t_1 = __pyx_t_3;
+    goto __pyx_L7_bool_binop_done;
+  }
+  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_fid, __pyx_n_s_mode); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 97; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __Pyx_GOTREF(__pyx_t_4);
+  __pyx_t_3 = (__Pyx_PyString_Equals(__pyx_t_4, __pyx_n_s_rb, Py_NE)); if (unlikely(__pyx_t_3 < 0)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 97; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
+  __pyx_t_1 = __pyx_t_3;
+  __pyx_L7_bool_binop_done:;
+  if (__pyx_t_1) {
+
+    /* "indexed_gzip.pyx":98
+ * 
+ *         if fid is not None and fid.mode != 'rb':
+ *             raise ValueError('The gzip file must be opened in '             # <<<<<<<<<<<<<<
+ *                              'read-only binary ("rb") mode')
+ * 
+ */
+    __pyx_t_4 = __Pyx_PyObject_Call(__pyx_builtin_ValueError, __pyx_tuple__2, NULL); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 98; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __Pyx_GOTREF(__pyx_t_4);
+    __Pyx_Raise(__pyx_t_4, 0, 0, 0);
+    __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
+    {__pyx_filename = __pyx_f[0]; __pyx_lineno = 98; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+
+    /* "indexed_gzip.pyx":97
+ *             raise ValueError('One of fid or filename must be specified')
+ * 
+ *         if fid is not None and fid.mode != 'rb':             # <<<<<<<<<<<<<<
+ *             raise ValueError('The gzip file must be opened in '
+ *                              'read-only binary ("rb") mode')
+ */
+  }
+
+  /* "indexed_gzip.pyx":101
+ *                              'read-only binary ("rb") mode')
+ * 
+ *         self.own_file   = fid is None             # <<<<<<<<<<<<<<
+ *         self.auto_build = auto_build
+ * 
+ */
+  __pyx_t_1 = (__pyx_v_fid == Py_None);
+  __pyx_v_self->own_file = __pyx_t_1;
+
+  /* "indexed_gzip.pyx":102
+ * 
+ *         self.own_file   = fid is None
+ *         self.auto_build = auto_build             # <<<<<<<<<<<<<<
+ * 
+ *         if self.own_file: self.pyfid = open(filename, 'rb')
+ */
+  __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_v_auto_build); if (unlikely((__pyx_t_1 == (int)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 102; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_v_self->auto_build = __pyx_t_1;
+
+  /* "indexed_gzip.pyx":104
+ *         self.auto_build = auto_build
+ * 
+ *         if self.own_file: self.pyfid = open(filename, 'rb')             # <<<<<<<<<<<<<<
+ *         else:             self.pyfid = fid
+ * 
+ */
+  __pyx_t_1 = (__pyx_v_self->own_file != 0);
+  if (__pyx_t_1) {
+    __pyx_t_4 = PyTuple_New(2); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 104; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __Pyx_GOTREF(__pyx_t_4);
+    __Pyx_INCREF(__pyx_v_filename);
+    __Pyx_GIVEREF(__pyx_v_filename);
+    PyTuple_SET_ITEM(__pyx_t_4, 0, __pyx_v_filename);
+    __Pyx_INCREF(__pyx_n_s_rb);
+    __Pyx_GIVEREF(__pyx_n_s_rb);
+    PyTuple_SET_ITEM(__pyx_t_4, 1, __pyx_n_s_rb);
+    __pyx_t_5 = __Pyx_PyObject_Call(__pyx_builtin_open, __pyx_t_4, NULL); if (unlikely(!__pyx_t_5)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 104; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __Pyx_GOTREF(__pyx_t_5);
+    __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
+    __Pyx_GIVEREF(__pyx_t_5);
+    __Pyx_GOTREF(__pyx_v_self->pyfid);
+    __Pyx_DECREF(__pyx_v_self->pyfid);
+    __pyx_v_self->pyfid = __pyx_t_5;
+    __pyx_t_5 = 0;
+    goto __pyx_L9;
+  }
+
+  /* "indexed_gzip.pyx":105
+ * 
+ *         if self.own_file: self.pyfid = open(filename, 'rb')
+ *         else:             self.pyfid = fid             # <<<<<<<<<<<<<<
+ * 
+ *         self.cfid = fdopen(fid.fileno(), 'rb')
+ */
+  /*else*/ {
+    __Pyx_INCREF(__pyx_v_fid);
+    __Pyx_GIVEREF(__pyx_v_fid);
+    __Pyx_GOTREF(__pyx_v_self->pyfid);
+    __Pyx_DECREF(__pyx_v_self->pyfid);
+    __pyx_v_self->pyfid = __pyx_v_fid;
+  }
+  __pyx_L9:;
+
+  /* "indexed_gzip.pyx":107
+ *         else:             self.pyfid = fid
+ * 
+ *         self.cfid = fdopen(fid.fileno(), 'rb')             # <<<<<<<<<<<<<<
+ * 
+ *         if self.auto_build: flags = zran.ZRAN_AUTO_BUILD
+ */
+  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_fid, __pyx_n_s_fileno); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 107; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __Pyx_GOTREF(__pyx_t_4);
+  __pyx_t_6 = NULL;
+  if (CYTHON_COMPILING_IN_CPYTHON && likely(PyMethod_Check(__pyx_t_4))) {
+    __pyx_t_6 = PyMethod_GET_SELF(__pyx_t_4);
+    if (likely(__pyx_t_6)) {
+      PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_4);
+      __Pyx_INCREF(__pyx_t_6);
       __Pyx_INCREF(function);
-      __Pyx_DECREF_SET(__pyx_t_3, function);
+      __Pyx_DECREF_SET(__pyx_t_4, function);
     }
   }
-  if (__pyx_t_4) {
-    __pyx_t_2 = __Pyx_PyObject_CallOneArg(__pyx_t_3, __pyx_t_4); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 35; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
-    __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
+  if (__pyx_t_6) {
+    __pyx_t_5 = __Pyx_PyObject_CallOneArg(__pyx_t_4, __pyx_t_6); if (unlikely(!__pyx_t_5)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 107; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
   } else {
-    __pyx_t_2 = __Pyx_PyObject_CallNoArg(__pyx_t_3); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 35; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __pyx_t_5 = __Pyx_PyObject_CallNoArg(__pyx_t_4); if (unlikely(!__pyx_t_5)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 107; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   }
-  __Pyx_GOTREF(__pyx_t_2);
-  __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-  __pyx_t_5 = __Pyx_PyInt_As_int(__pyx_t_2); if (unlikely((__pyx_t_5 == (int)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 35; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
-  __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-  __pyx_v_cfid = fdopen(__pyx_t_5, __pyx_k_rb);
+  __Pyx_GOTREF(__pyx_t_5);
+  __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
+  __pyx_t_7 = __Pyx_PyInt_As_int(__pyx_t_5); if (unlikely((__pyx_t_7 == (int)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 107; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
+  __pyx_v_self->cfid = fdopen(__pyx_t_7, __pyx_k_rb);
 
-  /* "indexed_gzip.pyx":39
- *         if zran.zran_init(&self.index,
- *                           cfid,
- *                           spacing,             # <<<<<<<<<<<<<<
- *                           window_size,
- *                           readbuf_size,
- */
-  __pyx_t_5 = __Pyx_PyInt_As_int(__pyx_v_spacing); if (unlikely((__pyx_t_5 == (int)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 39; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
-
-  /* "indexed_gzip.pyx":40
- *                           cfid,
- *                           spacing,
- *                           window_size,             # <<<<<<<<<<<<<<
- *                           readbuf_size,
- *                           flags):
- */
-  __pyx_t_6 = __Pyx_PyInt_As_int(__pyx_v_window_size); if (unlikely((__pyx_t_6 == (int)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 40; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
-
-  /* "indexed_gzip.pyx":41
- *                           spacing,
- *                           window_size,
- *                           readbuf_size,             # <<<<<<<<<<<<<<
- *                           flags):
- *             raise RuntimeError()
- */
-  __pyx_t_7 = __Pyx_PyInt_As_int(__pyx_v_readbuf_size); if (unlikely((__pyx_t_7 == (int)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 41; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
-
-  /* "indexed_gzip.pyx":37
- *         cfid = fdopen(fid.fileno(), 'rb')
+  /* "indexed_gzip.pyx":109
+ *         self.cfid = fdopen(fid.fileno(), 'rb')
  * 
- *         if zran.zran_init(&self.index,             # <<<<<<<<<<<<<<
- *                           cfid,
- *                           spacing,
+ *         if self.auto_build: flags = zran.ZRAN_AUTO_BUILD             # <<<<<<<<<<<<<<
+ *         else:               flags = 0
+ * 
  */
-  __pyx_t_1 = (zran_init((&__pyx_v_self->index), __pyx_v_cfid, __pyx_t_5, __pyx_t_6, __pyx_t_7, __pyx_v_flags) != 0);
+  __pyx_t_1 = (__pyx_v_self->auto_build != 0);
+  if (__pyx_t_1) {
+    __pyx_v_flags = ZRAN_AUTO_BUILD;
+    goto __pyx_L10;
+  }
+
+  /* "indexed_gzip.pyx":110
+ * 
+ *         if self.auto_build: flags = zran.ZRAN_AUTO_BUILD
+ *         else:               flags = 0             # <<<<<<<<<<<<<<
+ * 
+ *         if zran.zran_init(index=&self.index,
+ */
+  /*else*/ {
+    __pyx_v_flags = 0;
+  }
+  __pyx_L10:;
+
+  /* "indexed_gzip.pyx":114
+ *         if zran.zran_init(index=&self.index,
+ *                           fd=self.cfid,
+ *                           spacing=spacing,             # <<<<<<<<<<<<<<
+ *                           window_size=window_size,
+ *                           readbuf_size=readbuf_size,
+ */
+  __pyx_t_8 = __Pyx_PyInt_As_uint32_t(__pyx_v_spacing); if (unlikely((__pyx_t_8 == (uint32_t)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 114; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+
+  /* "indexed_gzip.pyx":115
+ *                           fd=self.cfid,
+ *                           spacing=spacing,
+ *                           window_size=window_size,             # <<<<<<<<<<<<<<
+ *                           readbuf_size=readbuf_size,
+ *                           flags=flags):
+ */
+  __pyx_t_9 = __Pyx_PyInt_As_uint32_t(__pyx_v_window_size); if (unlikely((__pyx_t_9 == (uint32_t)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 115; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+
+  /* "indexed_gzip.pyx":116
+ *                           spacing=spacing,
+ *                           window_size=window_size,
+ *                           readbuf_size=readbuf_size,             # <<<<<<<<<<<<<<
+ *                           flags=flags):
+ *             raise ZranError('zran_init returned error')
+ */
+  __pyx_t_10 = __Pyx_PyInt_As_uint32_t(__pyx_v_readbuf_size); if (unlikely((__pyx_t_10 == (uint32_t)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 116; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+
+  /* "indexed_gzip.pyx":112
+ *         else:               flags = 0
+ * 
+ *         if zran.zran_init(index=&self.index,             # <<<<<<<<<<<<<<
+ *                           fd=self.cfid,
+ *                           spacing=spacing,
+ */
+  __pyx_t_1 = (zran_init((&__pyx_v_self->index), __pyx_v_self->cfid, __pyx_t_8, __pyx_t_9, __pyx_t_10, __pyx_v_flags) != 0);
   if (__pyx_t_1) {
 
-    /* "indexed_gzip.pyx":43
- *                           readbuf_size,
- *                           flags):
- *             raise RuntimeError()             # <<<<<<<<<<<<<<
+    /* "indexed_gzip.pyx":118
+ *                           readbuf_size=readbuf_size,
+ *                           flags=flags):
+ *             raise ZranError('zran_init returned error')             # <<<<<<<<<<<<<<
  * 
  * 
  */
-    __pyx_t_2 = __Pyx_PyObject_CallNoArg(__pyx_builtin_RuntimeError); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 43; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
-    __Pyx_GOTREF(__pyx_t_2);
-    __Pyx_Raise(__pyx_t_2, 0, 0, 0);
-    __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-    {__pyx_filename = __pyx_f[0]; __pyx_lineno = 43; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __pyx_t_5 = __Pyx_GetModuleGlobalName(__pyx_n_s_ZranError); if (unlikely(!__pyx_t_5)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 118; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __Pyx_GOTREF(__pyx_t_5);
+    __pyx_t_4 = __Pyx_PyObject_Call(__pyx_t_5, __pyx_tuple__3, NULL); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 118; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __Pyx_GOTREF(__pyx_t_4);
+    __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
+    __Pyx_Raise(__pyx_t_4, 0, 0, 0);
+    __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
+    {__pyx_filename = __pyx_f[0]; __pyx_lineno = 118; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
 
-    /* "indexed_gzip.pyx":37
- *         cfid = fdopen(fid.fileno(), 'rb')
+    /* "indexed_gzip.pyx":112
+ *         else:               flags = 0
  * 
- *         if zran.zran_init(&self.index,             # <<<<<<<<<<<<<<
- *                           cfid,
- *                           spacing,
+ *         if zran.zran_init(index=&self.index,             # <<<<<<<<<<<<<<
+ *                           fd=self.cfid,
+ *                           spacing=spacing,
  */
   }
 
-  /* "indexed_gzip.pyx":22
- *     cdef zran.zran_index_t index
+  /* "indexed_gzip.pyx":66
+ * 
  * 
  *     def __cinit__(self,             # <<<<<<<<<<<<<<
- *                   fid,
- *                   spacing=1048576,
+ *                   fid=None,
+ *                   filename=None,
  */
 
   /* function exit code */
   __pyx_r = 0;
   goto __pyx_L0;
   __pyx_L1_error:;
-  __Pyx_XDECREF(__pyx_t_2);
-  __Pyx_XDECREF(__pyx_t_3);
   __Pyx_XDECREF(__pyx_t_4);
+  __Pyx_XDECREF(__pyx_t_5);
+  __Pyx_XDECREF(__pyx_t_6);
   __Pyx_AddTraceback("indexed_gzip.IndexedGzipFile.__cinit__", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __pyx_r = -1;
   __pyx_L0:;
@@ -970,139 +1226,279 @@ static int __pyx_pf_12indexed_gzip_15IndexedGzipFile___cinit__(struct __pyx_obj_
   return __pyx_r;
 }
 
-/* "indexed_gzip.pyx":46
+/* "indexed_gzip.pyx":121
  * 
  * 
- *     def seek(self, offset):             # <<<<<<<<<<<<<<
+ *     def build_full_index(self):             # <<<<<<<<<<<<<<
+ *         """Re-builds the full file index. """
  * 
- *         ret = zran.zran_seek(&self.index, offset, SEEK_SET, NULL)
  */
 
 /* Python wrapper */
-static PyObject *__pyx_pw_12indexed_gzip_15IndexedGzipFile_3seek(PyObject *__pyx_v_self, PyObject *__pyx_v_offset); /*proto*/
-static PyObject *__pyx_pw_12indexed_gzip_15IndexedGzipFile_3seek(PyObject *__pyx_v_self, PyObject *__pyx_v_offset) {
+static PyObject *__pyx_pw_12indexed_gzip_15IndexedGzipFile_3build_full_index(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused); /*proto*/
+static char __pyx_doc_12indexed_gzip_15IndexedGzipFile_2build_full_index[] = "Re-builds the full file index. ";
+static PyObject *__pyx_pw_12indexed_gzip_15IndexedGzipFile_3build_full_index(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused) {
   PyObject *__pyx_r = 0;
   __Pyx_RefNannyDeclarations
-  __Pyx_RefNannySetupContext("seek (wrapper)", 0);
-  __pyx_r = __pyx_pf_12indexed_gzip_15IndexedGzipFile_2seek(((struct __pyx_obj_12indexed_gzip_IndexedGzipFile *)__pyx_v_self), ((PyObject *)__pyx_v_offset));
+  __Pyx_RefNannySetupContext("build_full_index (wrapper)", 0);
+  __pyx_r = __pyx_pf_12indexed_gzip_15IndexedGzipFile_2build_full_index(((struct __pyx_obj_12indexed_gzip_IndexedGzipFile *)__pyx_v_self));
 
   /* function exit code */
   __Pyx_RefNannyFinishContext();
   return __pyx_r;
 }
 
-static PyObject *__pyx_pf_12indexed_gzip_15IndexedGzipFile_2seek(struct __pyx_obj_12indexed_gzip_IndexedGzipFile *__pyx_v_self, PyObject *__pyx_v_offset) {
+static PyObject *__pyx_pf_12indexed_gzip_15IndexedGzipFile_2build_full_index(struct __pyx_obj_12indexed_gzip_IndexedGzipFile *__pyx_v_self) {
+  PyObject *__pyx_r = NULL;
+  __Pyx_RefNannyDeclarations
+  int __pyx_t_1;
+  PyObject *__pyx_t_2 = NULL;
+  PyObject *__pyx_t_3 = NULL;
+  int __pyx_lineno = 0;
+  const char *__pyx_filename = NULL;
+  int __pyx_clineno = 0;
+  __Pyx_RefNannySetupContext("build_full_index", 0);
+
+  /* "indexed_gzip.pyx":124
+ *         """Re-builds the full file index. """
+ * 
+ *         if zran.zran_build_index(&self.index, 0, 0) != 0:             # <<<<<<<<<<<<<<
+ *             raise ZranError('zran_build_index returned error')
+ * 
+ */
+  __pyx_t_1 = ((zran_build_index((&__pyx_v_self->index), 0, 0) != 0) != 0);
+  if (__pyx_t_1) {
+
+    /* "indexed_gzip.pyx":125
+ * 
+ *         if zran.zran_build_index(&self.index, 0, 0) != 0:
+ *             raise ZranError('zran_build_index returned error')             # <<<<<<<<<<<<<<
+ * 
+ * 
+ */
+    __pyx_t_2 = __Pyx_GetModuleGlobalName(__pyx_n_s_ZranError); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 125; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __Pyx_GOTREF(__pyx_t_2);
+    __pyx_t_3 = __Pyx_PyObject_Call(__pyx_t_2, __pyx_tuple__4, NULL); if (unlikely(!__pyx_t_3)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 125; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __Pyx_GOTREF(__pyx_t_3);
+    __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+    __Pyx_Raise(__pyx_t_3, 0, 0, 0);
+    __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
+    {__pyx_filename = __pyx_f[0]; __pyx_lineno = 125; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+
+    /* "indexed_gzip.pyx":124
+ *         """Re-builds the full file index. """
+ * 
+ *         if zran.zran_build_index(&self.index, 0, 0) != 0:             # <<<<<<<<<<<<<<
+ *             raise ZranError('zran_build_index returned error')
+ * 
+ */
+  }
+
+  /* "indexed_gzip.pyx":121
+ * 
+ * 
+ *     def build_full_index(self):             # <<<<<<<<<<<<<<
+ *         """Re-builds the full file index. """
+ * 
+ */
+
+  /* function exit code */
+  __pyx_r = Py_None; __Pyx_INCREF(Py_None);
+  goto __pyx_L0;
+  __pyx_L1_error:;
+  __Pyx_XDECREF(__pyx_t_2);
+  __Pyx_XDECREF(__pyx_t_3);
+  __Pyx_AddTraceback("indexed_gzip.IndexedGzipFile.build_full_index", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __pyx_r = NULL;
+  __pyx_L0:;
+  __Pyx_XGIVEREF(__pyx_r);
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* "indexed_gzip.pyx":128
+ * 
+ * 
+ *     def seek(self, offset):             # <<<<<<<<<<<<<<
+ *         """Seeks to the specified position in the uncompressed data stream.
+ * 
+ */
+
+/* Python wrapper */
+static PyObject *__pyx_pw_12indexed_gzip_15IndexedGzipFile_5seek(PyObject *__pyx_v_self, PyObject *__pyx_v_offset); /*proto*/
+static char __pyx_doc_12indexed_gzip_15IndexedGzipFile_4seek[] = "Seeks to the specified position in the uncompressed data stream.\n\n        If this IndexedGzipFile was created with auto_build=False, and the\n        requested offset is not covered by the index, a NotCoveredError is\n        raised.\n        ";
+static PyObject *__pyx_pw_12indexed_gzip_15IndexedGzipFile_5seek(PyObject *__pyx_v_self, PyObject *__pyx_v_offset) {
+  PyObject *__pyx_r = 0;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("seek (wrapper)", 0);
+  __pyx_r = __pyx_pf_12indexed_gzip_15IndexedGzipFile_4seek(((struct __pyx_obj_12indexed_gzip_IndexedGzipFile *)__pyx_v_self), ((PyObject *)__pyx_v_offset));
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static PyObject *__pyx_pf_12indexed_gzip_15IndexedGzipFile_4seek(struct __pyx_obj_12indexed_gzip_IndexedGzipFile *__pyx_v_self, PyObject *__pyx_v_offset) {
   int __pyx_v_ret;
   PyObject *__pyx_r = NULL;
   __Pyx_RefNannyDeclarations
-  long __pyx_t_1;
+  off_t __pyx_t_1;
   int __pyx_t_2;
   PyObject *__pyx_t_3 = NULL;
   PyObject *__pyx_t_4 = NULL;
   PyObject *__pyx_t_5 = NULL;
+  PyObject *__pyx_t_6 = NULL;
+  PyObject *__pyx_t_7 = NULL;
+  PyObject *__pyx_t_8 = NULL;
   int __pyx_lineno = 0;
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("seek", 0);
 
-  /* "indexed_gzip.pyx":48
- *     def seek(self, offset):
+  /* "indexed_gzip.pyx":136
+ *         """
  * 
  *         ret = zran.zran_seek(&self.index, offset, SEEK_SET, NULL)             # <<<<<<<<<<<<<<
  * 
  *         if ret < 0:
  */
-  __pyx_t_1 = __Pyx_PyInt_As_long(__pyx_v_offset); if (unlikely((__pyx_t_1 == (long)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 48; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = __Pyx_PyInt_As_off_t(__pyx_v_offset); if (unlikely((__pyx_t_1 == (off_t)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 136; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __pyx_v_ret = zran_seek((&__pyx_v_self->index), __pyx_t_1, SEEK_SET, NULL);
 
-  /* "indexed_gzip.pyx":50
+  /* "indexed_gzip.pyx":138
  *         ret = zran.zran_seek(&self.index, offset, SEEK_SET, NULL)
  * 
  *         if ret < 0:             # <<<<<<<<<<<<<<
- *             raise RuntimeError()
- *         elif ret > 0:
+ *             raise ZranError('zran_seek returned error')
+ * 
  */
   __pyx_t_2 = ((__pyx_v_ret < 0) != 0);
   if (__pyx_t_2) {
 
-    /* "indexed_gzip.pyx":51
+    /* "indexed_gzip.pyx":139
  * 
  *         if ret < 0:
- *             raise RuntimeError()             # <<<<<<<<<<<<<<
+ *             raise ZranError('zran_seek returned error')             # <<<<<<<<<<<<<<
+ * 
  *         elif ret > 0:
- *             raise NotCoveredError()
  */
-    __pyx_t_3 = __Pyx_PyObject_CallNoArg(__pyx_builtin_RuntimeError); if (unlikely(!__pyx_t_3)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 51; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __pyx_t_3 = __Pyx_GetModuleGlobalName(__pyx_n_s_ZranError); if (unlikely(!__pyx_t_3)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 139; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
     __Pyx_GOTREF(__pyx_t_3);
-    __Pyx_Raise(__pyx_t_3, 0, 0, 0);
+    __pyx_t_4 = __Pyx_PyObject_Call(__pyx_t_3, __pyx_tuple__5, NULL); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 139; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __Pyx_GOTREF(__pyx_t_4);
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-    {__pyx_filename = __pyx_f[0]; __pyx_lineno = 51; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __Pyx_Raise(__pyx_t_4, 0, 0, 0);
+    __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
+    {__pyx_filename = __pyx_f[0]; __pyx_lineno = 139; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
 
-    /* "indexed_gzip.pyx":50
+    /* "indexed_gzip.pyx":138
  *         ret = zran.zran_seek(&self.index, offset, SEEK_SET, NULL)
  * 
  *         if ret < 0:             # <<<<<<<<<<<<<<
- *             raise RuntimeError()
- *         elif ret > 0:
+ *             raise ZranError('zran_seek returned error')
+ * 
  */
   }
 
-  /* "indexed_gzip.pyx":52
- *         if ret < 0:
- *             raise RuntimeError()
- *         elif ret > 0:             # <<<<<<<<<<<<<<
- *             raise NotCoveredError()
+  /* "indexed_gzip.pyx":141
+ *             raise ZranError('zran_seek returned error')
  * 
+ *         elif ret > 0:             # <<<<<<<<<<<<<<
+ *             raise NotCoveredError('Index does not cover '
+ *                                   'offset {}'.format(offset))
  */
   __pyx_t_2 = ((__pyx_v_ret > 0) != 0);
   if (__pyx_t_2) {
 
-    /* "indexed_gzip.pyx":53
- *             raise RuntimeError()
+    /* "indexed_gzip.pyx":142
+ * 
  *         elif ret > 0:
- *             raise NotCoveredError()             # <<<<<<<<<<<<<<
+ *             raise NotCoveredError('Index does not cover '             # <<<<<<<<<<<<<<
+ *                                   'offset {}'.format(offset))
+ * 
+ */
+    __pyx_t_3 = __Pyx_GetModuleGlobalName(__pyx_n_s_NotCoveredError); if (unlikely(!__pyx_t_3)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 142; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __Pyx_GOTREF(__pyx_t_3);
+
+    /* "indexed_gzip.pyx":143
+ *         elif ret > 0:
+ *             raise NotCoveredError('Index does not cover '
+ *                                   'offset {}'.format(offset))             # <<<<<<<<<<<<<<
  * 
  * 
  */
-    __pyx_t_4 = __Pyx_GetModuleGlobalName(__pyx_n_s_NotCoveredError); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 53; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
-    __Pyx_GOTREF(__pyx_t_4);
-    __pyx_t_5 = NULL;
-    if (CYTHON_COMPILING_IN_CPYTHON && unlikely(PyMethod_Check(__pyx_t_4))) {
-      __pyx_t_5 = PyMethod_GET_SELF(__pyx_t_4);
-      if (likely(__pyx_t_5)) {
-        PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_4);
-        __Pyx_INCREF(__pyx_t_5);
+    __pyx_t_6 = __Pyx_PyObject_GetAttrStr(__pyx_kp_s_Index_does_not_cover_offset, __pyx_n_s_format); if (unlikely(!__pyx_t_6)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 143; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __Pyx_GOTREF(__pyx_t_6);
+    __pyx_t_7 = NULL;
+    if (CYTHON_COMPILING_IN_CPYTHON && likely(PyMethod_Check(__pyx_t_6))) {
+      __pyx_t_7 = PyMethod_GET_SELF(__pyx_t_6);
+      if (likely(__pyx_t_7)) {
+        PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_6);
+        __Pyx_INCREF(__pyx_t_7);
         __Pyx_INCREF(function);
-        __Pyx_DECREF_SET(__pyx_t_4, function);
+        __Pyx_DECREF_SET(__pyx_t_6, function);
       }
     }
-    if (__pyx_t_5) {
-      __pyx_t_3 = __Pyx_PyObject_CallOneArg(__pyx_t_4, __pyx_t_5); if (unlikely(!__pyx_t_3)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 53; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
-      __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
+    if (!__pyx_t_7) {
+      __pyx_t_5 = __Pyx_PyObject_CallOneArg(__pyx_t_6, __pyx_v_offset); if (unlikely(!__pyx_t_5)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 143; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+      __Pyx_GOTREF(__pyx_t_5);
     } else {
-      __pyx_t_3 = __Pyx_PyObject_CallNoArg(__pyx_t_4); if (unlikely(!__pyx_t_3)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 53; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+      __pyx_t_8 = PyTuple_New(1+1); if (unlikely(!__pyx_t_8)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 143; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+      __Pyx_GOTREF(__pyx_t_8);
+      __Pyx_GIVEREF(__pyx_t_7); PyTuple_SET_ITEM(__pyx_t_8, 0, __pyx_t_7); __pyx_t_7 = NULL;
+      __Pyx_INCREF(__pyx_v_offset);
+      __Pyx_GIVEREF(__pyx_v_offset);
+      PyTuple_SET_ITEM(__pyx_t_8, 0+1, __pyx_v_offset);
+      __pyx_t_5 = __Pyx_PyObject_Call(__pyx_t_6, __pyx_t_8, NULL); if (unlikely(!__pyx_t_5)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 143; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+      __Pyx_GOTREF(__pyx_t_5);
+      __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
     }
-    __Pyx_GOTREF(__pyx_t_3);
-    __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-    __Pyx_Raise(__pyx_t_3, 0, 0, 0);
+    __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
+    __pyx_t_6 = NULL;
+    if (CYTHON_COMPILING_IN_CPYTHON && unlikely(PyMethod_Check(__pyx_t_3))) {
+      __pyx_t_6 = PyMethod_GET_SELF(__pyx_t_3);
+      if (likely(__pyx_t_6)) {
+        PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_3);
+        __Pyx_INCREF(__pyx_t_6);
+        __Pyx_INCREF(function);
+        __Pyx_DECREF_SET(__pyx_t_3, function);
+      }
+    }
+    if (!__pyx_t_6) {
+      __pyx_t_4 = __Pyx_PyObject_CallOneArg(__pyx_t_3, __pyx_t_5); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 142; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+      __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
+      __Pyx_GOTREF(__pyx_t_4);
+    } else {
+      __pyx_t_8 = PyTuple_New(1+1); if (unlikely(!__pyx_t_8)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 142; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+      __Pyx_GOTREF(__pyx_t_8);
+      __Pyx_GIVEREF(__pyx_t_6); PyTuple_SET_ITEM(__pyx_t_8, 0, __pyx_t_6); __pyx_t_6 = NULL;
+      __Pyx_GIVEREF(__pyx_t_5);
+      PyTuple_SET_ITEM(__pyx_t_8, 0+1, __pyx_t_5);
+      __pyx_t_5 = 0;
+      __pyx_t_4 = __Pyx_PyObject_Call(__pyx_t_3, __pyx_t_8, NULL); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 142; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+      __Pyx_GOTREF(__pyx_t_4);
+      __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
+    }
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-    {__pyx_filename = __pyx_f[0]; __pyx_lineno = 53; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __Pyx_Raise(__pyx_t_4, 0, 0, 0);
+    __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
+    {__pyx_filename = __pyx_f[0]; __pyx_lineno = 142; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
 
-    /* "indexed_gzip.pyx":52
- *         if ret < 0:
- *             raise RuntimeError()
- *         elif ret > 0:             # <<<<<<<<<<<<<<
- *             raise NotCoveredError()
+    /* "indexed_gzip.pyx":141
+ *             raise ZranError('zran_seek returned error')
  * 
+ *         elif ret > 0:             # <<<<<<<<<<<<<<
+ *             raise NotCoveredError('Index does not cover '
+ *                                   'offset {}'.format(offset))
  */
   }
 
-  /* "indexed_gzip.pyx":46
+  /* "indexed_gzip.pyx":128
  * 
  * 
  *     def seek(self, offset):             # <<<<<<<<<<<<<<
+ *         """Seeks to the specified position in the uncompressed data stream.
  * 
- *         ret = zran.zran_seek(&self.index, offset, SEEK_SET, NULL)
  */
 
   /* function exit code */
@@ -1112,6 +1508,9 @@ static PyObject *__pyx_pf_12indexed_gzip_15IndexedGzipFile_2seek(struct __pyx_ob
   __Pyx_XDECREF(__pyx_t_3);
   __Pyx_XDECREF(__pyx_t_4);
   __Pyx_XDECREF(__pyx_t_5);
+  __Pyx_XDECREF(__pyx_t_6);
+  __Pyx_XDECREF(__pyx_t_7);
+  __Pyx_XDECREF(__pyx_t_8);
   __Pyx_AddTraceback("indexed_gzip.IndexedGzipFile.seek", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __pyx_r = NULL;
   __pyx_L0:;
@@ -1120,28 +1519,29 @@ static PyObject *__pyx_pf_12indexed_gzip_15IndexedGzipFile_2seek(struct __pyx_ob
   return __pyx_r;
 }
 
-/* "indexed_gzip.pyx":56
+/* "indexed_gzip.pyx":146
  * 
  * 
  *     def read(self, nbytes):             # <<<<<<<<<<<<<<
+ *         """Reads up to nbytes bytes from the uncompressed data stream. """
  * 
- *         cdef void *buf = PyMem_Malloc(nbytes);
  */
 
 /* Python wrapper */
-static PyObject *__pyx_pw_12indexed_gzip_15IndexedGzipFile_5read(PyObject *__pyx_v_self, PyObject *__pyx_v_nbytes); /*proto*/
-static PyObject *__pyx_pw_12indexed_gzip_15IndexedGzipFile_5read(PyObject *__pyx_v_self, PyObject *__pyx_v_nbytes) {
+static PyObject *__pyx_pw_12indexed_gzip_15IndexedGzipFile_7read(PyObject *__pyx_v_self, PyObject *__pyx_v_nbytes); /*proto*/
+static char __pyx_doc_12indexed_gzip_15IndexedGzipFile_6read[] = "Reads up to nbytes bytes from the uncompressed data stream. ";
+static PyObject *__pyx_pw_12indexed_gzip_15IndexedGzipFile_7read(PyObject *__pyx_v_self, PyObject *__pyx_v_nbytes) {
   PyObject *__pyx_r = 0;
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("read (wrapper)", 0);
-  __pyx_r = __pyx_pf_12indexed_gzip_15IndexedGzipFile_4read(((struct __pyx_obj_12indexed_gzip_IndexedGzipFile *)__pyx_v_self), ((PyObject *)__pyx_v_nbytes));
+  __pyx_r = __pyx_pf_12indexed_gzip_15IndexedGzipFile_6read(((struct __pyx_obj_12indexed_gzip_IndexedGzipFile *)__pyx_v_self), ((PyObject *)__pyx_v_nbytes));
 
   /* function exit code */
   __Pyx_RefNannyFinishContext();
   return __pyx_r;
 }
 
-static PyObject *__pyx_pf_12indexed_gzip_15IndexedGzipFile_4read(struct __pyx_obj_12indexed_gzip_IndexedGzipFile *__pyx_v_self, PyObject *__pyx_v_nbytes) {
+static PyObject *__pyx_pf_12indexed_gzip_15IndexedGzipFile_6read(struct __pyx_obj_12indexed_gzip_IndexedGzipFile *__pyx_v_self, PyObject *__pyx_v_nbytes) {
   void *__pyx_v_buf;
   int __pyx_v_ret;
   PyObject *__pyx_v_pybuf = NULL;
@@ -1149,64 +1549,66 @@ static PyObject *__pyx_pf_12indexed_gzip_15IndexedGzipFile_4read(struct __pyx_ob
   __Pyx_RefNannyDeclarations
   size_t __pyx_t_1;
   int __pyx_t_2;
-  int __pyx_t_3;
+  PyObject *__pyx_t_3 = NULL;
   PyObject *__pyx_t_4 = NULL;
-  PyObject *__pyx_t_5 = NULL;
-  PyObject *__pyx_t_6 = NULL;
   int __pyx_lineno = 0;
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("read", 0);
 
-  /* "indexed_gzip.pyx":58
- *     def read(self, nbytes):
+  /* "indexed_gzip.pyx":149
+ *         """Reads up to nbytes bytes from the uncompressed data stream. """
  * 
  *         cdef void *buf = PyMem_Malloc(nbytes);             # <<<<<<<<<<<<<<
  * 
  *         if not buf:
  */
-  __pyx_t_1 = __Pyx_PyInt_As_size_t(__pyx_v_nbytes); if (unlikely((__pyx_t_1 == (size_t)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 58; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = __Pyx_PyInt_As_size_t(__pyx_v_nbytes); if (unlikely((__pyx_t_1 == (size_t)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 149; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __pyx_v_buf = PyMem_Malloc(__pyx_t_1);
 
-  /* "indexed_gzip.pyx":60
+  /* "indexed_gzip.pyx":151
  *         cdef void *buf = PyMem_Malloc(nbytes);
  * 
  *         if not buf:             # <<<<<<<<<<<<<<
- *             raise MemoryError()
+ *             raise MemoryError('PyMem_Malloc fail')
  * 
  */
   __pyx_t_2 = ((!(__pyx_v_buf != 0)) != 0);
   if (__pyx_t_2) {
 
-    /* "indexed_gzip.pyx":61
+    /* "indexed_gzip.pyx":152
  * 
  *         if not buf:
- *             raise MemoryError()             # <<<<<<<<<<<<<<
+ *             raise MemoryError('PyMem_Malloc fail')             # <<<<<<<<<<<<<<
  * 
  *         ret = zran.zran_read(&self.index, buf, nbytes)
  */
-    PyErr_NoMemory(); {__pyx_filename = __pyx_f[0]; __pyx_lineno = 61; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __pyx_t_3 = __Pyx_PyObject_Call(__pyx_builtin_MemoryError, __pyx_tuple__6, NULL); if (unlikely(!__pyx_t_3)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 152; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __Pyx_GOTREF(__pyx_t_3);
+    __Pyx_Raise(__pyx_t_3, 0, 0, 0);
+    __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
+    {__pyx_filename = __pyx_f[0]; __pyx_lineno = 152; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
 
-    /* "indexed_gzip.pyx":60
+    /* "indexed_gzip.pyx":151
  *         cdef void *buf = PyMem_Malloc(nbytes);
  * 
  *         if not buf:             # <<<<<<<<<<<<<<
- *             raise MemoryError()
+ *             raise MemoryError('PyMem_Malloc fail')
  * 
  */
   }
 
-  /* "indexed_gzip.pyx":63
- *             raise MemoryError()
+  /* "indexed_gzip.pyx":154
+ *             raise MemoryError('PyMem_Malloc fail')
  * 
  *         ret = zran.zran_read(&self.index, buf, nbytes)             # <<<<<<<<<<<<<<
  * 
  *         if ret <= 0:
  */
-  __pyx_t_3 = __Pyx_PyInt_As_int(__pyx_v_nbytes); if (unlikely((__pyx_t_3 == (int)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 63; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
-  __pyx_v_ret = zran_read((&__pyx_v_self->index), __pyx_v_buf, __pyx_t_3);
+  __pyx_t_1 = __Pyx_PyInt_As_size_t(__pyx_v_nbytes); if (unlikely((__pyx_t_1 == (size_t)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 154; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_v_ret = zran_read((&__pyx_v_self->index), __pyx_v_buf, __pyx_t_1);
 
-  /* "indexed_gzip.pyx":65
+  /* "indexed_gzip.pyx":156
  *         ret = zran.zran_read(&self.index, buf, nbytes)
  * 
  *         if ret <= 0:             # <<<<<<<<<<<<<<
@@ -1216,16 +1618,16 @@ static PyObject *__pyx_pf_12indexed_gzip_15IndexedGzipFile_4read(struct __pyx_ob
   __pyx_t_2 = ((__pyx_v_ret <= 0) != 0);
   if (__pyx_t_2) {
 
-    /* "indexed_gzip.pyx":66
+    /* "indexed_gzip.pyx":157
  * 
  *         if ret <= 0:
  *             PyMem_Free(buf)             # <<<<<<<<<<<<<<
  * 
- *         if   ret == -1: raise NotCoveredError()
+ *         if ret < -1:
  */
     PyMem_Free(__pyx_v_buf);
 
-    /* "indexed_gzip.pyx":65
+    /* "indexed_gzip.pyx":156
  *         ret = zran.zran_read(&self.index, buf, nbytes)
  * 
  *         if ret <= 0:             # <<<<<<<<<<<<<<
@@ -1234,117 +1636,153 @@ static PyObject *__pyx_pf_12indexed_gzip_15IndexedGzipFile_4read(struct __pyx_ob
  */
   }
 
-  /* "indexed_gzip.pyx":68
+  /* "indexed_gzip.pyx":159
  *             PyMem_Free(buf)
  * 
- *         if   ret == -1: raise NotCoveredError()             # <<<<<<<<<<<<<<
- *         elif ret <  -1: raise RuntimeError()
- *         elif ret ==  0: pybuf = bytes()
- */
-  __pyx_t_2 = ((__pyx_v_ret == -1L) != 0);
-  if (__pyx_t_2) {
-    __pyx_t_5 = __Pyx_GetModuleGlobalName(__pyx_n_s_NotCoveredError); if (unlikely(!__pyx_t_5)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 68; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
-    __Pyx_GOTREF(__pyx_t_5);
-    __pyx_t_6 = NULL;
-    if (CYTHON_COMPILING_IN_CPYTHON && unlikely(PyMethod_Check(__pyx_t_5))) {
-      __pyx_t_6 = PyMethod_GET_SELF(__pyx_t_5);
-      if (likely(__pyx_t_6)) {
-        PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_5);
-        __Pyx_INCREF(__pyx_t_6);
-        __Pyx_INCREF(function);
-        __Pyx_DECREF_SET(__pyx_t_5, function);
-      }
-    }
-    if (__pyx_t_6) {
-      __pyx_t_4 = __Pyx_PyObject_CallOneArg(__pyx_t_5, __pyx_t_6); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 68; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
-      __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
-    } else {
-      __pyx_t_4 = __Pyx_PyObject_CallNoArg(__pyx_t_5); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 68; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
-    }
-    __Pyx_GOTREF(__pyx_t_4);
-    __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
-    __Pyx_Raise(__pyx_t_4, 0, 0, 0);
-    __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-    {__pyx_filename = __pyx_f[0]; __pyx_lineno = 68; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
-  }
-
-  /* "indexed_gzip.pyx":69
+ *         if ret < -1:             # <<<<<<<<<<<<<<
+ *             raise ZranError('zran_read returned error')
  * 
- *         if   ret == -1: raise NotCoveredError()
- *         elif ret <  -1: raise RuntimeError()             # <<<<<<<<<<<<<<
- *         elif ret ==  0: pybuf = bytes()
- *         elif ret >   0:
  */
   __pyx_t_2 = ((__pyx_v_ret < -1L) != 0);
   if (__pyx_t_2) {
-    __pyx_t_4 = __Pyx_PyObject_CallNoArg(__pyx_builtin_RuntimeError); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 69; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+
+    /* "indexed_gzip.pyx":160
+ * 
+ *         if ret < -1:
+ *             raise ZranError('zran_read returned error')             # <<<<<<<<<<<<<<
+ * 
+ *         elif ret == -1:
+ */
+    __pyx_t_3 = __Pyx_GetModuleGlobalName(__pyx_n_s_ZranError); if (unlikely(!__pyx_t_3)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 160; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __Pyx_GOTREF(__pyx_t_3);
+    __pyx_t_4 = __Pyx_PyObject_Call(__pyx_t_3, __pyx_tuple__7, NULL); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 160; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
     __Pyx_GOTREF(__pyx_t_4);
+    __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
     __Pyx_Raise(__pyx_t_4, 0, 0, 0);
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-    {__pyx_filename = __pyx_f[0]; __pyx_lineno = 69; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    {__pyx_filename = __pyx_f[0]; __pyx_lineno = 160; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+
+    /* "indexed_gzip.pyx":159
+ *             PyMem_Free(buf)
+ * 
+ *         if ret < -1:             # <<<<<<<<<<<<<<
+ *             raise ZranError('zran_read returned error')
+ * 
+ */
   }
 
-  /* "indexed_gzip.pyx":70
- *         if   ret == -1: raise NotCoveredError()
- *         elif ret <  -1: raise RuntimeError()
- *         elif ret ==  0: pybuf = bytes()             # <<<<<<<<<<<<<<
- *         elif ret >   0:
- *             buf   = PyMem_Realloc(buf, ret)
+  /* "indexed_gzip.pyx":162
+ *             raise ZranError('zran_read returned error')
+ * 
+ *         elif ret == -1:             # <<<<<<<<<<<<<<
+ *             raise NotCoveredError('Index does not cover current offset')
+ * 
+ */
+  __pyx_t_2 = ((__pyx_v_ret == -1L) != 0);
+  if (__pyx_t_2) {
+
+    /* "indexed_gzip.pyx":163
+ * 
+ *         elif ret == -1:
+ *             raise NotCoveredError('Index does not cover current offset')             # <<<<<<<<<<<<<<
+ * 
+ *         # 0 bytes read
+ */
+    __pyx_t_4 = __Pyx_GetModuleGlobalName(__pyx_n_s_NotCoveredError); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 163; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __Pyx_GOTREF(__pyx_t_4);
+    __pyx_t_3 = __Pyx_PyObject_Call(__pyx_t_4, __pyx_tuple__8, NULL); if (unlikely(!__pyx_t_3)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 163; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __Pyx_GOTREF(__pyx_t_3);
+    __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
+    __Pyx_Raise(__pyx_t_3, 0, 0, 0);
+    __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
+    {__pyx_filename = __pyx_f[0]; __pyx_lineno = 163; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+
+    /* "indexed_gzip.pyx":162
+ *             raise ZranError('zran_read returned error')
+ * 
+ *         elif ret == -1:             # <<<<<<<<<<<<<<
+ *             raise NotCoveredError('Index does not cover current offset')
+ * 
+ */
+  }
+
+  /* "indexed_gzip.pyx":166
+ * 
+ *         # 0 bytes read
+ *         elif ret ==  0:             # <<<<<<<<<<<<<<
+ *             pybuf = bytes()
+ * 
  */
   __pyx_t_2 = ((__pyx_v_ret == 0) != 0);
   if (__pyx_t_2) {
-    __pyx_t_4 = __Pyx_PyObject_Call(((PyObject *)(&PyBytes_Type)), __pyx_empty_tuple, NULL); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 70; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
-    __Pyx_GOTREF(__pyx_t_4);
-    __pyx_v_pybuf = ((PyObject*)__pyx_t_4);
-    __pyx_t_4 = 0;
+
+    /* "indexed_gzip.pyx":167
+ *         # 0 bytes read
+ *         elif ret ==  0:
+ *             pybuf = bytes()             # <<<<<<<<<<<<<<
+ * 
+ *         # Some bytes read
+ */
+    __pyx_t_3 = __Pyx_PyObject_Call(((PyObject *)(&PyBytes_Type)), __pyx_empty_tuple, NULL); if (unlikely(!__pyx_t_3)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 167; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __Pyx_GOTREF(__pyx_t_3);
+    __pyx_v_pybuf = ((PyObject*)__pyx_t_3);
+    __pyx_t_3 = 0;
+
+    /* "indexed_gzip.pyx":166
+ * 
+ *         # 0 bytes read
+ *         elif ret ==  0:             # <<<<<<<<<<<<<<
+ *             pybuf = bytes()
+ * 
+ */
     goto __pyx_L5;
   }
 
-  /* "indexed_gzip.pyx":71
- *         elif ret <  -1: raise RuntimeError()
- *         elif ret ==  0: pybuf = bytes()
- *         elif ret >   0:             # <<<<<<<<<<<<<<
+  /* "indexed_gzip.pyx":170
+ * 
+ *         # Some bytes read
+ *         elif ret > 0:             # <<<<<<<<<<<<<<
  *             buf   = PyMem_Realloc(buf, ret)
  *             pybuf = <bytes>(<char *>buf)[:ret]
  */
   __pyx_t_2 = ((__pyx_v_ret > 0) != 0);
   if (__pyx_t_2) {
 
-    /* "indexed_gzip.pyx":72
- *         elif ret ==  0: pybuf = bytes()
- *         elif ret >   0:
+    /* "indexed_gzip.pyx":171
+ *         # Some bytes read
+ *         elif ret > 0:
  *             buf   = PyMem_Realloc(buf, ret)             # <<<<<<<<<<<<<<
  *             pybuf = <bytes>(<char *>buf)[:ret]
  * 
  */
     __pyx_v_buf = PyMem_Realloc(__pyx_v_buf, __pyx_v_ret);
 
-    /* "indexed_gzip.pyx":73
- *         elif ret >   0:
+    /* "indexed_gzip.pyx":172
+ *         elif ret > 0:
  *             buf   = PyMem_Realloc(buf, ret)
  *             pybuf = <bytes>(<char *>buf)[:ret]             # <<<<<<<<<<<<<<
  * 
  *         return pybuf
  */
-    __pyx_t_4 = __Pyx_PyBytes_FromStringAndSize(((char *)__pyx_v_buf) + 0, __pyx_v_ret - 0); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 73; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
-    __Pyx_GOTREF(__pyx_t_4);
-    __pyx_t_5 = __pyx_t_4;
-    __Pyx_INCREF(__pyx_t_5);
-    __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-    __pyx_v_pybuf = ((PyObject*)__pyx_t_5);
-    __pyx_t_5 = 0;
+    __pyx_t_3 = __Pyx_PyBytes_FromStringAndSize(((char *)__pyx_v_buf) + 0, __pyx_v_ret - 0); if (unlikely(!__pyx_t_3)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 172; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __Pyx_GOTREF(__pyx_t_3);
+    __pyx_t_4 = __pyx_t_3;
+    __Pyx_INCREF(__pyx_t_4);
+    __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
+    __pyx_v_pybuf = ((PyObject*)__pyx_t_4);
+    __pyx_t_4 = 0;
 
-    /* "indexed_gzip.pyx":71
- *         elif ret <  -1: raise RuntimeError()
- *         elif ret ==  0: pybuf = bytes()
- *         elif ret >   0:             # <<<<<<<<<<<<<<
+    /* "indexed_gzip.pyx":170
+ * 
+ *         # Some bytes read
+ *         elif ret > 0:             # <<<<<<<<<<<<<<
  *             buf   = PyMem_Realloc(buf, ret)
  *             pybuf = <bytes>(<char *>buf)[:ret]
  */
   }
   __pyx_L5:;
 
-  /* "indexed_gzip.pyx":75
+  /* "indexed_gzip.pyx":174
  *             pybuf = <bytes>(<char *>buf)[:ret]
  * 
  *         return pybuf             # <<<<<<<<<<<<<<
@@ -1352,24 +1790,23 @@ static PyObject *__pyx_pf_12indexed_gzip_15IndexedGzipFile_4read(struct __pyx_ob
  * 
  */
   __Pyx_XDECREF(__pyx_r);
-  if (unlikely(!__pyx_v_pybuf)) { __Pyx_RaiseUnboundLocalError("pybuf"); {__pyx_filename = __pyx_f[0]; __pyx_lineno = 75; __pyx_clineno = __LINE__; goto __pyx_L1_error;} }
+  if (unlikely(!__pyx_v_pybuf)) { __Pyx_RaiseUnboundLocalError("pybuf"); {__pyx_filename = __pyx_f[0]; __pyx_lineno = 174; __pyx_clineno = __LINE__; goto __pyx_L1_error;} }
   __Pyx_INCREF(__pyx_v_pybuf);
   __pyx_r = __pyx_v_pybuf;
   goto __pyx_L0;
 
-  /* "indexed_gzip.pyx":56
+  /* "indexed_gzip.pyx":146
  * 
  * 
  *     def read(self, nbytes):             # <<<<<<<<<<<<<<
+ *         """Reads up to nbytes bytes from the uncompressed data stream. """
  * 
- *         cdef void *buf = PyMem_Malloc(nbytes);
  */
 
   /* function exit code */
   __pyx_L1_error:;
+  __Pyx_XDECREF(__pyx_t_3);
   __Pyx_XDECREF(__pyx_t_4);
-  __Pyx_XDECREF(__pyx_t_5);
-  __Pyx_XDECREF(__pyx_t_6);
   __Pyx_AddTraceback("indexed_gzip.IndexedGzipFile.read", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __pyx_r = NULL;
   __pyx_L0:;
@@ -1379,47 +1816,110 @@ static PyObject *__pyx_pf_12indexed_gzip_15IndexedGzipFile_4read(struct __pyx_ob
   return __pyx_r;
 }
 
-/* "indexed_gzip.pyx":78
+/* "indexed_gzip.pyx":177
  * 
  * 
  *     def __dealloc__(self):             # <<<<<<<<<<<<<<
- *         zran.zran_free(&self.index)
+ *         """Frees the memory used by this IndexedGzipFile. If a file name was
+ *         passed to __cinit__, the file handle is closed.
  */
 
 /* Python wrapper */
-static void __pyx_pw_12indexed_gzip_15IndexedGzipFile_7__dealloc__(PyObject *__pyx_v_self); /*proto*/
-static void __pyx_pw_12indexed_gzip_15IndexedGzipFile_7__dealloc__(PyObject *__pyx_v_self) {
+static void __pyx_pw_12indexed_gzip_15IndexedGzipFile_9__dealloc__(PyObject *__pyx_v_self); /*proto*/
+static void __pyx_pw_12indexed_gzip_15IndexedGzipFile_9__dealloc__(PyObject *__pyx_v_self) {
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("__dealloc__ (wrapper)", 0);
-  __pyx_pf_12indexed_gzip_15IndexedGzipFile_6__dealloc__(((struct __pyx_obj_12indexed_gzip_IndexedGzipFile *)__pyx_v_self));
+  __pyx_pf_12indexed_gzip_15IndexedGzipFile_8__dealloc__(((struct __pyx_obj_12indexed_gzip_IndexedGzipFile *)__pyx_v_self));
 
   /* function exit code */
   __Pyx_RefNannyFinishContext();
 }
 
-static void __pyx_pf_12indexed_gzip_15IndexedGzipFile_6__dealloc__(struct __pyx_obj_12indexed_gzip_IndexedGzipFile *__pyx_v_self) {
+static void __pyx_pf_12indexed_gzip_15IndexedGzipFile_8__dealloc__(struct __pyx_obj_12indexed_gzip_IndexedGzipFile *__pyx_v_self) {
   __Pyx_RefNannyDeclarations
+  int __pyx_t_1;
+  PyObject *__pyx_t_2 = NULL;
+  PyObject *__pyx_t_3 = NULL;
+  PyObject *__pyx_t_4 = NULL;
+  int __pyx_lineno = 0;
+  const char *__pyx_filename = NULL;
+  int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__dealloc__", 0);
 
-  /* "indexed_gzip.pyx":79
+  /* "indexed_gzip.pyx":182
+ *         """
  * 
- *     def __dealloc__(self):
  *         zran.zran_free(&self.index)             # <<<<<<<<<<<<<<
+ * 
+ *         if self.own_file:
  */
   zran_free((&__pyx_v_self->index));
 
-  /* "indexed_gzip.pyx":78
+  /* "indexed_gzip.pyx":184
+ *         zran.zran_free(&self.index)
+ * 
+ *         if self.own_file:             # <<<<<<<<<<<<<<
+ *             self.pyfid.close()
+ */
+  __pyx_t_1 = (__pyx_v_self->own_file != 0);
+  if (__pyx_t_1) {
+
+    /* "indexed_gzip.pyx":185
+ * 
+ *         if self.own_file:
+ *             self.pyfid.close()             # <<<<<<<<<<<<<<
+ */
+    __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_v_self->pyfid, __pyx_n_s_close); if (unlikely(!__pyx_t_3)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 185; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __Pyx_GOTREF(__pyx_t_3);
+    __pyx_t_4 = NULL;
+    if (CYTHON_COMPILING_IN_CPYTHON && likely(PyMethod_Check(__pyx_t_3))) {
+      __pyx_t_4 = PyMethod_GET_SELF(__pyx_t_3);
+      if (likely(__pyx_t_4)) {
+        PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_3);
+        __Pyx_INCREF(__pyx_t_4);
+        __Pyx_INCREF(function);
+        __Pyx_DECREF_SET(__pyx_t_3, function);
+      }
+    }
+    if (__pyx_t_4) {
+      __pyx_t_2 = __Pyx_PyObject_CallOneArg(__pyx_t_3, __pyx_t_4); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 185; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+      __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
+    } else {
+      __pyx_t_2 = __Pyx_PyObject_CallNoArg(__pyx_t_3); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 185; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    }
+    __Pyx_GOTREF(__pyx_t_2);
+    __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
+    __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+
+    /* "indexed_gzip.pyx":184
+ *         zran.zran_free(&self.index)
+ * 
+ *         if self.own_file:             # <<<<<<<<<<<<<<
+ *             self.pyfid.close()
+ */
+  }
+
+  /* "indexed_gzip.pyx":177
  * 
  * 
  *     def __dealloc__(self):             # <<<<<<<<<<<<<<
- *         zran.zran_free(&self.index)
+ *         """Frees the memory used by this IndexedGzipFile. If a file name was
+ *         passed to __cinit__, the file handle is closed.
  */
 
   /* function exit code */
+  goto __pyx_L0;
+  __pyx_L1_error:;
+  __Pyx_XDECREF(__pyx_t_2);
+  __Pyx_XDECREF(__pyx_t_3);
+  __Pyx_XDECREF(__pyx_t_4);
+  __Pyx_WriteUnraisable("indexed_gzip.IndexedGzipFile.__dealloc__", __pyx_clineno, __pyx_lineno, __pyx_filename, 0, 0);
+  __pyx_L0:;
   __Pyx_RefNannyFinishContext();
 }
 
 static PyObject *__pyx_tp_new_12indexed_gzip_IndexedGzipFile(PyTypeObject *t, PyObject *a, PyObject *k) {
+  struct __pyx_obj_12indexed_gzip_IndexedGzipFile *p;
   PyObject *o;
   if (likely((t->tp_flags & Py_TPFLAGS_IS_ABSTRACT) == 0)) {
     o = (*t->tp_alloc)(t, 0);
@@ -1427,6 +1927,8 @@ static PyObject *__pyx_tp_new_12indexed_gzip_IndexedGzipFile(PyTypeObject *t, Py
     o = (PyObject *) PyBaseObject_Type.tp_new(t, __pyx_empty_tuple, 0);
   }
   if (unlikely(!o)) return 0;
+  p = ((struct __pyx_obj_12indexed_gzip_IndexedGzipFile *)o);
+  p->pyfid = Py_None; Py_INCREF(Py_None);
   if (unlikely(__pyx_pw_12indexed_gzip_15IndexedGzipFile_1__cinit__(o, a, k) < 0)) {
     Py_DECREF(o); o = 0;
   }
@@ -1434,25 +1936,47 @@ static PyObject *__pyx_tp_new_12indexed_gzip_IndexedGzipFile(PyTypeObject *t, Py
 }
 
 static void __pyx_tp_dealloc_12indexed_gzip_IndexedGzipFile(PyObject *o) {
+  struct __pyx_obj_12indexed_gzip_IndexedGzipFile *p = (struct __pyx_obj_12indexed_gzip_IndexedGzipFile *)o;
   #if PY_VERSION_HEX >= 0x030400a1
-  if (unlikely(Py_TYPE(o)->tp_finalize) && (!PyType_IS_GC(Py_TYPE(o)) || !_PyGC_FINALIZED(o))) {
+  if (unlikely(Py_TYPE(o)->tp_finalize) && !_PyGC_FINALIZED(o)) {
     if (PyObject_CallFinalizerFromDealloc(o)) return;
   }
   #endif
+  PyObject_GC_UnTrack(o);
   {
     PyObject *etype, *eval, *etb;
     PyErr_Fetch(&etype, &eval, &etb);
     ++Py_REFCNT(o);
-    __pyx_pw_12indexed_gzip_15IndexedGzipFile_7__dealloc__(o);
+    __pyx_pw_12indexed_gzip_15IndexedGzipFile_9__dealloc__(o);
     --Py_REFCNT(o);
     PyErr_Restore(etype, eval, etb);
   }
+  Py_CLEAR(p->pyfid);
   (*Py_TYPE(o)->tp_free)(o);
 }
 
+static int __pyx_tp_traverse_12indexed_gzip_IndexedGzipFile(PyObject *o, visitproc v, void *a) {
+  int e;
+  struct __pyx_obj_12indexed_gzip_IndexedGzipFile *p = (struct __pyx_obj_12indexed_gzip_IndexedGzipFile *)o;
+  if (p->pyfid) {
+    e = (*v)(p->pyfid, a); if (e) return e;
+  }
+  return 0;
+}
+
+static int __pyx_tp_clear_12indexed_gzip_IndexedGzipFile(PyObject *o) {
+  PyObject* tmp;
+  struct __pyx_obj_12indexed_gzip_IndexedGzipFile *p = (struct __pyx_obj_12indexed_gzip_IndexedGzipFile *)o;
+  tmp = ((PyObject*)p->pyfid);
+  p->pyfid = Py_None; Py_INCREF(Py_None);
+  Py_XDECREF(tmp);
+  return 0;
+}
+
 static PyMethodDef __pyx_methods_12indexed_gzip_IndexedGzipFile[] = {
-  {"seek", (PyCFunction)__pyx_pw_12indexed_gzip_15IndexedGzipFile_3seek, METH_O, 0},
-  {"read", (PyCFunction)__pyx_pw_12indexed_gzip_15IndexedGzipFile_5read, METH_O, 0},
+  {"build_full_index", (PyCFunction)__pyx_pw_12indexed_gzip_15IndexedGzipFile_3build_full_index, METH_NOARGS, __pyx_doc_12indexed_gzip_15IndexedGzipFile_2build_full_index},
+  {"seek", (PyCFunction)__pyx_pw_12indexed_gzip_15IndexedGzipFile_5seek, METH_O, __pyx_doc_12indexed_gzip_15IndexedGzipFile_4seek},
+  {"read", (PyCFunction)__pyx_pw_12indexed_gzip_15IndexedGzipFile_7read, METH_O, __pyx_doc_12indexed_gzip_15IndexedGzipFile_6read},
   {0, 0, 0, 0}
 };
 
@@ -1481,10 +2005,10 @@ static PyTypeObject __pyx_type_12indexed_gzip_IndexedGzipFile = {
   0, /*tp_getattro*/
   0, /*tp_setattro*/
   0, /*tp_as_buffer*/
-  Py_TPFLAGS_DEFAULT|Py_TPFLAGS_HAVE_VERSION_TAG|Py_TPFLAGS_CHECKTYPES|Py_TPFLAGS_HAVE_NEWBUFFER|Py_TPFLAGS_BASETYPE, /*tp_flags*/
-  0, /*tp_doc*/
-  0, /*tp_traverse*/
-  0, /*tp_clear*/
+  Py_TPFLAGS_DEFAULT|Py_TPFLAGS_HAVE_VERSION_TAG|Py_TPFLAGS_CHECKTYPES|Py_TPFLAGS_HAVE_NEWBUFFER|Py_TPFLAGS_BASETYPE|Py_TPFLAGS_HAVE_GC, /*tp_flags*/
+  "The IndexedGzipFile class allows for fast random access of a gzip file\n    by using the zran library to build and maintain an index of seek points\n    into the file.\n    ", /*tp_doc*/
+  __pyx_tp_traverse_12indexed_gzip_IndexedGzipFile, /*tp_traverse*/
+  __pyx_tp_clear_12indexed_gzip_IndexedGzipFile, /*tp_clear*/
   0, /*tp_richcompare*/
   0, /*tp_weaklistoffset*/
   0, /*tp_iter*/
@@ -1537,30 +2061,49 @@ static struct PyModuleDef __pyx_moduledef = {
 #endif
 
 static __Pyx_StringTabEntry __pyx_string_tab[] = {
+  {&__pyx_n_s_Exception, __pyx_k_Exception, sizeof(__pyx_k_Exception), 0, 0, 1, 1},
+  {&__pyx_kp_s_Exception_raised_by_the_IndexedG, __pyx_k_Exception_raised_by_the_IndexedG, sizeof(__pyx_k_Exception_raised_by_the_IndexedG), 0, 0, 1, 0},
+  {&__pyx_kp_s_Exception_raised_by_the_IndexedG_2, __pyx_k_Exception_raised_by_the_IndexedG_2, sizeof(__pyx_k_Exception_raised_by_the_IndexedG_2), 0, 0, 1, 0},
+  {&__pyx_kp_s_Index_does_not_cover_current_off, __pyx_k_Index_does_not_cover_current_off, sizeof(__pyx_k_Index_does_not_cover_current_off), 0, 0, 1, 0},
+  {&__pyx_kp_s_Index_does_not_cover_offset, __pyx_k_Index_does_not_cover_offset, sizeof(__pyx_k_Index_does_not_cover_offset), 0, 0, 1, 0},
   {&__pyx_n_s_MemoryError, __pyx_k_MemoryError, sizeof(__pyx_k_MemoryError), 0, 0, 1, 1},
   {&__pyx_n_s_NotCoveredError, __pyx_k_NotCoveredError, sizeof(__pyx_k_NotCoveredError), 0, 0, 1, 1},
-  {&__pyx_n_s_RuntimeError, __pyx_k_RuntimeError, sizeof(__pyx_k_RuntimeError), 0, 0, 1, 1},
+  {&__pyx_kp_s_One_of_fid_or_filename_must_be_s, __pyx_k_One_of_fid_or_filename_must_be_s, sizeof(__pyx_k_One_of_fid_or_filename_must_be_s), 0, 0, 1, 0},
+  {&__pyx_kp_s_PyMem_Malloc_fail, __pyx_k_PyMem_Malloc_fail, sizeof(__pyx_k_PyMem_Malloc_fail), 0, 0, 1, 0},
+  {&__pyx_kp_s_The_gzip_file_must_be_opened_in, __pyx_k_The_gzip_file_must_be_opened_in, sizeof(__pyx_k_The_gzip_file_must_be_opened_in), 0, 0, 1, 0},
+  {&__pyx_n_s_ValueError, __pyx_k_ValueError, sizeof(__pyx_k_ValueError), 0, 0, 1, 1},
+  {&__pyx_n_s_ZranError, __pyx_k_ZranError, sizeof(__pyx_k_ZranError), 0, 0, 1, 1},
   {&__pyx_n_s_auto_build, __pyx_k_auto_build, sizeof(__pyx_k_auto_build), 0, 0, 1, 1},
+  {&__pyx_n_s_close, __pyx_k_close, sizeof(__pyx_k_close), 0, 0, 1, 1},
   {&__pyx_n_s_doc, __pyx_k_doc, sizeof(__pyx_k_doc), 0, 0, 1, 1},
   {&__pyx_n_s_fid, __pyx_k_fid, sizeof(__pyx_k_fid), 0, 0, 1, 1},
+  {&__pyx_n_s_filename, __pyx_k_filename, sizeof(__pyx_k_filename), 0, 0, 1, 1},
   {&__pyx_n_s_fileno, __pyx_k_fileno, sizeof(__pyx_k_fileno), 0, 0, 1, 1},
+  {&__pyx_n_s_format, __pyx_k_format, sizeof(__pyx_k_format), 0, 0, 1, 1},
   {&__pyx_n_s_indexed_gzip, __pyx_k_indexed_gzip, sizeof(__pyx_k_indexed_gzip), 0, 0, 1, 1},
   {&__pyx_n_s_main, __pyx_k_main, sizeof(__pyx_k_main), 0, 0, 1, 1},
   {&__pyx_n_s_metaclass, __pyx_k_metaclass, sizeof(__pyx_k_metaclass), 0, 0, 1, 1},
+  {&__pyx_n_s_mode, __pyx_k_mode, sizeof(__pyx_k_mode), 0, 0, 1, 1},
   {&__pyx_n_s_module, __pyx_k_module, sizeof(__pyx_k_module), 0, 0, 1, 1},
-  {&__pyx_n_s_object, __pyx_k_object, sizeof(__pyx_k_object), 0, 0, 1, 1},
+  {&__pyx_n_s_open, __pyx_k_open, sizeof(__pyx_k_open), 0, 0, 1, 1},
   {&__pyx_n_s_prepare, __pyx_k_prepare, sizeof(__pyx_k_prepare), 0, 0, 1, 1},
   {&__pyx_n_s_qualname, __pyx_k_qualname, sizeof(__pyx_k_qualname), 0, 0, 1, 1},
+  {&__pyx_n_s_rb, __pyx_k_rb, sizeof(__pyx_k_rb), 0, 0, 1, 1},
   {&__pyx_n_s_readbuf_size, __pyx_k_readbuf_size, sizeof(__pyx_k_readbuf_size), 0, 0, 1, 1},
   {&__pyx_n_s_spacing, __pyx_k_spacing, sizeof(__pyx_k_spacing), 0, 0, 1, 1},
   {&__pyx_n_s_test, __pyx_k_test, sizeof(__pyx_k_test), 0, 0, 1, 1},
   {&__pyx_n_s_window_size, __pyx_k_window_size, sizeof(__pyx_k_window_size), 0, 0, 1, 1},
+  {&__pyx_kp_s_zran_build_index_returned_error, __pyx_k_zran_build_index_returned_error, sizeof(__pyx_k_zran_build_index_returned_error), 0, 0, 1, 0},
+  {&__pyx_kp_s_zran_init_returned_error, __pyx_k_zran_init_returned_error, sizeof(__pyx_k_zran_init_returned_error), 0, 0, 1, 0},
+  {&__pyx_kp_s_zran_read_returned_error, __pyx_k_zran_read_returned_error, sizeof(__pyx_k_zran_read_returned_error), 0, 0, 1, 0},
+  {&__pyx_kp_s_zran_seek_returned_error, __pyx_k_zran_seek_returned_error, sizeof(__pyx_k_zran_seek_returned_error), 0, 0, 1, 0},
   {0, 0, 0, 0, 0, 0, 0}
 };
 static int __Pyx_InitCachedBuiltins(void) {
-  __pyx_builtin_object = __Pyx_GetBuiltinName(__pyx_n_s_object); if (!__pyx_builtin_object) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 14; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
-  __pyx_builtin_RuntimeError = __Pyx_GetBuiltinName(__pyx_n_s_RuntimeError); if (!__pyx_builtin_RuntimeError) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 43; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
-  __pyx_builtin_MemoryError = __Pyx_GetBuiltinName(__pyx_n_s_MemoryError); if (!__pyx_builtin_MemoryError) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 61; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_builtin_Exception = __Pyx_GetBuiltinName(__pyx_n_s_Exception); if (!__pyx_builtin_Exception) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 18; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_builtin_ValueError = __Pyx_GetBuiltinName(__pyx_n_s_ValueError); if (!__pyx_builtin_ValueError) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 95; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_builtin_open = __Pyx_GetBuiltinName(__pyx_n_s_open); if (!__pyx_builtin_open) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 104; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_builtin_MemoryError = __Pyx_GetBuiltinName(__pyx_n_s_MemoryError); if (!__pyx_builtin_MemoryError) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 152; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   return 0;
   __pyx_L1_error:;
   return -1;
@@ -1569,8 +2112,99 @@ static int __Pyx_InitCachedBuiltins(void) {
 static int __Pyx_InitCachedConstants(void) {
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("__Pyx_InitCachedConstants", 0);
+
+  /* "indexed_gzip.pyx":95
+ *         if fid is None and filename is None:
+ * 
+ *             raise ValueError('One of fid or filename must be specified')             # <<<<<<<<<<<<<<
+ * 
+ *         if fid is not None and fid.mode != 'rb':
+ */
+  __pyx_tuple_ = PyTuple_Pack(1, __pyx_kp_s_One_of_fid_or_filename_must_be_s); if (unlikely(!__pyx_tuple_)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 95; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __Pyx_GOTREF(__pyx_tuple_);
+  __Pyx_GIVEREF(__pyx_tuple_);
+
+  /* "indexed_gzip.pyx":98
+ * 
+ *         if fid is not None and fid.mode != 'rb':
+ *             raise ValueError('The gzip file must be opened in '             # <<<<<<<<<<<<<<
+ *                              'read-only binary ("rb") mode')
+ * 
+ */
+  __pyx_tuple__2 = PyTuple_Pack(1, __pyx_kp_s_The_gzip_file_must_be_opened_in); if (unlikely(!__pyx_tuple__2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 98; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __Pyx_GOTREF(__pyx_tuple__2);
+  __Pyx_GIVEREF(__pyx_tuple__2);
+
+  /* "indexed_gzip.pyx":118
+ *                           readbuf_size=readbuf_size,
+ *                           flags=flags):
+ *             raise ZranError('zran_init returned error')             # <<<<<<<<<<<<<<
+ * 
+ * 
+ */
+  __pyx_tuple__3 = PyTuple_Pack(1, __pyx_kp_s_zran_init_returned_error); if (unlikely(!__pyx_tuple__3)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 118; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __Pyx_GOTREF(__pyx_tuple__3);
+  __Pyx_GIVEREF(__pyx_tuple__3);
+
+  /* "indexed_gzip.pyx":125
+ * 
+ *         if zran.zran_build_index(&self.index, 0, 0) != 0:
+ *             raise ZranError('zran_build_index returned error')             # <<<<<<<<<<<<<<
+ * 
+ * 
+ */
+  __pyx_tuple__4 = PyTuple_Pack(1, __pyx_kp_s_zran_build_index_returned_error); if (unlikely(!__pyx_tuple__4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 125; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __Pyx_GOTREF(__pyx_tuple__4);
+  __Pyx_GIVEREF(__pyx_tuple__4);
+
+  /* "indexed_gzip.pyx":139
+ * 
+ *         if ret < 0:
+ *             raise ZranError('zran_seek returned error')             # <<<<<<<<<<<<<<
+ * 
+ *         elif ret > 0:
+ */
+  __pyx_tuple__5 = PyTuple_Pack(1, __pyx_kp_s_zran_seek_returned_error); if (unlikely(!__pyx_tuple__5)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 139; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __Pyx_GOTREF(__pyx_tuple__5);
+  __Pyx_GIVEREF(__pyx_tuple__5);
+
+  /* "indexed_gzip.pyx":152
+ * 
+ *         if not buf:
+ *             raise MemoryError('PyMem_Malloc fail')             # <<<<<<<<<<<<<<
+ * 
+ *         ret = zran.zran_read(&self.index, buf, nbytes)
+ */
+  __pyx_tuple__6 = PyTuple_Pack(1, __pyx_kp_s_PyMem_Malloc_fail); if (unlikely(!__pyx_tuple__6)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 152; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __Pyx_GOTREF(__pyx_tuple__6);
+  __Pyx_GIVEREF(__pyx_tuple__6);
+
+  /* "indexed_gzip.pyx":160
+ * 
+ *         if ret < -1:
+ *             raise ZranError('zran_read returned error')             # <<<<<<<<<<<<<<
+ * 
+ *         elif ret == -1:
+ */
+  __pyx_tuple__7 = PyTuple_Pack(1, __pyx_kp_s_zran_read_returned_error); if (unlikely(!__pyx_tuple__7)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 160; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __Pyx_GOTREF(__pyx_tuple__7);
+  __Pyx_GIVEREF(__pyx_tuple__7);
+
+  /* "indexed_gzip.pyx":163
+ * 
+ *         elif ret == -1:
+ *             raise NotCoveredError('Index does not cover current offset')             # <<<<<<<<<<<<<<
+ * 
+ *         # 0 bytes read
+ */
+  __pyx_tuple__8 = PyTuple_Pack(1, __pyx_kp_s_Index_does_not_cover_current_off); if (unlikely(!__pyx_tuple__8)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 163; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __Pyx_GOTREF(__pyx_tuple__8);
+  __Pyx_GIVEREF(__pyx_tuple__8);
   __Pyx_RefNannyFinishContext();
   return 0;
+  __pyx_L1_error:;
+  __Pyx_RefNannyFinishContext();
+  return -1;
 }
 
 static int __Pyx_InitGlobals(void) {
@@ -1672,9 +2306,9 @@ PyMODINIT_FUNC PyInit_indexed_gzip(void)
   /*--- Variable export code ---*/
   /*--- Function export code ---*/
   /*--- Type init code ---*/
-  if (PyType_Ready(&__pyx_type_12indexed_gzip_IndexedGzipFile) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 19; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  if (PyType_Ready(&__pyx_type_12indexed_gzip_IndexedGzipFile) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 34; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __pyx_type_12indexed_gzip_IndexedGzipFile.tp_print = 0;
-  if (PyObject_SetAttrString(__pyx_m, "IndexedGzipFile", (PyObject *)&__pyx_type_12indexed_gzip_IndexedGzipFile) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 19; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  if (PyObject_SetAttrString(__pyx_m, "IndexedGzipFile", (PyObject *)&__pyx_type_12indexed_gzip_IndexedGzipFile) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 34; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __pyx_ptype_12indexed_gzip_IndexedGzipFile = &__pyx_type_12indexed_gzip_IndexedGzipFile;
   /*--- Type import code ---*/
   /*--- Variable import code ---*/
@@ -1684,34 +2318,58 @@ PyMODINIT_FUNC PyInit_indexed_gzip(void)
   if (__Pyx_patch_abc() < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 1; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   #endif
 
-  /* "indexed_gzip.pyx":14
+  /* "indexed_gzip.pyx":18
  * 
  * 
- * class NotCoveredError(object):             # <<<<<<<<<<<<<<
- *     pass
- * 
+ * class NotCoveredError(Exception):             # <<<<<<<<<<<<<<
+ *     """Exception raised by the IndexedGzipFile when an attempt is made to seek
+ *     to/read from a location that is not covered by the index. This exception
  */
-  __pyx_t_1 = PyTuple_New(1); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 14; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = PyTuple_New(1); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 18; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_1);
-  __Pyx_INCREF(__pyx_builtin_object);
-  __Pyx_GIVEREF(__pyx_builtin_object);
-  PyTuple_SET_ITEM(__pyx_t_1, 0, __pyx_builtin_object);
-  __pyx_t_2 = __Pyx_CalculateMetaclass(NULL, __pyx_t_1); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 14; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __Pyx_INCREF(__pyx_builtin_Exception);
+  __Pyx_GIVEREF(__pyx_builtin_Exception);
+  PyTuple_SET_ITEM(__pyx_t_1, 0, __pyx_builtin_Exception);
+  __pyx_t_2 = __Pyx_CalculateMetaclass(NULL, __pyx_t_1); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 18; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_2);
-  __pyx_t_3 = __Pyx_Py3MetaclassPrepare(__pyx_t_2, __pyx_t_1, __pyx_n_s_NotCoveredError, __pyx_n_s_NotCoveredError, (PyObject *) NULL, __pyx_n_s_indexed_gzip, (PyObject *) NULL); if (unlikely(!__pyx_t_3)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 14; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_3 = __Pyx_Py3MetaclassPrepare(__pyx_t_2, __pyx_t_1, __pyx_n_s_NotCoveredError, __pyx_n_s_NotCoveredError, (PyObject *) NULL, __pyx_n_s_indexed_gzip, __pyx_kp_s_Exception_raised_by_the_IndexedG); if (unlikely(!__pyx_t_3)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 18; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_3);
-  __pyx_t_4 = __Pyx_Py3ClassCreate(__pyx_t_2, __pyx_n_s_NotCoveredError, __pyx_t_1, __pyx_t_3, NULL, 0, 1); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 14; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_4 = __Pyx_Py3ClassCreate(__pyx_t_2, __pyx_n_s_NotCoveredError, __pyx_t_1, __pyx_t_3, NULL, 0, 1); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 18; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_4);
-  if (PyDict_SetItem(__pyx_d, __pyx_n_s_NotCoveredError, __pyx_t_4) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 14; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_NotCoveredError, __pyx_t_4) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 18; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
+  __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
+  __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+
+  /* "indexed_gzip.pyx":27
+ * 
+ * 
+ * class ZranError(Exception):             # <<<<<<<<<<<<<<
+ *     """Exception raised by the IndexedGzipFile when the zran library signals
+ *     an error.
+ */
+  __pyx_t_1 = PyTuple_New(1); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 27; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __Pyx_GOTREF(__pyx_t_1);
+  __Pyx_INCREF(__pyx_builtin_Exception);
+  __Pyx_GIVEREF(__pyx_builtin_Exception);
+  PyTuple_SET_ITEM(__pyx_t_1, 0, __pyx_builtin_Exception);
+  __pyx_t_2 = __Pyx_CalculateMetaclass(NULL, __pyx_t_1); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 27; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __Pyx_GOTREF(__pyx_t_2);
+  __pyx_t_3 = __Pyx_Py3MetaclassPrepare(__pyx_t_2, __pyx_t_1, __pyx_n_s_ZranError, __pyx_n_s_ZranError, (PyObject *) NULL, __pyx_n_s_indexed_gzip, __pyx_kp_s_Exception_raised_by_the_IndexedG_2); if (unlikely(!__pyx_t_3)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 27; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __Pyx_GOTREF(__pyx_t_3);
+  __pyx_t_4 = __Pyx_Py3ClassCreate(__pyx_t_2, __pyx_n_s_ZranError, __pyx_t_1, __pyx_t_3, NULL, 0, 1); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 27; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __Pyx_GOTREF(__pyx_t_4);
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_ZranError, __pyx_t_4) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 27; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
   /* "indexed_gzip.pyx":1
- * from libc.stdio cimport *             # <<<<<<<<<<<<<<
- * 
- * from cpython.mem cimport PyMem_Malloc, PyMem_Realloc, PyMem_Free
+ * #             # <<<<<<<<<<<<<<
+ * # The IndexedGzipFile class.
+ * #
  */
   __pyx_t_1 = PyDict_New(); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 1; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_1);
@@ -1931,74 +2589,6 @@ static CYTHON_INLINE PyObject* __Pyx_PyObject_Call(PyObject *func, PyObject *arg
 }
 #endif
 
-#if CYTHON_COMPILING_IN_CPYTHON
-static CYTHON_INLINE PyObject* __Pyx_PyObject_CallMethO(PyObject *func, PyObject *arg) {
-    PyObject *self, *result;
-    PyCFunction cfunc;
-    cfunc = PyCFunction_GET_FUNCTION(func);
-    self = PyCFunction_GET_SELF(func);
-    if (unlikely(Py_EnterRecursiveCall((char*)" while calling a Python object")))
-        return NULL;
-    result = cfunc(self, arg);
-    Py_LeaveRecursiveCall();
-    if (unlikely(!result) && unlikely(!PyErr_Occurred())) {
-        PyErr_SetString(
-            PyExc_SystemError,
-            "NULL result without error in PyObject_Call");
-    }
-    return result;
-}
-#endif
-
-#if CYTHON_COMPILING_IN_CPYTHON
-static PyObject* __Pyx__PyObject_CallOneArg(PyObject *func, PyObject *arg) {
-    PyObject *result;
-    PyObject *args = PyTuple_New(1);
-    if (unlikely(!args)) return NULL;
-    Py_INCREF(arg);
-    PyTuple_SET_ITEM(args, 0, arg);
-    result = __Pyx_PyObject_Call(func, args, NULL);
-    Py_DECREF(args);
-    return result;
-}
-static CYTHON_INLINE PyObject* __Pyx_PyObject_CallOneArg(PyObject *func, PyObject *arg) {
-#ifdef __Pyx_CyFunction_USED
-    if (likely(PyCFunction_Check(func) || PyObject_TypeCheck(func, __pyx_CyFunctionType))) {
-#else
-    if (likely(PyCFunction_Check(func))) {
-#endif
-        if (likely(PyCFunction_GET_FLAGS(func) & METH_O)) {
-            return __Pyx_PyObject_CallMethO(func, arg);
-        }
-    }
-    return __Pyx__PyObject_CallOneArg(func, arg);
-}
-#else
-static CYTHON_INLINE PyObject* __Pyx_PyObject_CallOneArg(PyObject *func, PyObject *arg) {
-    PyObject *result;
-    PyObject *args = PyTuple_Pack(1, arg);
-    if (unlikely(!args)) return NULL;
-    result = __Pyx_PyObject_Call(func, args, NULL);
-    Py_DECREF(args);
-    return result;
-}
-#endif
-
-#if CYTHON_COMPILING_IN_CPYTHON
-static CYTHON_INLINE PyObject* __Pyx_PyObject_CallNoArg(PyObject *func) {
-#ifdef __Pyx_CyFunction_USED
-    if (likely(PyCFunction_Check(func) || PyObject_TypeCheck(func, __pyx_CyFunctionType))) {
-#else
-    if (likely(PyCFunction_Check(func))) {
-#endif
-        if (likely(PyCFunction_GET_FLAGS(func) & METH_NOARGS)) {
-            return __Pyx_PyObject_CallMethO(func, NULL);
-        }
-    }
-    return __Pyx_PyObject_Call(func, __pyx_empty_tuple, NULL);
-}
-#endif
-
 static CYTHON_INLINE void __Pyx_ErrRestore(PyObject *type, PyObject *value, PyObject *tb) {
 #if CYTHON_COMPILING_IN_CPYTHON
     PyObject *tmp_type, *tmp_value, *tmp_tb;
@@ -2190,6 +2780,194 @@ bad:
 }
 #endif
 
+static CYTHON_INLINE int __Pyx_PyBytes_Equals(PyObject* s1, PyObject* s2, int equals) {
+#if CYTHON_COMPILING_IN_PYPY
+    return PyObject_RichCompareBool(s1, s2, equals);
+#else
+    if (s1 == s2) {
+        return (equals == Py_EQ);
+    } else if (PyBytes_CheckExact(s1) & PyBytes_CheckExact(s2)) {
+        const char *ps1, *ps2;
+        Py_ssize_t length = PyBytes_GET_SIZE(s1);
+        if (length != PyBytes_GET_SIZE(s2))
+            return (equals == Py_NE);
+        ps1 = PyBytes_AS_STRING(s1);
+        ps2 = PyBytes_AS_STRING(s2);
+        if (ps1[0] != ps2[0]) {
+            return (equals == Py_NE);
+        } else if (length == 1) {
+            return (equals == Py_EQ);
+        } else {
+            int result = memcmp(ps1, ps2, (size_t)length);
+            return (equals == Py_EQ) ? (result == 0) : (result != 0);
+        }
+    } else if ((s1 == Py_None) & PyBytes_CheckExact(s2)) {
+        return (equals == Py_NE);
+    } else if ((s2 == Py_None) & PyBytes_CheckExact(s1)) {
+        return (equals == Py_NE);
+    } else {
+        int result;
+        PyObject* py_result = PyObject_RichCompare(s1, s2, equals);
+        if (!py_result)
+            return -1;
+        result = __Pyx_PyObject_IsTrue(py_result);
+        Py_DECREF(py_result);
+        return result;
+    }
+#endif
+}
+
+static CYTHON_INLINE int __Pyx_PyUnicode_Equals(PyObject* s1, PyObject* s2, int equals) {
+#if CYTHON_COMPILING_IN_PYPY
+    return PyObject_RichCompareBool(s1, s2, equals);
+#else
+#if PY_MAJOR_VERSION < 3
+    PyObject* owned_ref = NULL;
+#endif
+    int s1_is_unicode, s2_is_unicode;
+    if (s1 == s2) {
+        goto return_eq;
+    }
+    s1_is_unicode = PyUnicode_CheckExact(s1);
+    s2_is_unicode = PyUnicode_CheckExact(s2);
+#if PY_MAJOR_VERSION < 3
+    if ((s1_is_unicode & (!s2_is_unicode)) && PyString_CheckExact(s2)) {
+        owned_ref = PyUnicode_FromObject(s2);
+        if (unlikely(!owned_ref))
+            return -1;
+        s2 = owned_ref;
+        s2_is_unicode = 1;
+    } else if ((s2_is_unicode & (!s1_is_unicode)) && PyString_CheckExact(s1)) {
+        owned_ref = PyUnicode_FromObject(s1);
+        if (unlikely(!owned_ref))
+            return -1;
+        s1 = owned_ref;
+        s1_is_unicode = 1;
+    } else if (((!s2_is_unicode) & (!s1_is_unicode))) {
+        return __Pyx_PyBytes_Equals(s1, s2, equals);
+    }
+#endif
+    if (s1_is_unicode & s2_is_unicode) {
+        Py_ssize_t length;
+        int kind;
+        void *data1, *data2;
+        if (unlikely(__Pyx_PyUnicode_READY(s1) < 0) || unlikely(__Pyx_PyUnicode_READY(s2) < 0))
+            return -1;
+        length = __Pyx_PyUnicode_GET_LENGTH(s1);
+        if (length != __Pyx_PyUnicode_GET_LENGTH(s2)) {
+            goto return_ne;
+        }
+        kind = __Pyx_PyUnicode_KIND(s1);
+        if (kind != __Pyx_PyUnicode_KIND(s2)) {
+            goto return_ne;
+        }
+        data1 = __Pyx_PyUnicode_DATA(s1);
+        data2 = __Pyx_PyUnicode_DATA(s2);
+        if (__Pyx_PyUnicode_READ(kind, data1, 0) != __Pyx_PyUnicode_READ(kind, data2, 0)) {
+            goto return_ne;
+        } else if (length == 1) {
+            goto return_eq;
+        } else {
+            int result = memcmp(data1, data2, (size_t)(length * kind));
+            #if PY_MAJOR_VERSION < 3
+            Py_XDECREF(owned_ref);
+            #endif
+            return (equals == Py_EQ) ? (result == 0) : (result != 0);
+        }
+    } else if ((s1 == Py_None) & s2_is_unicode) {
+        goto return_ne;
+    } else if ((s2 == Py_None) & s1_is_unicode) {
+        goto return_ne;
+    } else {
+        int result;
+        PyObject* py_result = PyObject_RichCompare(s1, s2, equals);
+        if (!py_result)
+            return -1;
+        result = __Pyx_PyObject_IsTrue(py_result);
+        Py_DECREF(py_result);
+        return result;
+    }
+return_eq:
+    #if PY_MAJOR_VERSION < 3
+    Py_XDECREF(owned_ref);
+    #endif
+    return (equals == Py_EQ);
+return_ne:
+    #if PY_MAJOR_VERSION < 3
+    Py_XDECREF(owned_ref);
+    #endif
+    return (equals == Py_NE);
+#endif
+}
+
+#if CYTHON_COMPILING_IN_CPYTHON
+static CYTHON_INLINE PyObject* __Pyx_PyObject_CallMethO(PyObject *func, PyObject *arg) {
+    PyObject *self, *result;
+    PyCFunction cfunc;
+    cfunc = PyCFunction_GET_FUNCTION(func);
+    self = PyCFunction_GET_SELF(func);
+    if (unlikely(Py_EnterRecursiveCall((char*)" while calling a Python object")))
+        return NULL;
+    result = cfunc(self, arg);
+    Py_LeaveRecursiveCall();
+    if (unlikely(!result) && unlikely(!PyErr_Occurred())) {
+        PyErr_SetString(
+            PyExc_SystemError,
+            "NULL result without error in PyObject_Call");
+    }
+    return result;
+}
+#endif
+
+#if CYTHON_COMPILING_IN_CPYTHON
+static PyObject* __Pyx__PyObject_CallOneArg(PyObject *func, PyObject *arg) {
+    PyObject *result;
+    PyObject *args = PyTuple_New(1);
+    if (unlikely(!args)) return NULL;
+    Py_INCREF(arg);
+    PyTuple_SET_ITEM(args, 0, arg);
+    result = __Pyx_PyObject_Call(func, args, NULL);
+    Py_DECREF(args);
+    return result;
+}
+static CYTHON_INLINE PyObject* __Pyx_PyObject_CallOneArg(PyObject *func, PyObject *arg) {
+#ifdef __Pyx_CyFunction_USED
+    if (likely(PyCFunction_Check(func) || PyObject_TypeCheck(func, __pyx_CyFunctionType))) {
+#else
+    if (likely(PyCFunction_Check(func))) {
+#endif
+        if (likely(PyCFunction_GET_FLAGS(func) & METH_O)) {
+            return __Pyx_PyObject_CallMethO(func, arg);
+        }
+    }
+    return __Pyx__PyObject_CallOneArg(func, arg);
+}
+#else
+static CYTHON_INLINE PyObject* __Pyx_PyObject_CallOneArg(PyObject *func, PyObject *arg) {
+    PyObject *result;
+    PyObject *args = PyTuple_Pack(1, arg);
+    if (unlikely(!args)) return NULL;
+    result = __Pyx_PyObject_Call(func, args, NULL);
+    Py_DECREF(args);
+    return result;
+}
+#endif
+
+#if CYTHON_COMPILING_IN_CPYTHON
+static CYTHON_INLINE PyObject* __Pyx_PyObject_CallNoArg(PyObject *func) {
+#ifdef __Pyx_CyFunction_USED
+    if (likely(PyCFunction_Check(func) || PyObject_TypeCheck(func, __pyx_CyFunctionType))) {
+#else
+    if (likely(PyCFunction_Check(func))) {
+#endif
+        if (likely(PyCFunction_GET_FLAGS(func) & METH_NOARGS)) {
+            return __Pyx_PyObject_CallMethO(func, NULL);
+        }
+    }
+    return __Pyx_PyObject_Call(func, __pyx_empty_tuple, NULL);
+}
+#endif
+
 static CYTHON_INLINE PyObject *__Pyx_GetModuleGlobalName(PyObject *name) {
     PyObject *result;
 #if CYTHON_COMPILING_IN_CPYTHON
@@ -2209,6 +2987,42 @@ static CYTHON_INLINE PyObject *__Pyx_GetModuleGlobalName(PyObject *name) {
 
 static CYTHON_INLINE void __Pyx_RaiseUnboundLocalError(const char *varname) {
     PyErr_Format(PyExc_UnboundLocalError, "local variable '%s' referenced before assignment", varname);
+}
+
+static void __Pyx_WriteUnraisable(const char *name, CYTHON_UNUSED int clineno,
+                                  CYTHON_UNUSED int lineno, CYTHON_UNUSED const char *filename,
+                                  int full_traceback, CYTHON_UNUSED int nogil) {
+    PyObject *old_exc, *old_val, *old_tb;
+    PyObject *ctx;
+#ifdef WITH_THREAD
+    PyGILState_STATE state;
+    if (nogil)
+        state = PyGILState_Ensure();
+#endif
+    __Pyx_ErrFetch(&old_exc, &old_val, &old_tb);
+    if (full_traceback) {
+        Py_XINCREF(old_exc);
+        Py_XINCREF(old_val);
+        Py_XINCREF(old_tb);
+        __Pyx_ErrRestore(old_exc, old_val, old_tb);
+        PyErr_PrintEx(1);
+    }
+    #if PY_MAJOR_VERSION < 3
+    ctx = PyString_FromString(name);
+    #else
+    ctx = PyUnicode_FromString(name);
+    #endif
+    __Pyx_ErrRestore(old_exc, old_val, old_tb);
+    if (!ctx) {
+        PyErr_WriteUnraisable(Py_None);
+    } else {
+        PyErr_WriteUnraisable(ctx);
+        Py_DECREF(ctx);
+    }
+#ifdef WITH_THREAD
+    if (nogil)
+        PyGILState_Release(state);
+#endif
 }
 
 static PyObject *__Pyx_CalculateMetaclass(PyTypeObject *metaclass, PyObject *bases) {
@@ -2683,19 +3497,19 @@ raise_neg_overflow:
     return (int) -1;
 }
 
-static CYTHON_INLINE long __Pyx_PyInt_As_long(PyObject *x) {
-    const long neg_one = (long) -1, const_zero = (long) 0;
+static CYTHON_INLINE uint32_t __Pyx_PyInt_As_uint32_t(PyObject *x) {
+    const uint32_t neg_one = (uint32_t) -1, const_zero = (uint32_t) 0;
     const int is_unsigned = neg_one > const_zero;
 #if PY_MAJOR_VERSION < 3
     if (likely(PyInt_Check(x))) {
-        if (sizeof(long) < sizeof(long)) {
-            __PYX_VERIFY_RETURN_INT(long, long, PyInt_AS_LONG(x))
+        if (sizeof(uint32_t) < sizeof(long)) {
+            __PYX_VERIFY_RETURN_INT(uint32_t, long, PyInt_AS_LONG(x))
         } else {
             long val = PyInt_AS_LONG(x);
             if (is_unsigned && unlikely(val < 0)) {
                 goto raise_neg_overflow;
             }
-            return (long) val;
+            return (uint32_t) val;
         }
     } else
 #endif
@@ -2704,32 +3518,32 @@ static CYTHON_INLINE long __Pyx_PyInt_As_long(PyObject *x) {
 #if CYTHON_USE_PYLONG_INTERNALS
             const digit* digits = ((PyLongObject*)x)->ob_digit;
             switch (Py_SIZE(x)) {
-                case  0: return (long) 0;
-                case  1: __PYX_VERIFY_RETURN_INT(long, digit, digits[0])
+                case  0: return (uint32_t) 0;
+                case  1: __PYX_VERIFY_RETURN_INT(uint32_t, digit, digits[0])
                 case 2:
-                    if (8 * sizeof(long) > 1 * PyLong_SHIFT) {
+                    if (8 * sizeof(uint32_t) > 1 * PyLong_SHIFT) {
                         if (8 * sizeof(unsigned long) > 2 * PyLong_SHIFT) {
-                            __PYX_VERIFY_RETURN_INT(long, unsigned long, (((((unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
-                        } else if (8 * sizeof(long) >= 2 * PyLong_SHIFT) {
-                            return (long) (((((long)digits[1]) << PyLong_SHIFT) | (long)digits[0]));
+                            __PYX_VERIFY_RETURN_INT(uint32_t, unsigned long, (((((unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
+                        } else if (8 * sizeof(uint32_t) >= 2 * PyLong_SHIFT) {
+                            return (uint32_t) (((((uint32_t)digits[1]) << PyLong_SHIFT) | (uint32_t)digits[0]));
                         }
                     }
                     break;
                 case 3:
-                    if (8 * sizeof(long) > 2 * PyLong_SHIFT) {
+                    if (8 * sizeof(uint32_t) > 2 * PyLong_SHIFT) {
                         if (8 * sizeof(unsigned long) > 3 * PyLong_SHIFT) {
-                            __PYX_VERIFY_RETURN_INT(long, unsigned long, (((((((unsigned long)digits[2]) << PyLong_SHIFT) | (unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
-                        } else if (8 * sizeof(long) >= 3 * PyLong_SHIFT) {
-                            return (long) (((((((long)digits[2]) << PyLong_SHIFT) | (long)digits[1]) << PyLong_SHIFT) | (long)digits[0]));
+                            __PYX_VERIFY_RETURN_INT(uint32_t, unsigned long, (((((((unsigned long)digits[2]) << PyLong_SHIFT) | (unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
+                        } else if (8 * sizeof(uint32_t) >= 3 * PyLong_SHIFT) {
+                            return (uint32_t) (((((((uint32_t)digits[2]) << PyLong_SHIFT) | (uint32_t)digits[1]) << PyLong_SHIFT) | (uint32_t)digits[0]));
                         }
                     }
                     break;
                 case 4:
-                    if (8 * sizeof(long) > 3 * PyLong_SHIFT) {
+                    if (8 * sizeof(uint32_t) > 3 * PyLong_SHIFT) {
                         if (8 * sizeof(unsigned long) > 4 * PyLong_SHIFT) {
-                            __PYX_VERIFY_RETURN_INT(long, unsigned long, (((((((((unsigned long)digits[3]) << PyLong_SHIFT) | (unsigned long)digits[2]) << PyLong_SHIFT) | (unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
-                        } else if (8 * sizeof(long) >= 4 * PyLong_SHIFT) {
-                            return (long) (((((((((long)digits[3]) << PyLong_SHIFT) | (long)digits[2]) << PyLong_SHIFT) | (long)digits[1]) << PyLong_SHIFT) | (long)digits[0]));
+                            __PYX_VERIFY_RETURN_INT(uint32_t, unsigned long, (((((((((unsigned long)digits[3]) << PyLong_SHIFT) | (unsigned long)digits[2]) << PyLong_SHIFT) | (unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
+                        } else if (8 * sizeof(uint32_t) >= 4 * PyLong_SHIFT) {
+                            return (uint32_t) (((((((((uint32_t)digits[3]) << PyLong_SHIFT) | (uint32_t)digits[2]) << PyLong_SHIFT) | (uint32_t)digits[1]) << PyLong_SHIFT) | (uint32_t)digits[0]));
                         }
                     }
                     break;
@@ -2743,83 +3557,83 @@ static CYTHON_INLINE long __Pyx_PyInt_As_long(PyObject *x) {
             {
                 int result = PyObject_RichCompareBool(x, Py_False, Py_LT);
                 if (unlikely(result < 0))
-                    return (long) -1;
+                    return (uint32_t) -1;
                 if (unlikely(result == 1))
                     goto raise_neg_overflow;
             }
 #endif
-            if (sizeof(long) <= sizeof(unsigned long)) {
-                __PYX_VERIFY_RETURN_INT_EXC(long, unsigned long, PyLong_AsUnsignedLong(x))
-            } else if (sizeof(long) <= sizeof(unsigned PY_LONG_LONG)) {
-                __PYX_VERIFY_RETURN_INT_EXC(long, unsigned PY_LONG_LONG, PyLong_AsUnsignedLongLong(x))
+            if (sizeof(uint32_t) <= sizeof(unsigned long)) {
+                __PYX_VERIFY_RETURN_INT_EXC(uint32_t, unsigned long, PyLong_AsUnsignedLong(x))
+            } else if (sizeof(uint32_t) <= sizeof(unsigned PY_LONG_LONG)) {
+                __PYX_VERIFY_RETURN_INT_EXC(uint32_t, unsigned PY_LONG_LONG, PyLong_AsUnsignedLongLong(x))
             }
         } else {
 #if CYTHON_USE_PYLONG_INTERNALS
             const digit* digits = ((PyLongObject*)x)->ob_digit;
             switch (Py_SIZE(x)) {
-                case  0: return (long) 0;
-                case -1: __PYX_VERIFY_RETURN_INT(long, sdigit, -(sdigit) digits[0])
-                case  1: __PYX_VERIFY_RETURN_INT(long,  digit, +digits[0])
+                case  0: return (uint32_t) 0;
+                case -1: __PYX_VERIFY_RETURN_INT(uint32_t, sdigit, -(sdigit) digits[0])
+                case  1: __PYX_VERIFY_RETURN_INT(uint32_t,  digit, +digits[0])
                 case -2:
-                    if (8 * sizeof(long) - 1 > 1 * PyLong_SHIFT) {
+                    if (8 * sizeof(uint32_t) - 1 > 1 * PyLong_SHIFT) {
                         if (8 * sizeof(unsigned long) > 2 * PyLong_SHIFT) {
-                            __PYX_VERIFY_RETURN_INT(long, long, -(long) (((((unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
-                        } else if (8 * sizeof(long) - 1 > 2 * PyLong_SHIFT) {
-                            return (long) (((long)-1)*(((((long)digits[1]) << PyLong_SHIFT) | (long)digits[0])));
+                            __PYX_VERIFY_RETURN_INT(uint32_t, long, -(long) (((((unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
+                        } else if (8 * sizeof(uint32_t) - 1 > 2 * PyLong_SHIFT) {
+                            return (uint32_t) (((uint32_t)-1)*(((((uint32_t)digits[1]) << PyLong_SHIFT) | (uint32_t)digits[0])));
                         }
                     }
                     break;
                 case 2:
-                    if (8 * sizeof(long) > 1 * PyLong_SHIFT) {
+                    if (8 * sizeof(uint32_t) > 1 * PyLong_SHIFT) {
                         if (8 * sizeof(unsigned long) > 2 * PyLong_SHIFT) {
-                            __PYX_VERIFY_RETURN_INT(long, unsigned long, (((((unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
-                        } else if (8 * sizeof(long) - 1 > 2 * PyLong_SHIFT) {
-                            return (long) ((((((long)digits[1]) << PyLong_SHIFT) | (long)digits[0])));
+                            __PYX_VERIFY_RETURN_INT(uint32_t, unsigned long, (((((unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
+                        } else if (8 * sizeof(uint32_t) - 1 > 2 * PyLong_SHIFT) {
+                            return (uint32_t) ((((((uint32_t)digits[1]) << PyLong_SHIFT) | (uint32_t)digits[0])));
                         }
                     }
                     break;
                 case -3:
-                    if (8 * sizeof(long) - 1 > 2 * PyLong_SHIFT) {
+                    if (8 * sizeof(uint32_t) - 1 > 2 * PyLong_SHIFT) {
                         if (8 * sizeof(unsigned long) > 3 * PyLong_SHIFT) {
-                            __PYX_VERIFY_RETURN_INT(long, long, -(long) (((((((unsigned long)digits[2]) << PyLong_SHIFT) | (unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
-                        } else if (8 * sizeof(long) - 1 > 3 * PyLong_SHIFT) {
-                            return (long) (((long)-1)*(((((((long)digits[2]) << PyLong_SHIFT) | (long)digits[1]) << PyLong_SHIFT) | (long)digits[0])));
+                            __PYX_VERIFY_RETURN_INT(uint32_t, long, -(long) (((((((unsigned long)digits[2]) << PyLong_SHIFT) | (unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
+                        } else if (8 * sizeof(uint32_t) - 1 > 3 * PyLong_SHIFT) {
+                            return (uint32_t) (((uint32_t)-1)*(((((((uint32_t)digits[2]) << PyLong_SHIFT) | (uint32_t)digits[1]) << PyLong_SHIFT) | (uint32_t)digits[0])));
                         }
                     }
                     break;
                 case 3:
-                    if (8 * sizeof(long) > 2 * PyLong_SHIFT) {
+                    if (8 * sizeof(uint32_t) > 2 * PyLong_SHIFT) {
                         if (8 * sizeof(unsigned long) > 3 * PyLong_SHIFT) {
-                            __PYX_VERIFY_RETURN_INT(long, unsigned long, (((((((unsigned long)digits[2]) << PyLong_SHIFT) | (unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
-                        } else if (8 * sizeof(long) - 1 > 3 * PyLong_SHIFT) {
-                            return (long) ((((((((long)digits[2]) << PyLong_SHIFT) | (long)digits[1]) << PyLong_SHIFT) | (long)digits[0])));
+                            __PYX_VERIFY_RETURN_INT(uint32_t, unsigned long, (((((((unsigned long)digits[2]) << PyLong_SHIFT) | (unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
+                        } else if (8 * sizeof(uint32_t) - 1 > 3 * PyLong_SHIFT) {
+                            return (uint32_t) ((((((((uint32_t)digits[2]) << PyLong_SHIFT) | (uint32_t)digits[1]) << PyLong_SHIFT) | (uint32_t)digits[0])));
                         }
                     }
                     break;
                 case -4:
-                    if (8 * sizeof(long) - 1 > 3 * PyLong_SHIFT) {
+                    if (8 * sizeof(uint32_t) - 1 > 3 * PyLong_SHIFT) {
                         if (8 * sizeof(unsigned long) > 4 * PyLong_SHIFT) {
-                            __PYX_VERIFY_RETURN_INT(long, long, -(long) (((((((((unsigned long)digits[3]) << PyLong_SHIFT) | (unsigned long)digits[2]) << PyLong_SHIFT) | (unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
-                        } else if (8 * sizeof(long) - 1 > 4 * PyLong_SHIFT) {
-                            return (long) (((long)-1)*(((((((((long)digits[3]) << PyLong_SHIFT) | (long)digits[2]) << PyLong_SHIFT) | (long)digits[1]) << PyLong_SHIFT) | (long)digits[0])));
+                            __PYX_VERIFY_RETURN_INT(uint32_t, long, -(long) (((((((((unsigned long)digits[3]) << PyLong_SHIFT) | (unsigned long)digits[2]) << PyLong_SHIFT) | (unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
+                        } else if (8 * sizeof(uint32_t) - 1 > 4 * PyLong_SHIFT) {
+                            return (uint32_t) (((uint32_t)-1)*(((((((((uint32_t)digits[3]) << PyLong_SHIFT) | (uint32_t)digits[2]) << PyLong_SHIFT) | (uint32_t)digits[1]) << PyLong_SHIFT) | (uint32_t)digits[0])));
                         }
                     }
                     break;
                 case 4:
-                    if (8 * sizeof(long) > 3 * PyLong_SHIFT) {
+                    if (8 * sizeof(uint32_t) > 3 * PyLong_SHIFT) {
                         if (8 * sizeof(unsigned long) > 4 * PyLong_SHIFT) {
-                            __PYX_VERIFY_RETURN_INT(long, unsigned long, (((((((((unsigned long)digits[3]) << PyLong_SHIFT) | (unsigned long)digits[2]) << PyLong_SHIFT) | (unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
-                        } else if (8 * sizeof(long) - 1 > 4 * PyLong_SHIFT) {
-                            return (long) ((((((((((long)digits[3]) << PyLong_SHIFT) | (long)digits[2]) << PyLong_SHIFT) | (long)digits[1]) << PyLong_SHIFT) | (long)digits[0])));
+                            __PYX_VERIFY_RETURN_INT(uint32_t, unsigned long, (((((((((unsigned long)digits[3]) << PyLong_SHIFT) | (unsigned long)digits[2]) << PyLong_SHIFT) | (unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
+                        } else if (8 * sizeof(uint32_t) - 1 > 4 * PyLong_SHIFT) {
+                            return (uint32_t) ((((((((((uint32_t)digits[3]) << PyLong_SHIFT) | (uint32_t)digits[2]) << PyLong_SHIFT) | (uint32_t)digits[1]) << PyLong_SHIFT) | (uint32_t)digits[0])));
                         }
                     }
                     break;
             }
 #endif
-            if (sizeof(long) <= sizeof(long)) {
-                __PYX_VERIFY_RETURN_INT_EXC(long, long, PyLong_AsLong(x))
-            } else if (sizeof(long) <= sizeof(PY_LONG_LONG)) {
-                __PYX_VERIFY_RETURN_INT_EXC(long, PY_LONG_LONG, PyLong_AsLongLong(x))
+            if (sizeof(uint32_t) <= sizeof(long)) {
+                __PYX_VERIFY_RETURN_INT_EXC(uint32_t, long, PyLong_AsLong(x))
+            } else if (sizeof(uint32_t) <= sizeof(PY_LONG_LONG)) {
+                __PYX_VERIFY_RETURN_INT_EXC(uint32_t, PY_LONG_LONG, PyLong_AsLongLong(x))
             }
         }
         {
@@ -2827,7 +3641,7 @@ static CYTHON_INLINE long __Pyx_PyInt_As_long(PyObject *x) {
             PyErr_SetString(PyExc_RuntimeError,
                             "_PyLong_AsByteArray() not available in PyPy, cannot convert large numbers");
 #else
-            long val;
+            uint32_t val;
             PyObject *v = __Pyx_PyNumber_Int(x);
  #if PY_MAJOR_VERSION < 3
             if (likely(v) && !PyLong_Check(v)) {
@@ -2847,24 +3661,208 @@ static CYTHON_INLINE long __Pyx_PyInt_As_long(PyObject *x) {
                     return val;
             }
 #endif
-            return (long) -1;
+            return (uint32_t) -1;
         }
     } else {
-        long val;
+        uint32_t val;
         PyObject *tmp = __Pyx_PyNumber_Int(x);
-        if (!tmp) return (long) -1;
-        val = __Pyx_PyInt_As_long(tmp);
+        if (!tmp) return (uint32_t) -1;
+        val = __Pyx_PyInt_As_uint32_t(tmp);
         Py_DECREF(tmp);
         return val;
     }
 raise_overflow:
     PyErr_SetString(PyExc_OverflowError,
-        "value too large to convert to long");
-    return (long) -1;
+        "value too large to convert to uint32_t");
+    return (uint32_t) -1;
 raise_neg_overflow:
     PyErr_SetString(PyExc_OverflowError,
-        "can't convert negative value to long");
-    return (long) -1;
+        "can't convert negative value to uint32_t");
+    return (uint32_t) -1;
+}
+
+static CYTHON_INLINE off_t __Pyx_PyInt_As_off_t(PyObject *x) {
+    const off_t neg_one = (off_t) -1, const_zero = (off_t) 0;
+    const int is_unsigned = neg_one > const_zero;
+#if PY_MAJOR_VERSION < 3
+    if (likely(PyInt_Check(x))) {
+        if (sizeof(off_t) < sizeof(long)) {
+            __PYX_VERIFY_RETURN_INT(off_t, long, PyInt_AS_LONG(x))
+        } else {
+            long val = PyInt_AS_LONG(x);
+            if (is_unsigned && unlikely(val < 0)) {
+                goto raise_neg_overflow;
+            }
+            return (off_t) val;
+        }
+    } else
+#endif
+    if (likely(PyLong_Check(x))) {
+        if (is_unsigned) {
+#if CYTHON_USE_PYLONG_INTERNALS
+            const digit* digits = ((PyLongObject*)x)->ob_digit;
+            switch (Py_SIZE(x)) {
+                case  0: return (off_t) 0;
+                case  1: __PYX_VERIFY_RETURN_INT(off_t, digit, digits[0])
+                case 2:
+                    if (8 * sizeof(off_t) > 1 * PyLong_SHIFT) {
+                        if (8 * sizeof(unsigned long) > 2 * PyLong_SHIFT) {
+                            __PYX_VERIFY_RETURN_INT(off_t, unsigned long, (((((unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
+                        } else if (8 * sizeof(off_t) >= 2 * PyLong_SHIFT) {
+                            return (off_t) (((((off_t)digits[1]) << PyLong_SHIFT) | (off_t)digits[0]));
+                        }
+                    }
+                    break;
+                case 3:
+                    if (8 * sizeof(off_t) > 2 * PyLong_SHIFT) {
+                        if (8 * sizeof(unsigned long) > 3 * PyLong_SHIFT) {
+                            __PYX_VERIFY_RETURN_INT(off_t, unsigned long, (((((((unsigned long)digits[2]) << PyLong_SHIFT) | (unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
+                        } else if (8 * sizeof(off_t) >= 3 * PyLong_SHIFT) {
+                            return (off_t) (((((((off_t)digits[2]) << PyLong_SHIFT) | (off_t)digits[1]) << PyLong_SHIFT) | (off_t)digits[0]));
+                        }
+                    }
+                    break;
+                case 4:
+                    if (8 * sizeof(off_t) > 3 * PyLong_SHIFT) {
+                        if (8 * sizeof(unsigned long) > 4 * PyLong_SHIFT) {
+                            __PYX_VERIFY_RETURN_INT(off_t, unsigned long, (((((((((unsigned long)digits[3]) << PyLong_SHIFT) | (unsigned long)digits[2]) << PyLong_SHIFT) | (unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
+                        } else if (8 * sizeof(off_t) >= 4 * PyLong_SHIFT) {
+                            return (off_t) (((((((((off_t)digits[3]) << PyLong_SHIFT) | (off_t)digits[2]) << PyLong_SHIFT) | (off_t)digits[1]) << PyLong_SHIFT) | (off_t)digits[0]));
+                        }
+                    }
+                    break;
+            }
+#endif
+#if CYTHON_COMPILING_IN_CPYTHON
+            if (unlikely(Py_SIZE(x) < 0)) {
+                goto raise_neg_overflow;
+            }
+#else
+            {
+                int result = PyObject_RichCompareBool(x, Py_False, Py_LT);
+                if (unlikely(result < 0))
+                    return (off_t) -1;
+                if (unlikely(result == 1))
+                    goto raise_neg_overflow;
+            }
+#endif
+            if (sizeof(off_t) <= sizeof(unsigned long)) {
+                __PYX_VERIFY_RETURN_INT_EXC(off_t, unsigned long, PyLong_AsUnsignedLong(x))
+            } else if (sizeof(off_t) <= sizeof(unsigned PY_LONG_LONG)) {
+                __PYX_VERIFY_RETURN_INT_EXC(off_t, unsigned PY_LONG_LONG, PyLong_AsUnsignedLongLong(x))
+            }
+        } else {
+#if CYTHON_USE_PYLONG_INTERNALS
+            const digit* digits = ((PyLongObject*)x)->ob_digit;
+            switch (Py_SIZE(x)) {
+                case  0: return (off_t) 0;
+                case -1: __PYX_VERIFY_RETURN_INT(off_t, sdigit, -(sdigit) digits[0])
+                case  1: __PYX_VERIFY_RETURN_INT(off_t,  digit, +digits[0])
+                case -2:
+                    if (8 * sizeof(off_t) - 1 > 1 * PyLong_SHIFT) {
+                        if (8 * sizeof(unsigned long) > 2 * PyLong_SHIFT) {
+                            __PYX_VERIFY_RETURN_INT(off_t, long, -(long) (((((unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
+                        } else if (8 * sizeof(off_t) - 1 > 2 * PyLong_SHIFT) {
+                            return (off_t) (((off_t)-1)*(((((off_t)digits[1]) << PyLong_SHIFT) | (off_t)digits[0])));
+                        }
+                    }
+                    break;
+                case 2:
+                    if (8 * sizeof(off_t) > 1 * PyLong_SHIFT) {
+                        if (8 * sizeof(unsigned long) > 2 * PyLong_SHIFT) {
+                            __PYX_VERIFY_RETURN_INT(off_t, unsigned long, (((((unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
+                        } else if (8 * sizeof(off_t) - 1 > 2 * PyLong_SHIFT) {
+                            return (off_t) ((((((off_t)digits[1]) << PyLong_SHIFT) | (off_t)digits[0])));
+                        }
+                    }
+                    break;
+                case -3:
+                    if (8 * sizeof(off_t) - 1 > 2 * PyLong_SHIFT) {
+                        if (8 * sizeof(unsigned long) > 3 * PyLong_SHIFT) {
+                            __PYX_VERIFY_RETURN_INT(off_t, long, -(long) (((((((unsigned long)digits[2]) << PyLong_SHIFT) | (unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
+                        } else if (8 * sizeof(off_t) - 1 > 3 * PyLong_SHIFT) {
+                            return (off_t) (((off_t)-1)*(((((((off_t)digits[2]) << PyLong_SHIFT) | (off_t)digits[1]) << PyLong_SHIFT) | (off_t)digits[0])));
+                        }
+                    }
+                    break;
+                case 3:
+                    if (8 * sizeof(off_t) > 2 * PyLong_SHIFT) {
+                        if (8 * sizeof(unsigned long) > 3 * PyLong_SHIFT) {
+                            __PYX_VERIFY_RETURN_INT(off_t, unsigned long, (((((((unsigned long)digits[2]) << PyLong_SHIFT) | (unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
+                        } else if (8 * sizeof(off_t) - 1 > 3 * PyLong_SHIFT) {
+                            return (off_t) ((((((((off_t)digits[2]) << PyLong_SHIFT) | (off_t)digits[1]) << PyLong_SHIFT) | (off_t)digits[0])));
+                        }
+                    }
+                    break;
+                case -4:
+                    if (8 * sizeof(off_t) - 1 > 3 * PyLong_SHIFT) {
+                        if (8 * sizeof(unsigned long) > 4 * PyLong_SHIFT) {
+                            __PYX_VERIFY_RETURN_INT(off_t, long, -(long) (((((((((unsigned long)digits[3]) << PyLong_SHIFT) | (unsigned long)digits[2]) << PyLong_SHIFT) | (unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
+                        } else if (8 * sizeof(off_t) - 1 > 4 * PyLong_SHIFT) {
+                            return (off_t) (((off_t)-1)*(((((((((off_t)digits[3]) << PyLong_SHIFT) | (off_t)digits[2]) << PyLong_SHIFT) | (off_t)digits[1]) << PyLong_SHIFT) | (off_t)digits[0])));
+                        }
+                    }
+                    break;
+                case 4:
+                    if (8 * sizeof(off_t) > 3 * PyLong_SHIFT) {
+                        if (8 * sizeof(unsigned long) > 4 * PyLong_SHIFT) {
+                            __PYX_VERIFY_RETURN_INT(off_t, unsigned long, (((((((((unsigned long)digits[3]) << PyLong_SHIFT) | (unsigned long)digits[2]) << PyLong_SHIFT) | (unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
+                        } else if (8 * sizeof(off_t) - 1 > 4 * PyLong_SHIFT) {
+                            return (off_t) ((((((((((off_t)digits[3]) << PyLong_SHIFT) | (off_t)digits[2]) << PyLong_SHIFT) | (off_t)digits[1]) << PyLong_SHIFT) | (off_t)digits[0])));
+                        }
+                    }
+                    break;
+            }
+#endif
+            if (sizeof(off_t) <= sizeof(long)) {
+                __PYX_VERIFY_RETURN_INT_EXC(off_t, long, PyLong_AsLong(x))
+            } else if (sizeof(off_t) <= sizeof(PY_LONG_LONG)) {
+                __PYX_VERIFY_RETURN_INT_EXC(off_t, PY_LONG_LONG, PyLong_AsLongLong(x))
+            }
+        }
+        {
+#if CYTHON_COMPILING_IN_PYPY && !defined(_PyLong_AsByteArray)
+            PyErr_SetString(PyExc_RuntimeError,
+                            "_PyLong_AsByteArray() not available in PyPy, cannot convert large numbers");
+#else
+            off_t val;
+            PyObject *v = __Pyx_PyNumber_Int(x);
+ #if PY_MAJOR_VERSION < 3
+            if (likely(v) && !PyLong_Check(v)) {
+                PyObject *tmp = v;
+                v = PyNumber_Long(tmp);
+                Py_DECREF(tmp);
+            }
+ #endif
+            if (likely(v)) {
+                int one = 1; int is_little = (int)*(unsigned char *)&one;
+                unsigned char *bytes = (unsigned char *)&val;
+                int ret = _PyLong_AsByteArray((PyLongObject *)v,
+                                              bytes, sizeof(val),
+                                              is_little, !is_unsigned);
+                Py_DECREF(v);
+                if (likely(!ret))
+                    return val;
+            }
+#endif
+            return (off_t) -1;
+        }
+    } else {
+        off_t val;
+        PyObject *tmp = __Pyx_PyNumber_Int(x);
+        if (!tmp) return (off_t) -1;
+        val = __Pyx_PyInt_As_off_t(tmp);
+        Py_DECREF(tmp);
+        return val;
+    }
+raise_overflow:
+    PyErr_SetString(PyExc_OverflowError,
+        "value too large to convert to off_t");
+    return (off_t) -1;
+raise_neg_overflow:
+    PyErr_SetString(PyExc_OverflowError,
+        "can't convert negative value to off_t");
+    return (off_t) -1;
 }
 
 static CYTHON_INLINE size_t __Pyx_PyInt_As_size_t(PyObject *x) {
@@ -3075,6 +4073,190 @@ static CYTHON_INLINE PyObject* __Pyx_PyInt_From_long(long value) {
         return _PyLong_FromByteArray(bytes, sizeof(long),
                                      little, !is_unsigned);
     }
+}
+
+static CYTHON_INLINE long __Pyx_PyInt_As_long(PyObject *x) {
+    const long neg_one = (long) -1, const_zero = (long) 0;
+    const int is_unsigned = neg_one > const_zero;
+#if PY_MAJOR_VERSION < 3
+    if (likely(PyInt_Check(x))) {
+        if (sizeof(long) < sizeof(long)) {
+            __PYX_VERIFY_RETURN_INT(long, long, PyInt_AS_LONG(x))
+        } else {
+            long val = PyInt_AS_LONG(x);
+            if (is_unsigned && unlikely(val < 0)) {
+                goto raise_neg_overflow;
+            }
+            return (long) val;
+        }
+    } else
+#endif
+    if (likely(PyLong_Check(x))) {
+        if (is_unsigned) {
+#if CYTHON_USE_PYLONG_INTERNALS
+            const digit* digits = ((PyLongObject*)x)->ob_digit;
+            switch (Py_SIZE(x)) {
+                case  0: return (long) 0;
+                case  1: __PYX_VERIFY_RETURN_INT(long, digit, digits[0])
+                case 2:
+                    if (8 * sizeof(long) > 1 * PyLong_SHIFT) {
+                        if (8 * sizeof(unsigned long) > 2 * PyLong_SHIFT) {
+                            __PYX_VERIFY_RETURN_INT(long, unsigned long, (((((unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
+                        } else if (8 * sizeof(long) >= 2 * PyLong_SHIFT) {
+                            return (long) (((((long)digits[1]) << PyLong_SHIFT) | (long)digits[0]));
+                        }
+                    }
+                    break;
+                case 3:
+                    if (8 * sizeof(long) > 2 * PyLong_SHIFT) {
+                        if (8 * sizeof(unsigned long) > 3 * PyLong_SHIFT) {
+                            __PYX_VERIFY_RETURN_INT(long, unsigned long, (((((((unsigned long)digits[2]) << PyLong_SHIFT) | (unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
+                        } else if (8 * sizeof(long) >= 3 * PyLong_SHIFT) {
+                            return (long) (((((((long)digits[2]) << PyLong_SHIFT) | (long)digits[1]) << PyLong_SHIFT) | (long)digits[0]));
+                        }
+                    }
+                    break;
+                case 4:
+                    if (8 * sizeof(long) > 3 * PyLong_SHIFT) {
+                        if (8 * sizeof(unsigned long) > 4 * PyLong_SHIFT) {
+                            __PYX_VERIFY_RETURN_INT(long, unsigned long, (((((((((unsigned long)digits[3]) << PyLong_SHIFT) | (unsigned long)digits[2]) << PyLong_SHIFT) | (unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
+                        } else if (8 * sizeof(long) >= 4 * PyLong_SHIFT) {
+                            return (long) (((((((((long)digits[3]) << PyLong_SHIFT) | (long)digits[2]) << PyLong_SHIFT) | (long)digits[1]) << PyLong_SHIFT) | (long)digits[0]));
+                        }
+                    }
+                    break;
+            }
+#endif
+#if CYTHON_COMPILING_IN_CPYTHON
+            if (unlikely(Py_SIZE(x) < 0)) {
+                goto raise_neg_overflow;
+            }
+#else
+            {
+                int result = PyObject_RichCompareBool(x, Py_False, Py_LT);
+                if (unlikely(result < 0))
+                    return (long) -1;
+                if (unlikely(result == 1))
+                    goto raise_neg_overflow;
+            }
+#endif
+            if (sizeof(long) <= sizeof(unsigned long)) {
+                __PYX_VERIFY_RETURN_INT_EXC(long, unsigned long, PyLong_AsUnsignedLong(x))
+            } else if (sizeof(long) <= sizeof(unsigned PY_LONG_LONG)) {
+                __PYX_VERIFY_RETURN_INT_EXC(long, unsigned PY_LONG_LONG, PyLong_AsUnsignedLongLong(x))
+            }
+        } else {
+#if CYTHON_USE_PYLONG_INTERNALS
+            const digit* digits = ((PyLongObject*)x)->ob_digit;
+            switch (Py_SIZE(x)) {
+                case  0: return (long) 0;
+                case -1: __PYX_VERIFY_RETURN_INT(long, sdigit, -(sdigit) digits[0])
+                case  1: __PYX_VERIFY_RETURN_INT(long,  digit, +digits[0])
+                case -2:
+                    if (8 * sizeof(long) - 1 > 1 * PyLong_SHIFT) {
+                        if (8 * sizeof(unsigned long) > 2 * PyLong_SHIFT) {
+                            __PYX_VERIFY_RETURN_INT(long, long, -(long) (((((unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
+                        } else if (8 * sizeof(long) - 1 > 2 * PyLong_SHIFT) {
+                            return (long) (((long)-1)*(((((long)digits[1]) << PyLong_SHIFT) | (long)digits[0])));
+                        }
+                    }
+                    break;
+                case 2:
+                    if (8 * sizeof(long) > 1 * PyLong_SHIFT) {
+                        if (8 * sizeof(unsigned long) > 2 * PyLong_SHIFT) {
+                            __PYX_VERIFY_RETURN_INT(long, unsigned long, (((((unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
+                        } else if (8 * sizeof(long) - 1 > 2 * PyLong_SHIFT) {
+                            return (long) ((((((long)digits[1]) << PyLong_SHIFT) | (long)digits[0])));
+                        }
+                    }
+                    break;
+                case -3:
+                    if (8 * sizeof(long) - 1 > 2 * PyLong_SHIFT) {
+                        if (8 * sizeof(unsigned long) > 3 * PyLong_SHIFT) {
+                            __PYX_VERIFY_RETURN_INT(long, long, -(long) (((((((unsigned long)digits[2]) << PyLong_SHIFT) | (unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
+                        } else if (8 * sizeof(long) - 1 > 3 * PyLong_SHIFT) {
+                            return (long) (((long)-1)*(((((((long)digits[2]) << PyLong_SHIFT) | (long)digits[1]) << PyLong_SHIFT) | (long)digits[0])));
+                        }
+                    }
+                    break;
+                case 3:
+                    if (8 * sizeof(long) > 2 * PyLong_SHIFT) {
+                        if (8 * sizeof(unsigned long) > 3 * PyLong_SHIFT) {
+                            __PYX_VERIFY_RETURN_INT(long, unsigned long, (((((((unsigned long)digits[2]) << PyLong_SHIFT) | (unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
+                        } else if (8 * sizeof(long) - 1 > 3 * PyLong_SHIFT) {
+                            return (long) ((((((((long)digits[2]) << PyLong_SHIFT) | (long)digits[1]) << PyLong_SHIFT) | (long)digits[0])));
+                        }
+                    }
+                    break;
+                case -4:
+                    if (8 * sizeof(long) - 1 > 3 * PyLong_SHIFT) {
+                        if (8 * sizeof(unsigned long) > 4 * PyLong_SHIFT) {
+                            __PYX_VERIFY_RETURN_INT(long, long, -(long) (((((((((unsigned long)digits[3]) << PyLong_SHIFT) | (unsigned long)digits[2]) << PyLong_SHIFT) | (unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
+                        } else if (8 * sizeof(long) - 1 > 4 * PyLong_SHIFT) {
+                            return (long) (((long)-1)*(((((((((long)digits[3]) << PyLong_SHIFT) | (long)digits[2]) << PyLong_SHIFT) | (long)digits[1]) << PyLong_SHIFT) | (long)digits[0])));
+                        }
+                    }
+                    break;
+                case 4:
+                    if (8 * sizeof(long) > 3 * PyLong_SHIFT) {
+                        if (8 * sizeof(unsigned long) > 4 * PyLong_SHIFT) {
+                            __PYX_VERIFY_RETURN_INT(long, unsigned long, (((((((((unsigned long)digits[3]) << PyLong_SHIFT) | (unsigned long)digits[2]) << PyLong_SHIFT) | (unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
+                        } else if (8 * sizeof(long) - 1 > 4 * PyLong_SHIFT) {
+                            return (long) ((((((((((long)digits[3]) << PyLong_SHIFT) | (long)digits[2]) << PyLong_SHIFT) | (long)digits[1]) << PyLong_SHIFT) | (long)digits[0])));
+                        }
+                    }
+                    break;
+            }
+#endif
+            if (sizeof(long) <= sizeof(long)) {
+                __PYX_VERIFY_RETURN_INT_EXC(long, long, PyLong_AsLong(x))
+            } else if (sizeof(long) <= sizeof(PY_LONG_LONG)) {
+                __PYX_VERIFY_RETURN_INT_EXC(long, PY_LONG_LONG, PyLong_AsLongLong(x))
+            }
+        }
+        {
+#if CYTHON_COMPILING_IN_PYPY && !defined(_PyLong_AsByteArray)
+            PyErr_SetString(PyExc_RuntimeError,
+                            "_PyLong_AsByteArray() not available in PyPy, cannot convert large numbers");
+#else
+            long val;
+            PyObject *v = __Pyx_PyNumber_Int(x);
+ #if PY_MAJOR_VERSION < 3
+            if (likely(v) && !PyLong_Check(v)) {
+                PyObject *tmp = v;
+                v = PyNumber_Long(tmp);
+                Py_DECREF(tmp);
+            }
+ #endif
+            if (likely(v)) {
+                int one = 1; int is_little = (int)*(unsigned char *)&one;
+                unsigned char *bytes = (unsigned char *)&val;
+                int ret = _PyLong_AsByteArray((PyLongObject *)v,
+                                              bytes, sizeof(val),
+                                              is_little, !is_unsigned);
+                Py_DECREF(v);
+                if (likely(!ret))
+                    return val;
+            }
+#endif
+            return (long) -1;
+        }
+    } else {
+        long val;
+        PyObject *tmp = __Pyx_PyNumber_Int(x);
+        if (!tmp) return (long) -1;
+        val = __Pyx_PyInt_As_long(tmp);
+        Py_DECREF(tmp);
+        return val;
+    }
+raise_overflow:
+    PyErr_SetString(PyExc_OverflowError,
+        "value too large to convert to long");
+    return (long) -1;
+raise_neg_overflow:
+    PyErr_SetString(PyExc_OverflowError,
+        "can't convert negative value to long");
+    return (long) -1;
 }
 
 static int __Pyx_check_binary_version(void) {

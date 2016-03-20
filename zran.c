@@ -434,13 +434,22 @@ int _zran_get_point_at(
      * of caution, and add a bit of padding to the 
      * limits.
      *
-     * TODO A bad compressed offset is easily checked 
-     *      against the file size, but a bad uncompressed
-     *      offset (i.e. one larger than the size of the 
-     *      uncompressed data) cannot easily be checked.
-     *     
-     *      What happens when we pass a bad uncompressed
-     *      offset in? This needs testing.
+     * A bad compressed offset is easily checked 
+     * against the file size, but a bad uncompressed
+     * offset (i.e. one larger than the size of the 
+     * uncompressed data) cannot be checked, as we
+     * have no way of knowing the size of the 
+     * uncompressed data. 
+     *
+     * If a bad uncompressed offset is passed in (one 
+     * which is greater than the uncompressed data size), 
+     * this function will incorrectly report that the 
+     * index does not yet cover the offset, instead of 
+     * just failing. 
+     *
+     * There's no method of getting around this which 
+     * does not use heuristics/guesses, so I'm going to 
+     * leave this as-is.
      */
     else {
         last      = &(index->list[index->npoints - 1]);
@@ -470,6 +479,10 @@ int _zran_get_point_at(
 
         if (compressed) {
 
+            /* 
+             * Adjust the offset for non 
+             * byte-aligned seek points.
+             */
             if (curr->bits > 0) bit = 1;
             else                bit = 0;
             
@@ -1035,9 +1048,8 @@ fail:
 
 /*
  * Seek to the approximate location of the specified offset into 
- * the uncompressed data stream. 
- *
- * Currently only whence == SEEK_SET is supported.
+ * the uncompressed data stream. The whence argument must be 
+ * SEEK_SET or SEEK_CUR.
  */ 
 int zran_seek(zran_index_t  *index,
               off_t          offset,
@@ -1050,8 +1062,21 @@ int zran_seek(zran_index_t  *index,
 
     zran_log("zran_seek(%lld, %i)\n", offset, whence);
 
-    if (whence != SEEK_SET) {
+    if (whence != SEEK_SET && whence != SEEK_CUR) {
         goto fail;
+    }
+
+    /* 
+     * SEEK_CUR: seek relative to 
+     * the current file position.
+     */
+    if (whence == SEEK_CUR) {
+      offset += index->uncmp_seek_offset;
+    }
+
+    /* Bad input */
+    if (offset < 0) {
+      goto fail;
     }
 
     /*

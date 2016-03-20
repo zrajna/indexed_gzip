@@ -187,8 +187,10 @@ int zran_build_index(
  * created with the ZRAN_AUTO_BUILD flag, the index is expanded
  * to cover the offset.
  *
- * Currently, only seeking from the beginning of the file is 
- * supported, i.e. the whence argument must be equal SEEK_SET.
+ * Seeking from the end of the uncompressed stream is not supported
+ * - you may only seek from the beginning of the file, or from the 
+ * current seek location. In other words, the whence argument must 
+ * be equal to SEEK_SET or SEEK_CUR.
  *
  * Returns:
  *    - 0 for success.
@@ -201,7 +203,7 @@ int zran_build_index(
 int zran_seek(
   zran_index_t  *index,   /* The index                      */
   off_t          offset,  /* Uncompressed offset to seek to */
-  int            whence,  /* Must be SEEK_SET               */
+  int            whence,  /* Must be SEEK_SET or SEEK_CUR   */
   zran_point_t **point    /* Optional place to store 
                              corresponding zran_point_t     */
 );

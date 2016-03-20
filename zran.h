@@ -209,6 +209,16 @@ int zran_seek(
 );
 
 /*
+ * Returns the current seek location in the uncompressed data stream
+ * (just returns zran_index_t.uncmp_seek_offset).
+ */
+long zran_tell(
+  zran_index_t *index /* The index */
+);
+
+  
+
+/*
  * Read len bytes from the current location in the uncompressed 
  * data stream, storing them in buf. If the index was created with 
  * the ZRAN_AUTO_BUILD flag, it is expanded as needed.
@@ -226,6 +236,5 @@ int zran_read(
   void          *buf,   /* Buffer to store len bytes */
   size_t         len    /* Number of bytes to read   */
 );
-
 
 #endif /* __ZRAN_H__ */

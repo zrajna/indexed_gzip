@@ -12,7 +12,7 @@ from posix.types cimport off_t
 cdef extern from "zran.h":
 
     ctypedef struct zran_index_t:
-        uint64_t uncmp_seek_offset
+        pass
     
     ctypedef struct zran_point_t:
         pass
@@ -31,6 +31,8 @@ cdef extern from "zran.h":
     bint zran_build_index(zran_index_t *index,
                           uint64_t      from_,
                           uint64_t      until)
+
+    long zran_tell(zran_index_t *index);
 
     int zran_seek(zran_index_t *index,
                   off_t         offset,

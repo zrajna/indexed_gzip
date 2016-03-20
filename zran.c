@@ -1115,11 +1115,19 @@ not_covered_by_index:
     return 1;
 }
 
+/* Return the current seek position in the uncompressed data stream. */
+long zran_tell(zran_index_t *index)
+{
+  
+    return index->uncmp_seek_offset;
+}
+
 
 /* Read len bytes from the uncompressed data stream, storing them in buf. */
 int zran_read(zran_index_t *index,
               void         *buf,
-              size_t        len) {
+              size_t        len)
+{
 
     /* Used to store/check return values. */
     int           ret;

@@ -12,7 +12,7 @@ from posix.types cimport off_t
 cdef extern from "zran.h":
 
     ctypedef struct zran_index_t:
-        pass
+        uint64_t uncmp_seek_offset
     
     ctypedef struct zran_point_t:
         pass

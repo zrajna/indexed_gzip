@@ -6,6 +6,9 @@
         "depends": [
             "zran.h"
         ],
+        "extra_compile_args": [
+            "-Wno-unused-function"
+        ],
         "libraries": [
             "z"
         ]
@@ -468,7 +471,7 @@ static const char *__pyx_f[] = {
 /*--- Type declarations ---*/
 struct __pyx_obj_12indexed_gzip_IndexedGzipFile;
 
-/* "indexed_gzip.pyx":34
+/* "indexed_gzip.pyx":35
  * 
  * 
  * cdef class IndexedGzipFile:             # <<<<<<<<<<<<<<
@@ -611,11 +614,11 @@ static CYTHON_INLINE PyObject* __Pyx_PyObject_CallNoArg(PyObject *func);
 
 static CYTHON_INLINE PyObject *__Pyx_GetModuleGlobalName(PyObject *name);
 
-static CYTHON_INLINE void __Pyx_RaiseUnboundLocalError(const char *varname);
-
 static void __Pyx_WriteUnraisable(const char *name, int clineno,
                                   int lineno, const char *filename,
                                   int full_traceback, int nogil);
+
+static CYTHON_INLINE void __Pyx_RaiseUnboundLocalError(const char *varname);
 
 static PyObject *__Pyx_CalculateMetaclass(PyTypeObject *metaclass, PyObject *bases);
 
@@ -644,6 +647,8 @@ static void __Pyx_AddTraceback(const char *funcname, int c_line,
 static CYTHON_INLINE int __Pyx_PyInt_As_int(PyObject *);
 
 static CYTHON_INLINE uint32_t __Pyx_PyInt_As_uint32_t(PyObject *);
+
+static CYTHON_INLINE PyObject* __Pyx_PyInt_From_uint64_t(uint64_t value);
 
 static CYTHON_INLINE off_t __Pyx_PyInt_As_off_t(PyObject *);
 
@@ -679,6 +684,7 @@ int __pyx_module_is_main_indexed_gzip = 0;
 static PyObject *__pyx_builtin_Exception;
 static PyObject *__pyx_builtin_ValueError;
 static PyObject *__pyx_builtin_open;
+static PyObject *__pyx_builtin_IOError;
 static PyObject *__pyx_builtin_MemoryError;
 static char __pyx_k_rb[] = "rb";
 static char __pyx_k_doc[] = "__doc__";
@@ -688,9 +694,11 @@ static char __pyx_k_mode[] = "mode";
 static char __pyx_k_open[] = "open";
 static char __pyx_k_test[] = "__test__";
 static char __pyx_k_close[] = "close";
+static char __pyx_k_closed[] = "closed";
 static char __pyx_k_fileno[] = "fileno";
 static char __pyx_k_format[] = "format";
 static char __pyx_k_module[] = "__module__";
+static char __pyx_k_IOError[] = "IOError";
 static char __pyx_k_prepare[] = "__prepare__";
 static char __pyx_k_spacing[] = "spacing";
 static char __pyx_k_filename[] = "filename";
@@ -714,13 +722,16 @@ static char __pyx_k_The_gzip_file_must_be_opened_in[] = "The gzip file must be o
 static char __pyx_k_zran_build_index_returned_error[] = "zran_build_index returned error";
 static char __pyx_k_Exception_raised_by_the_IndexedG[] = "Exception raised by the IndexedGzipFile when an attempt is made to seek\n    to/read from a location that is not covered by the index. This exception\n    will never be raised if the IndexedGzipFile was created with\n    auto_build=True.\n    ";
 static char __pyx_k_Index_does_not_cover_current_off[] = "Index does not cover current offset";
+static char __pyx_k_IndexedGzipFile_is_already_close[] = "IndexedGzipFile is already closed";
 static char __pyx_k_One_of_fid_or_filename_must_be_s[] = "One of fid or filename must be specified";
 static char __pyx_k_Exception_raised_by_the_IndexedG_2[] = "Exception raised by the IndexedGzipFile when the zran library signals\n    an error.\n    ";
 static PyObject *__pyx_n_s_Exception;
 static PyObject *__pyx_kp_s_Exception_raised_by_the_IndexedG;
 static PyObject *__pyx_kp_s_Exception_raised_by_the_IndexedG_2;
+static PyObject *__pyx_n_s_IOError;
 static PyObject *__pyx_kp_s_Index_does_not_cover_current_off;
 static PyObject *__pyx_kp_s_Index_does_not_cover_offset;
+static PyObject *__pyx_kp_s_IndexedGzipFile_is_already_close;
 static PyObject *__pyx_n_s_MemoryError;
 static PyObject *__pyx_n_s_NotCoveredError;
 static PyObject *__pyx_kp_s_One_of_fid_or_filename_must_be_s;
@@ -730,6 +741,7 @@ static PyObject *__pyx_n_s_ValueError;
 static PyObject *__pyx_n_s_ZranError;
 static PyObject *__pyx_n_s_auto_build;
 static PyObject *__pyx_n_s_close;
+static PyObject *__pyx_n_s_closed;
 static PyObject *__pyx_n_s_doc;
 static PyObject *__pyx_n_s_fid;
 static PyObject *__pyx_n_s_filename;
@@ -753,10 +765,18 @@ static PyObject *__pyx_kp_s_zran_init_returned_error;
 static PyObject *__pyx_kp_s_zran_read_returned_error;
 static PyObject *__pyx_kp_s_zran_seek_returned_error;
 static int __pyx_pf_12indexed_gzip_15IndexedGzipFile___cinit__(struct __pyx_obj_12indexed_gzip_IndexedGzipFile *__pyx_v_self, PyObject *__pyx_v_fid, PyObject *__pyx_v_filename, PyObject *__pyx_v_auto_build, PyObject *__pyx_v_spacing, PyObject *__pyx_v_window_size, PyObject *__pyx_v_readbuf_size); /* proto */
-static PyObject *__pyx_pf_12indexed_gzip_15IndexedGzipFile_2build_full_index(struct __pyx_obj_12indexed_gzip_IndexedGzipFile *__pyx_v_self); /* proto */
-static PyObject *__pyx_pf_12indexed_gzip_15IndexedGzipFile_4seek(struct __pyx_obj_12indexed_gzip_IndexedGzipFile *__pyx_v_self, PyObject *__pyx_v_offset); /* proto */
-static PyObject *__pyx_pf_12indexed_gzip_15IndexedGzipFile_6read(struct __pyx_obj_12indexed_gzip_IndexedGzipFile *__pyx_v_self, PyObject *__pyx_v_nbytes); /* proto */
-static void __pyx_pf_12indexed_gzip_15IndexedGzipFile_8__dealloc__(struct __pyx_obj_12indexed_gzip_IndexedGzipFile *__pyx_v_self); /* proto */
+static PyObject *__pyx_pf_12indexed_gzip_15IndexedGzipFile_2close(struct __pyx_obj_12indexed_gzip_IndexedGzipFile *__pyx_v_self); /* proto */
+static PyObject *__pyx_pf_12indexed_gzip_15IndexedGzipFile_4closed(struct __pyx_obj_12indexed_gzip_IndexedGzipFile *__pyx_v_self); /* proto */
+static PyObject *__pyx_pf_12indexed_gzip_15IndexedGzipFile_6readable(struct __pyx_obj_12indexed_gzip_IndexedGzipFile *__pyx_v_self); /* proto */
+static PyObject *__pyx_pf_12indexed_gzip_15IndexedGzipFile_8writable(CYTHON_UNUSED struct __pyx_obj_12indexed_gzip_IndexedGzipFile *__pyx_v_self); /* proto */
+static PyObject *__pyx_pf_12indexed_gzip_15IndexedGzipFile_10seekable(struct __pyx_obj_12indexed_gzip_IndexedGzipFile *__pyx_v_self); /* proto */
+static PyObject *__pyx_pf_12indexed_gzip_15IndexedGzipFile_12tell(struct __pyx_obj_12indexed_gzip_IndexedGzipFile *__pyx_v_self); /* proto */
+static PyObject *__pyx_pf_12indexed_gzip_15IndexedGzipFile_14__enter__(struct __pyx_obj_12indexed_gzip_IndexedGzipFile *__pyx_v_self); /* proto */
+static PyObject *__pyx_pf_12indexed_gzip_15IndexedGzipFile_16__exit__(struct __pyx_obj_12indexed_gzip_IndexedGzipFile *__pyx_v_self); /* proto */
+static void __pyx_pf_12indexed_gzip_15IndexedGzipFile_18__dealloc__(struct __pyx_obj_12indexed_gzip_IndexedGzipFile *__pyx_v_self); /* proto */
+static PyObject *__pyx_pf_12indexed_gzip_15IndexedGzipFile_20build_full_index(struct __pyx_obj_12indexed_gzip_IndexedGzipFile *__pyx_v_self); /* proto */
+static PyObject *__pyx_pf_12indexed_gzip_15IndexedGzipFile_22seek(struct __pyx_obj_12indexed_gzip_IndexedGzipFile *__pyx_v_self, PyObject *__pyx_v_offset); /* proto */
+static PyObject *__pyx_pf_12indexed_gzip_15IndexedGzipFile_24read(struct __pyx_obj_12indexed_gzip_IndexedGzipFile *__pyx_v_self, PyObject *__pyx_v_nbytes); /* proto */
 static PyObject *__pyx_tp_new_12indexed_gzip_IndexedGzipFile(PyTypeObject *t, PyObject *a, PyObject *k); /*proto*/
 static PyObject *__pyx_int_16384;
 static PyObject *__pyx_int_32768;
@@ -769,8 +789,9 @@ static PyObject *__pyx_tuple__5;
 static PyObject *__pyx_tuple__6;
 static PyObject *__pyx_tuple__7;
 static PyObject *__pyx_tuple__8;
+static PyObject *__pyx_tuple__9;
 
-/* "indexed_gzip.pyx":66
+/* "indexed_gzip.pyx":67
  * 
  * 
  *     def __cinit__(self,             # <<<<<<<<<<<<<<
@@ -797,7 +818,7 @@ static int __pyx_pw_12indexed_gzip_15IndexedGzipFile_1__cinit__(PyObject *__pyx_
     static PyObject **__pyx_pyargnames[] = {&__pyx_n_s_fid,&__pyx_n_s_filename,&__pyx_n_s_auto_build,&__pyx_n_s_spacing,&__pyx_n_s_window_size,&__pyx_n_s_readbuf_size,0};
     PyObject* values[6] = {0,0,0,0,0,0};
 
-    /* "indexed_gzip.pyx":67
+    /* "indexed_gzip.pyx":68
  * 
  *     def __cinit__(self,
  *                   fid=None,             # <<<<<<<<<<<<<<
@@ -806,7 +827,7 @@ static int __pyx_pw_12indexed_gzip_15IndexedGzipFile_1__cinit__(PyObject *__pyx_
  */
     values[0] = ((PyObject *)Py_None);
 
-    /* "indexed_gzip.pyx":68
+    /* "indexed_gzip.pyx":69
  *     def __cinit__(self,
  *                   fid=None,
  *                   filename=None,             # <<<<<<<<<<<<<<
@@ -815,7 +836,7 @@ static int __pyx_pw_12indexed_gzip_15IndexedGzipFile_1__cinit__(PyObject *__pyx_
  */
     values[1] = ((PyObject *)Py_None);
 
-    /* "indexed_gzip.pyx":69
+    /* "indexed_gzip.pyx":70
  *                   fid=None,
  *                   filename=None,
  *                   auto_build=True,             # <<<<<<<<<<<<<<
@@ -873,7 +894,7 @@ static int __pyx_pw_12indexed_gzip_15IndexedGzipFile_1__cinit__(PyObject *__pyx_
         }
       }
       if (unlikely(kw_args > 0)) {
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "__cinit__") < 0)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 66; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "__cinit__") < 0)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 67; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
       }
     } else {
       switch (PyTuple_GET_SIZE(__pyx_args)) {
@@ -896,7 +917,7 @@ static int __pyx_pw_12indexed_gzip_15IndexedGzipFile_1__cinit__(PyObject *__pyx_
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("__cinit__", 0, 0, 6, PyTuple_GET_SIZE(__pyx_args)); {__pyx_filename = __pyx_f[0]; __pyx_lineno = 66; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
+  __Pyx_RaiseArgtupleInvalid("__cinit__", 0, 0, 6, PyTuple_GET_SIZE(__pyx_args)); {__pyx_filename = __pyx_f[0]; __pyx_lineno = 67; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
   __pyx_L3_error:;
   __Pyx_AddTraceback("indexed_gzip.IndexedGzipFile.__cinit__", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
@@ -904,7 +925,7 @@ static int __pyx_pw_12indexed_gzip_15IndexedGzipFile_1__cinit__(PyObject *__pyx_
   __pyx_L4_argument_unpacking_done:;
   __pyx_r = __pyx_pf_12indexed_gzip_15IndexedGzipFile___cinit__(((struct __pyx_obj_12indexed_gzip_IndexedGzipFile *)__pyx_v_self), __pyx_v_fid, __pyx_v_filename, __pyx_v_auto_build, __pyx_v_spacing, __pyx_v_window_size, __pyx_v_readbuf_size);
 
-  /* "indexed_gzip.pyx":66
+  /* "indexed_gzip.pyx":67
  * 
  * 
  *     def __cinit__(self,             # <<<<<<<<<<<<<<
@@ -936,7 +957,7 @@ static int __pyx_pf_12indexed_gzip_15IndexedGzipFile___cinit__(struct __pyx_obj_
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__cinit__", 0);
 
-  /* "indexed_gzip.pyx":93
+  /* "indexed_gzip.pyx":94
  *         """
  * 
  *         if fid is None and filename is None:             # <<<<<<<<<<<<<<
@@ -956,20 +977,20 @@ static int __pyx_pf_12indexed_gzip_15IndexedGzipFile___cinit__(struct __pyx_obj_
   __pyx_L4_bool_binop_done:;
   if (__pyx_t_1) {
 
-    /* "indexed_gzip.pyx":95
+    /* "indexed_gzip.pyx":96
  *         if fid is None and filename is None:
  * 
  *             raise ValueError('One of fid or filename must be specified')             # <<<<<<<<<<<<<<
  * 
  *         if fid is not None and fid.mode != 'rb':
  */
-    __pyx_t_4 = __Pyx_PyObject_Call(__pyx_builtin_ValueError, __pyx_tuple_, NULL); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 95; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __pyx_t_4 = __Pyx_PyObject_Call(__pyx_builtin_ValueError, __pyx_tuple_, NULL); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 96; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
     __Pyx_GOTREF(__pyx_t_4);
     __Pyx_Raise(__pyx_t_4, 0, 0, 0);
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-    {__pyx_filename = __pyx_f[0]; __pyx_lineno = 95; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    {__pyx_filename = __pyx_f[0]; __pyx_lineno = 96; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
 
-    /* "indexed_gzip.pyx":93
+    /* "indexed_gzip.pyx":94
  *         """
  * 
  *         if fid is None and filename is None:             # <<<<<<<<<<<<<<
@@ -978,7 +999,7 @@ static int __pyx_pf_12indexed_gzip_15IndexedGzipFile___cinit__(struct __pyx_obj_
  */
   }
 
-  /* "indexed_gzip.pyx":97
+  /* "indexed_gzip.pyx":98
  *             raise ValueError('One of fid or filename must be specified')
  * 
  *         if fid is not None and fid.mode != 'rb':             # <<<<<<<<<<<<<<
@@ -992,28 +1013,28 @@ static int __pyx_pf_12indexed_gzip_15IndexedGzipFile___cinit__(struct __pyx_obj_
     __pyx_t_1 = __pyx_t_3;
     goto __pyx_L7_bool_binop_done;
   }
-  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_fid, __pyx_n_s_mode); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 97; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_fid, __pyx_n_s_mode); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 98; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_4);
-  __pyx_t_3 = (__Pyx_PyString_Equals(__pyx_t_4, __pyx_n_s_rb, Py_NE)); if (unlikely(__pyx_t_3 < 0)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 97; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_3 = (__Pyx_PyString_Equals(__pyx_t_4, __pyx_n_s_rb, Py_NE)); if (unlikely(__pyx_t_3 < 0)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 98; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
   __pyx_t_1 = __pyx_t_3;
   __pyx_L7_bool_binop_done:;
   if (__pyx_t_1) {
 
-    /* "indexed_gzip.pyx":98
+    /* "indexed_gzip.pyx":99
  * 
  *         if fid is not None and fid.mode != 'rb':
  *             raise ValueError('The gzip file must be opened in '             # <<<<<<<<<<<<<<
  *                              'read-only binary ("rb") mode')
  * 
  */
-    __pyx_t_4 = __Pyx_PyObject_Call(__pyx_builtin_ValueError, __pyx_tuple__2, NULL); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 98; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __pyx_t_4 = __Pyx_PyObject_Call(__pyx_builtin_ValueError, __pyx_tuple__2, NULL); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 99; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
     __Pyx_GOTREF(__pyx_t_4);
     __Pyx_Raise(__pyx_t_4, 0, 0, 0);
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-    {__pyx_filename = __pyx_f[0]; __pyx_lineno = 98; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    {__pyx_filename = __pyx_f[0]; __pyx_lineno = 99; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
 
-    /* "indexed_gzip.pyx":97
+    /* "indexed_gzip.pyx":98
  *             raise ValueError('One of fid or filename must be specified')
  * 
  *         if fid is not None and fid.mode != 'rb':             # <<<<<<<<<<<<<<
@@ -1022,7 +1043,7 @@ static int __pyx_pf_12indexed_gzip_15IndexedGzipFile___cinit__(struct __pyx_obj_
  */
   }
 
-  /* "indexed_gzip.pyx":101
+  /* "indexed_gzip.pyx":102
  *                              'read-only binary ("rb") mode')
  * 
  *         self.own_file   = fid is None             # <<<<<<<<<<<<<<
@@ -1032,17 +1053,17 @@ static int __pyx_pf_12indexed_gzip_15IndexedGzipFile___cinit__(struct __pyx_obj_
   __pyx_t_1 = (__pyx_v_fid == Py_None);
   __pyx_v_self->own_file = __pyx_t_1;
 
-  /* "indexed_gzip.pyx":102
+  /* "indexed_gzip.pyx":103
  * 
  *         self.own_file   = fid is None
  *         self.auto_build = auto_build             # <<<<<<<<<<<<<<
  * 
  *         if self.own_file: self.pyfid = open(filename, 'rb')
  */
-  __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_v_auto_build); if (unlikely((__pyx_t_1 == (int)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 102; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_v_auto_build); if (unlikely((__pyx_t_1 == (int)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 103; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __pyx_v_self->auto_build = __pyx_t_1;
 
-  /* "indexed_gzip.pyx":104
+  /* "indexed_gzip.pyx":105
  *         self.auto_build = auto_build
  * 
  *         if self.own_file: self.pyfid = open(filename, 'rb')             # <<<<<<<<<<<<<<
@@ -1051,7 +1072,7 @@ static int __pyx_pf_12indexed_gzip_15IndexedGzipFile___cinit__(struct __pyx_obj_
  */
   __pyx_t_1 = (__pyx_v_self->own_file != 0);
   if (__pyx_t_1) {
-    __pyx_t_4 = PyTuple_New(2); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 104; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __pyx_t_4 = PyTuple_New(2); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 105; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
     __Pyx_GOTREF(__pyx_t_4);
     __Pyx_INCREF(__pyx_v_filename);
     __Pyx_GIVEREF(__pyx_v_filename);
@@ -1059,7 +1080,7 @@ static int __pyx_pf_12indexed_gzip_15IndexedGzipFile___cinit__(struct __pyx_obj_
     __Pyx_INCREF(__pyx_n_s_rb);
     __Pyx_GIVEREF(__pyx_n_s_rb);
     PyTuple_SET_ITEM(__pyx_t_4, 1, __pyx_n_s_rb);
-    __pyx_t_5 = __Pyx_PyObject_Call(__pyx_builtin_open, __pyx_t_4, NULL); if (unlikely(!__pyx_t_5)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 104; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __pyx_t_5 = __Pyx_PyObject_Call(__pyx_builtin_open, __pyx_t_4, NULL); if (unlikely(!__pyx_t_5)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 105; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
     __Pyx_GOTREF(__pyx_t_5);
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
     __Pyx_GIVEREF(__pyx_t_5);
@@ -1070,7 +1091,7 @@ static int __pyx_pf_12indexed_gzip_15IndexedGzipFile___cinit__(struct __pyx_obj_
     goto __pyx_L9;
   }
 
-  /* "indexed_gzip.pyx":105
+  /* "indexed_gzip.pyx":106
  * 
  *         if self.own_file: self.pyfid = open(filename, 'rb')
  *         else:             self.pyfid = fid             # <<<<<<<<<<<<<<
@@ -1086,14 +1107,14 @@ static int __pyx_pf_12indexed_gzip_15IndexedGzipFile___cinit__(struct __pyx_obj_
   }
   __pyx_L9:;
 
-  /* "indexed_gzip.pyx":107
+  /* "indexed_gzip.pyx":108
  *         else:             self.pyfid = fid
  * 
  *         self.cfid = fdopen(fid.fileno(), 'rb')             # <<<<<<<<<<<<<<
  * 
  *         if self.auto_build: flags = zran.ZRAN_AUTO_BUILD
  */
-  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_fid, __pyx_n_s_fileno); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 107; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_fid, __pyx_n_s_fileno); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 108; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_4);
   __pyx_t_6 = NULL;
   if (CYTHON_COMPILING_IN_CPYTHON && likely(PyMethod_Check(__pyx_t_4))) {
@@ -1106,18 +1127,18 @@ static int __pyx_pf_12indexed_gzip_15IndexedGzipFile___cinit__(struct __pyx_obj_
     }
   }
   if (__pyx_t_6) {
-    __pyx_t_5 = __Pyx_PyObject_CallOneArg(__pyx_t_4, __pyx_t_6); if (unlikely(!__pyx_t_5)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 107; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __pyx_t_5 = __Pyx_PyObject_CallOneArg(__pyx_t_4, __pyx_t_6); if (unlikely(!__pyx_t_5)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 108; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
     __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
   } else {
-    __pyx_t_5 = __Pyx_PyObject_CallNoArg(__pyx_t_4); if (unlikely(!__pyx_t_5)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 107; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __pyx_t_5 = __Pyx_PyObject_CallNoArg(__pyx_t_4); if (unlikely(!__pyx_t_5)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 108; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   }
   __Pyx_GOTREF(__pyx_t_5);
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-  __pyx_t_7 = __Pyx_PyInt_As_int(__pyx_t_5); if (unlikely((__pyx_t_7 == (int)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 107; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_7 = __Pyx_PyInt_As_int(__pyx_t_5); if (unlikely((__pyx_t_7 == (int)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 108; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
   __pyx_v_self->cfid = fdopen(__pyx_t_7, __pyx_k_rb);
 
-  /* "indexed_gzip.pyx":109
+  /* "indexed_gzip.pyx":110
  *         self.cfid = fdopen(fid.fileno(), 'rb')
  * 
  *         if self.auto_build: flags = zran.ZRAN_AUTO_BUILD             # <<<<<<<<<<<<<<
@@ -1130,7 +1151,7 @@ static int __pyx_pf_12indexed_gzip_15IndexedGzipFile___cinit__(struct __pyx_obj_
     goto __pyx_L10;
   }
 
-  /* "indexed_gzip.pyx":110
+  /* "indexed_gzip.pyx":111
  * 
  *         if self.auto_build: flags = zran.ZRAN_AUTO_BUILD
  *         else:               flags = 0             # <<<<<<<<<<<<<<
@@ -1142,34 +1163,34 @@ static int __pyx_pf_12indexed_gzip_15IndexedGzipFile___cinit__(struct __pyx_obj_
   }
   __pyx_L10:;
 
-  /* "indexed_gzip.pyx":114
+  /* "indexed_gzip.pyx":115
  *         if zran.zran_init(index=&self.index,
  *                           fd=self.cfid,
  *                           spacing=spacing,             # <<<<<<<<<<<<<<
  *                           window_size=window_size,
  *                           readbuf_size=readbuf_size,
  */
-  __pyx_t_8 = __Pyx_PyInt_As_uint32_t(__pyx_v_spacing); if (unlikely((__pyx_t_8 == (uint32_t)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 114; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_8 = __Pyx_PyInt_As_uint32_t(__pyx_v_spacing); if (unlikely((__pyx_t_8 == (uint32_t)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 115; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
 
-  /* "indexed_gzip.pyx":115
+  /* "indexed_gzip.pyx":116
  *                           fd=self.cfid,
  *                           spacing=spacing,
  *                           window_size=window_size,             # <<<<<<<<<<<<<<
  *                           readbuf_size=readbuf_size,
  *                           flags=flags):
  */
-  __pyx_t_9 = __Pyx_PyInt_As_uint32_t(__pyx_v_window_size); if (unlikely((__pyx_t_9 == (uint32_t)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 115; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_9 = __Pyx_PyInt_As_uint32_t(__pyx_v_window_size); if (unlikely((__pyx_t_9 == (uint32_t)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 116; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
 
-  /* "indexed_gzip.pyx":116
+  /* "indexed_gzip.pyx":117
  *                           spacing=spacing,
  *                           window_size=window_size,
  *                           readbuf_size=readbuf_size,             # <<<<<<<<<<<<<<
  *                           flags=flags):
  *             raise ZranError('zran_init returned error')
  */
-  __pyx_t_10 = __Pyx_PyInt_As_uint32_t(__pyx_v_readbuf_size); if (unlikely((__pyx_t_10 == (uint32_t)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 116; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_10 = __Pyx_PyInt_As_uint32_t(__pyx_v_readbuf_size); if (unlikely((__pyx_t_10 == (uint32_t)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 117; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
 
-  /* "indexed_gzip.pyx":112
+  /* "indexed_gzip.pyx":113
  *         else:               flags = 0
  * 
  *         if zran.zran_init(index=&self.index,             # <<<<<<<<<<<<<<
@@ -1179,23 +1200,23 @@ static int __pyx_pf_12indexed_gzip_15IndexedGzipFile___cinit__(struct __pyx_obj_
   __pyx_t_1 = (zran_init((&__pyx_v_self->index), __pyx_v_self->cfid, __pyx_t_8, __pyx_t_9, __pyx_t_10, __pyx_v_flags) != 0);
   if (__pyx_t_1) {
 
-    /* "indexed_gzip.pyx":118
+    /* "indexed_gzip.pyx":119
  *                           readbuf_size=readbuf_size,
  *                           flags=flags):
  *             raise ZranError('zran_init returned error')             # <<<<<<<<<<<<<<
  * 
  * 
  */
-    __pyx_t_5 = __Pyx_GetModuleGlobalName(__pyx_n_s_ZranError); if (unlikely(!__pyx_t_5)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 118; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __pyx_t_5 = __Pyx_GetModuleGlobalName(__pyx_n_s_ZranError); if (unlikely(!__pyx_t_5)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 119; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
     __Pyx_GOTREF(__pyx_t_5);
-    __pyx_t_4 = __Pyx_PyObject_Call(__pyx_t_5, __pyx_tuple__3, NULL); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 118; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __pyx_t_4 = __Pyx_PyObject_Call(__pyx_t_5, __pyx_tuple__3, NULL); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 119; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
     __Pyx_GOTREF(__pyx_t_4);
     __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
     __Pyx_Raise(__pyx_t_4, 0, 0, 0);
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-    {__pyx_filename = __pyx_f[0]; __pyx_lineno = 118; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    {__pyx_filename = __pyx_f[0]; __pyx_lineno = 119; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
 
-    /* "indexed_gzip.pyx":112
+    /* "indexed_gzip.pyx":113
  *         else:               flags = 0
  * 
  *         if zran.zran_init(index=&self.index,             # <<<<<<<<<<<<<<
@@ -1204,7 +1225,7 @@ static int __pyx_pf_12indexed_gzip_15IndexedGzipFile___cinit__(struct __pyx_obj_
  */
   }
 
-  /* "indexed_gzip.pyx":66
+  /* "indexed_gzip.pyx":67
  * 
  * 
  *     def __cinit__(self,             # <<<<<<<<<<<<<<
@@ -1226,7 +1247,778 @@ static int __pyx_pf_12indexed_gzip_15IndexedGzipFile___cinit__(struct __pyx_obj_
   return __pyx_r;
 }
 
-/* "indexed_gzip.pyx":121
+/* "indexed_gzip.pyx":122
+ * 
+ * 
+ *     def close(self):             # <<<<<<<<<<<<<<
+ *         """Closes this IndexedGzipFile. """
+ * 
+ */
+
+/* Python wrapper */
+static PyObject *__pyx_pw_12indexed_gzip_15IndexedGzipFile_3close(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused); /*proto*/
+static char __pyx_doc_12indexed_gzip_15IndexedGzipFile_2close[] = "Closes this IndexedGzipFile. ";
+static PyObject *__pyx_pw_12indexed_gzip_15IndexedGzipFile_3close(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused) {
+  PyObject *__pyx_r = 0;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("close (wrapper)", 0);
+  __pyx_r = __pyx_pf_12indexed_gzip_15IndexedGzipFile_2close(((struct __pyx_obj_12indexed_gzip_IndexedGzipFile *)__pyx_v_self));
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static PyObject *__pyx_pf_12indexed_gzip_15IndexedGzipFile_2close(struct __pyx_obj_12indexed_gzip_IndexedGzipFile *__pyx_v_self) {
+  PyObject *__pyx_r = NULL;
+  __Pyx_RefNannyDeclarations
+  PyObject *__pyx_t_1 = NULL;
+  PyObject *__pyx_t_2 = NULL;
+  PyObject *__pyx_t_3 = NULL;
+  int __pyx_t_4;
+  int __pyx_lineno = 0;
+  const char *__pyx_filename = NULL;
+  int __pyx_clineno = 0;
+  __Pyx_RefNannySetupContext("close", 0);
+
+  /* "indexed_gzip.pyx":125
+ *         """Closes this IndexedGzipFile. """
+ * 
+ *         if self.closed():             # <<<<<<<<<<<<<<
+ *             raise IOError('IndexedGzipFile is already closed')
+ * 
+ */
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_n_s_closed); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 125; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __Pyx_GOTREF(__pyx_t_2);
+  __pyx_t_3 = NULL;
+  if (CYTHON_COMPILING_IN_CPYTHON && likely(PyMethod_Check(__pyx_t_2))) {
+    __pyx_t_3 = PyMethod_GET_SELF(__pyx_t_2);
+    if (likely(__pyx_t_3)) {
+      PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_2);
+      __Pyx_INCREF(__pyx_t_3);
+      __Pyx_INCREF(function);
+      __Pyx_DECREF_SET(__pyx_t_2, function);
+    }
+  }
+  if (__pyx_t_3) {
+    __pyx_t_1 = __Pyx_PyObject_CallOneArg(__pyx_t_2, __pyx_t_3); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 125; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
+  } else {
+    __pyx_t_1 = __Pyx_PyObject_CallNoArg(__pyx_t_2); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 125; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  }
+  __Pyx_GOTREF(__pyx_t_1);
+  __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+  __pyx_t_4 = __Pyx_PyObject_IsTrue(__pyx_t_1); if (unlikely(__pyx_t_4 < 0)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 125; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+  if (__pyx_t_4) {
+
+    /* "indexed_gzip.pyx":126
+ * 
+ *         if self.closed():
+ *             raise IOError('IndexedGzipFile is already closed')             # <<<<<<<<<<<<<<
+ * 
+ *         zran.zran_free(&self.index)
+ */
+    __pyx_t_1 = __Pyx_PyObject_Call(__pyx_builtin_IOError, __pyx_tuple__4, NULL); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 126; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __Pyx_GOTREF(__pyx_t_1);
+    __Pyx_Raise(__pyx_t_1, 0, 0, 0);
+    __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+    {__pyx_filename = __pyx_f[0]; __pyx_lineno = 126; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+
+    /* "indexed_gzip.pyx":125
+ *         """Closes this IndexedGzipFile. """
+ * 
+ *         if self.closed():             # <<<<<<<<<<<<<<
+ *             raise IOError('IndexedGzipFile is already closed')
+ * 
+ */
+  }
+
+  /* "indexed_gzip.pyx":128
+ *             raise IOError('IndexedGzipFile is already closed')
+ * 
+ *         zran.zran_free(&self.index)             # <<<<<<<<<<<<<<
+ * 
+ *         if self.own_file:
+ */
+  zran_free((&__pyx_v_self->index));
+
+  /* "indexed_gzip.pyx":130
+ *         zran.zran_free(&self.index)
+ * 
+ *         if self.own_file:             # <<<<<<<<<<<<<<
+ *             self.pyfid.close()
+ * 
+ */
+  __pyx_t_4 = (__pyx_v_self->own_file != 0);
+  if (__pyx_t_4) {
+
+    /* "indexed_gzip.pyx":131
+ * 
+ *         if self.own_file:
+ *             self.pyfid.close()             # <<<<<<<<<<<<<<
+ * 
+ *         self.cfid  = NULL
+ */
+    __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_self->pyfid, __pyx_n_s_close); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 131; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __Pyx_GOTREF(__pyx_t_2);
+    __pyx_t_3 = NULL;
+    if (CYTHON_COMPILING_IN_CPYTHON && likely(PyMethod_Check(__pyx_t_2))) {
+      __pyx_t_3 = PyMethod_GET_SELF(__pyx_t_2);
+      if (likely(__pyx_t_3)) {
+        PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_2);
+        __Pyx_INCREF(__pyx_t_3);
+        __Pyx_INCREF(function);
+        __Pyx_DECREF_SET(__pyx_t_2, function);
+      }
+    }
+    if (__pyx_t_3) {
+      __pyx_t_1 = __Pyx_PyObject_CallOneArg(__pyx_t_2, __pyx_t_3); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 131; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+      __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
+    } else {
+      __pyx_t_1 = __Pyx_PyObject_CallNoArg(__pyx_t_2); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 131; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    }
+    __Pyx_GOTREF(__pyx_t_1);
+    __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+    __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+
+    /* "indexed_gzip.pyx":130
+ *         zran.zran_free(&self.index)
+ * 
+ *         if self.own_file:             # <<<<<<<<<<<<<<
+ *             self.pyfid.close()
+ * 
+ */
+  }
+
+  /* "indexed_gzip.pyx":133
+ *             self.pyfid.close()
+ * 
+ *         self.cfid  = NULL             # <<<<<<<<<<<<<<
+ *         self.pyfid = None
+ * 
+ */
+  __pyx_v_self->cfid = NULL;
+
+  /* "indexed_gzip.pyx":134
+ * 
+ *         self.cfid  = NULL
+ *         self.pyfid = None             # <<<<<<<<<<<<<<
+ * 
+ * 
+ */
+  __Pyx_INCREF(Py_None);
+  __Pyx_GIVEREF(Py_None);
+  __Pyx_GOTREF(__pyx_v_self->pyfid);
+  __Pyx_DECREF(__pyx_v_self->pyfid);
+  __pyx_v_self->pyfid = Py_None;
+
+  /* "indexed_gzip.pyx":122
+ * 
+ * 
+ *     def close(self):             # <<<<<<<<<<<<<<
+ *         """Closes this IndexedGzipFile. """
+ * 
+ */
+
+  /* function exit code */
+  __pyx_r = Py_None; __Pyx_INCREF(Py_None);
+  goto __pyx_L0;
+  __pyx_L1_error:;
+  __Pyx_XDECREF(__pyx_t_1);
+  __Pyx_XDECREF(__pyx_t_2);
+  __Pyx_XDECREF(__pyx_t_3);
+  __Pyx_AddTraceback("indexed_gzip.IndexedGzipFile.close", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __pyx_r = NULL;
+  __pyx_L0:;
+  __Pyx_XGIVEREF(__pyx_r);
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* "indexed_gzip.pyx":137
+ * 
+ * 
+ *     def closed(self):             # <<<<<<<<<<<<<<
+ *         """Returns True if this IndexedGzipFile is closed, False otherwise. """
+ *         return self.pyfid is None
+ */
+
+/* Python wrapper */
+static PyObject *__pyx_pw_12indexed_gzip_15IndexedGzipFile_5closed(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused); /*proto*/
+static char __pyx_doc_12indexed_gzip_15IndexedGzipFile_4closed[] = "Returns True if this IndexedGzipFile is closed, False otherwise. ";
+static PyObject *__pyx_pw_12indexed_gzip_15IndexedGzipFile_5closed(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused) {
+  PyObject *__pyx_r = 0;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("closed (wrapper)", 0);
+  __pyx_r = __pyx_pf_12indexed_gzip_15IndexedGzipFile_4closed(((struct __pyx_obj_12indexed_gzip_IndexedGzipFile *)__pyx_v_self));
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static PyObject *__pyx_pf_12indexed_gzip_15IndexedGzipFile_4closed(struct __pyx_obj_12indexed_gzip_IndexedGzipFile *__pyx_v_self) {
+  PyObject *__pyx_r = NULL;
+  __Pyx_RefNannyDeclarations
+  int __pyx_t_1;
+  PyObject *__pyx_t_2 = NULL;
+  int __pyx_lineno = 0;
+  const char *__pyx_filename = NULL;
+  int __pyx_clineno = 0;
+  __Pyx_RefNannySetupContext("closed", 0);
+
+  /* "indexed_gzip.pyx":139
+ *     def closed(self):
+ *         """Returns True if this IndexedGzipFile is closed, False otherwise. """
+ *         return self.pyfid is None             # <<<<<<<<<<<<<<
+ * 
+ * 
+ */
+  __Pyx_XDECREF(__pyx_r);
+  __pyx_t_1 = (__pyx_v_self->pyfid == Py_None);
+  __pyx_t_2 = __Pyx_PyBool_FromLong(__pyx_t_1); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 139; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __Pyx_GOTREF(__pyx_t_2);
+  __pyx_r = __pyx_t_2;
+  __pyx_t_2 = 0;
+  goto __pyx_L0;
+
+  /* "indexed_gzip.pyx":137
+ * 
+ * 
+ *     def closed(self):             # <<<<<<<<<<<<<<
+ *         """Returns True if this IndexedGzipFile is closed, False otherwise. """
+ *         return self.pyfid is None
+ */
+
+  /* function exit code */
+  __pyx_L1_error:;
+  __Pyx_XDECREF(__pyx_t_2);
+  __Pyx_AddTraceback("indexed_gzip.IndexedGzipFile.closed", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __pyx_r = NULL;
+  __pyx_L0:;
+  __Pyx_XGIVEREF(__pyx_r);
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* "indexed_gzip.pyx":142
+ * 
+ * 
+ *     def readable(self):             # <<<<<<<<<<<<<<
+ *         """Returns True if this IndexedGzipFile is readable, False otherwise.
+ *         """
+ */
+
+/* Python wrapper */
+static PyObject *__pyx_pw_12indexed_gzip_15IndexedGzipFile_7readable(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused); /*proto*/
+static char __pyx_doc_12indexed_gzip_15IndexedGzipFile_6readable[] = "Returns True if this IndexedGzipFile is readable, False otherwise.\n        ";
+static PyObject *__pyx_pw_12indexed_gzip_15IndexedGzipFile_7readable(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused) {
+  PyObject *__pyx_r = 0;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("readable (wrapper)", 0);
+  __pyx_r = __pyx_pf_12indexed_gzip_15IndexedGzipFile_6readable(((struct __pyx_obj_12indexed_gzip_IndexedGzipFile *)__pyx_v_self));
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static PyObject *__pyx_pf_12indexed_gzip_15IndexedGzipFile_6readable(struct __pyx_obj_12indexed_gzip_IndexedGzipFile *__pyx_v_self) {
+  PyObject *__pyx_r = NULL;
+  __Pyx_RefNannyDeclarations
+  PyObject *__pyx_t_1 = NULL;
+  PyObject *__pyx_t_2 = NULL;
+  PyObject *__pyx_t_3 = NULL;
+  int __pyx_t_4;
+  int __pyx_lineno = 0;
+  const char *__pyx_filename = NULL;
+  int __pyx_clineno = 0;
+  __Pyx_RefNannySetupContext("readable", 0);
+
+  /* "indexed_gzip.pyx":145
+ *         """Returns True if this IndexedGzipFile is readable, False otherwise.
+ *         """
+ *         return not self.closed()             # <<<<<<<<<<<<<<
+ * 
+ * 
+ */
+  __Pyx_XDECREF(__pyx_r);
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_n_s_closed); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 145; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __Pyx_GOTREF(__pyx_t_2);
+  __pyx_t_3 = NULL;
+  if (CYTHON_COMPILING_IN_CPYTHON && likely(PyMethod_Check(__pyx_t_2))) {
+    __pyx_t_3 = PyMethod_GET_SELF(__pyx_t_2);
+    if (likely(__pyx_t_3)) {
+      PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_2);
+      __Pyx_INCREF(__pyx_t_3);
+      __Pyx_INCREF(function);
+      __Pyx_DECREF_SET(__pyx_t_2, function);
+    }
+  }
+  if (__pyx_t_3) {
+    __pyx_t_1 = __Pyx_PyObject_CallOneArg(__pyx_t_2, __pyx_t_3); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 145; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
+  } else {
+    __pyx_t_1 = __Pyx_PyObject_CallNoArg(__pyx_t_2); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 145; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  }
+  __Pyx_GOTREF(__pyx_t_1);
+  __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+  __pyx_t_4 = __Pyx_PyObject_IsTrue(__pyx_t_1); if (unlikely(__pyx_t_4 < 0)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 145; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+  __pyx_t_1 = __Pyx_PyBool_FromLong((!__pyx_t_4)); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 145; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __Pyx_GOTREF(__pyx_t_1);
+  __pyx_r = __pyx_t_1;
+  __pyx_t_1 = 0;
+  goto __pyx_L0;
+
+  /* "indexed_gzip.pyx":142
+ * 
+ * 
+ *     def readable(self):             # <<<<<<<<<<<<<<
+ *         """Returns True if this IndexedGzipFile is readable, False otherwise.
+ *         """
+ */
+
+  /* function exit code */
+  __pyx_L1_error:;
+  __Pyx_XDECREF(__pyx_t_1);
+  __Pyx_XDECREF(__pyx_t_2);
+  __Pyx_XDECREF(__pyx_t_3);
+  __Pyx_AddTraceback("indexed_gzip.IndexedGzipFile.readable", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __pyx_r = NULL;
+  __pyx_L0:;
+  __Pyx_XGIVEREF(__pyx_r);
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* "indexed_gzip.pyx":148
+ * 
+ * 
+ *     def writable(self):             # <<<<<<<<<<<<<<
+ *         """Always returns False - the IndexedGzipFile does not support writing.
+ *         """
+ */
+
+/* Python wrapper */
+static PyObject *__pyx_pw_12indexed_gzip_15IndexedGzipFile_9writable(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused); /*proto*/
+static char __pyx_doc_12indexed_gzip_15IndexedGzipFile_8writable[] = "Always returns False - the IndexedGzipFile does not support writing.\n        ";
+static PyObject *__pyx_pw_12indexed_gzip_15IndexedGzipFile_9writable(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused) {
+  PyObject *__pyx_r = 0;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("writable (wrapper)", 0);
+  __pyx_r = __pyx_pf_12indexed_gzip_15IndexedGzipFile_8writable(((struct __pyx_obj_12indexed_gzip_IndexedGzipFile *)__pyx_v_self));
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static PyObject *__pyx_pf_12indexed_gzip_15IndexedGzipFile_8writable(CYTHON_UNUSED struct __pyx_obj_12indexed_gzip_IndexedGzipFile *__pyx_v_self) {
+  PyObject *__pyx_r = NULL;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("writable", 0);
+
+  /* "indexed_gzip.pyx":151
+ *         """Always returns False - the IndexedGzipFile does not support writing.
+ *         """
+ *         return False             # <<<<<<<<<<<<<<
+ * 
+ * 
+ */
+  __Pyx_XDECREF(__pyx_r);
+  __Pyx_INCREF(Py_False);
+  __pyx_r = Py_False;
+  goto __pyx_L0;
+
+  /* "indexed_gzip.pyx":148
+ * 
+ * 
+ *     def writable(self):             # <<<<<<<<<<<<<<
+ *         """Always returns False - the IndexedGzipFile does not support writing.
+ *         """
+ */
+
+  /* function exit code */
+  __pyx_L0:;
+  __Pyx_XGIVEREF(__pyx_r);
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* "indexed_gzip.pyx":154
+ * 
+ * 
+ *     def seekable(self):             # <<<<<<<<<<<<<<
+ *         """Returns True if this IndexedGzipFile supports seeking, False
+ *         otherwise.
+ */
+
+/* Python wrapper */
+static PyObject *__pyx_pw_12indexed_gzip_15IndexedGzipFile_11seekable(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused); /*proto*/
+static char __pyx_doc_12indexed_gzip_15IndexedGzipFile_10seekable[] = "Returns True if this IndexedGzipFile supports seeking, False\n        otherwise.\n        ";
+static PyObject *__pyx_pw_12indexed_gzip_15IndexedGzipFile_11seekable(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused) {
+  PyObject *__pyx_r = 0;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("seekable (wrapper)", 0);
+  __pyx_r = __pyx_pf_12indexed_gzip_15IndexedGzipFile_10seekable(((struct __pyx_obj_12indexed_gzip_IndexedGzipFile *)__pyx_v_self));
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static PyObject *__pyx_pf_12indexed_gzip_15IndexedGzipFile_10seekable(struct __pyx_obj_12indexed_gzip_IndexedGzipFile *__pyx_v_self) {
+  PyObject *__pyx_r = NULL;
+  __Pyx_RefNannyDeclarations
+  PyObject *__pyx_t_1 = NULL;
+  PyObject *__pyx_t_2 = NULL;
+  PyObject *__pyx_t_3 = NULL;
+  int __pyx_t_4;
+  int __pyx_lineno = 0;
+  const char *__pyx_filename = NULL;
+  int __pyx_clineno = 0;
+  __Pyx_RefNannySetupContext("seekable", 0);
+
+  /* "indexed_gzip.pyx":158
+ *         otherwise.
+ *         """
+ *         return not self.closed()             # <<<<<<<<<<<<<<
+ * 
+ * 
+ */
+  __Pyx_XDECREF(__pyx_r);
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_n_s_closed); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 158; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __Pyx_GOTREF(__pyx_t_2);
+  __pyx_t_3 = NULL;
+  if (CYTHON_COMPILING_IN_CPYTHON && likely(PyMethod_Check(__pyx_t_2))) {
+    __pyx_t_3 = PyMethod_GET_SELF(__pyx_t_2);
+    if (likely(__pyx_t_3)) {
+      PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_2);
+      __Pyx_INCREF(__pyx_t_3);
+      __Pyx_INCREF(function);
+      __Pyx_DECREF_SET(__pyx_t_2, function);
+    }
+  }
+  if (__pyx_t_3) {
+    __pyx_t_1 = __Pyx_PyObject_CallOneArg(__pyx_t_2, __pyx_t_3); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 158; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
+  } else {
+    __pyx_t_1 = __Pyx_PyObject_CallNoArg(__pyx_t_2); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 158; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  }
+  __Pyx_GOTREF(__pyx_t_1);
+  __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+  __pyx_t_4 = __Pyx_PyObject_IsTrue(__pyx_t_1); if (unlikely(__pyx_t_4 < 0)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 158; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+  __pyx_t_1 = __Pyx_PyBool_FromLong((!__pyx_t_4)); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 158; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __Pyx_GOTREF(__pyx_t_1);
+  __pyx_r = __pyx_t_1;
+  __pyx_t_1 = 0;
+  goto __pyx_L0;
+
+  /* "indexed_gzip.pyx":154
+ * 
+ * 
+ *     def seekable(self):             # <<<<<<<<<<<<<<
+ *         """Returns True if this IndexedGzipFile supports seeking, False
+ *         otherwise.
+ */
+
+  /* function exit code */
+  __pyx_L1_error:;
+  __Pyx_XDECREF(__pyx_t_1);
+  __Pyx_XDECREF(__pyx_t_2);
+  __Pyx_XDECREF(__pyx_t_3);
+  __Pyx_AddTraceback("indexed_gzip.IndexedGzipFile.seekable", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __pyx_r = NULL;
+  __pyx_L0:;
+  __Pyx_XGIVEREF(__pyx_r);
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* "indexed_gzip.pyx":161
+ * 
+ * 
+ *     def tell(self):             # <<<<<<<<<<<<<<
+ *         """Returns the current seek offset into the uncompressed data stream.
+ *         """
+ */
+
+/* Python wrapper */
+static PyObject *__pyx_pw_12indexed_gzip_15IndexedGzipFile_13tell(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused); /*proto*/
+static char __pyx_doc_12indexed_gzip_15IndexedGzipFile_12tell[] = "Returns the current seek offset into the uncompressed data stream.\n        ";
+static PyObject *__pyx_pw_12indexed_gzip_15IndexedGzipFile_13tell(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused) {
+  PyObject *__pyx_r = 0;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("tell (wrapper)", 0);
+  __pyx_r = __pyx_pf_12indexed_gzip_15IndexedGzipFile_12tell(((struct __pyx_obj_12indexed_gzip_IndexedGzipFile *)__pyx_v_self));
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static PyObject *__pyx_pf_12indexed_gzip_15IndexedGzipFile_12tell(struct __pyx_obj_12indexed_gzip_IndexedGzipFile *__pyx_v_self) {
+  PyObject *__pyx_r = NULL;
+  __Pyx_RefNannyDeclarations
+  PyObject *__pyx_t_1 = NULL;
+  int __pyx_lineno = 0;
+  const char *__pyx_filename = NULL;
+  int __pyx_clineno = 0;
+  __Pyx_RefNannySetupContext("tell", 0);
+
+  /* "indexed_gzip.pyx":164
+ *         """Returns the current seek offset into the uncompressed data stream.
+ *         """
+ *         return self.index.uncmp_seek_offset             # <<<<<<<<<<<<<<
+ * 
+ * 
+ */
+  __Pyx_XDECREF(__pyx_r);
+  __pyx_t_1 = __Pyx_PyInt_From_uint64_t(__pyx_v_self->index.uncmp_seek_offset); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 164; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __Pyx_GOTREF(__pyx_t_1);
+  __pyx_r = __pyx_t_1;
+  __pyx_t_1 = 0;
+  goto __pyx_L0;
+
+  /* "indexed_gzip.pyx":161
+ * 
+ * 
+ *     def tell(self):             # <<<<<<<<<<<<<<
+ *         """Returns the current seek offset into the uncompressed data stream.
+ *         """
+ */
+
+  /* function exit code */
+  __pyx_L1_error:;
+  __Pyx_XDECREF(__pyx_t_1);
+  __Pyx_AddTraceback("indexed_gzip.IndexedGzipFile.tell", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __pyx_r = NULL;
+  __pyx_L0:;
+  __Pyx_XGIVEREF(__pyx_r);
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* "indexed_gzip.pyx":167
+ * 
+ * 
+ *     def __enter__(self):             # <<<<<<<<<<<<<<
+ *         """Returns this IndexedGzipFile. """
+ *         return self
+ */
+
+/* Python wrapper */
+static PyObject *__pyx_pw_12indexed_gzip_15IndexedGzipFile_15__enter__(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused); /*proto*/
+static char __pyx_doc_12indexed_gzip_15IndexedGzipFile_14__enter__[] = "Returns this IndexedGzipFile. ";
+static PyObject *__pyx_pw_12indexed_gzip_15IndexedGzipFile_15__enter__(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused) {
+  PyObject *__pyx_r = 0;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("__enter__ (wrapper)", 0);
+  __pyx_r = __pyx_pf_12indexed_gzip_15IndexedGzipFile_14__enter__(((struct __pyx_obj_12indexed_gzip_IndexedGzipFile *)__pyx_v_self));
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static PyObject *__pyx_pf_12indexed_gzip_15IndexedGzipFile_14__enter__(struct __pyx_obj_12indexed_gzip_IndexedGzipFile *__pyx_v_self) {
+  PyObject *__pyx_r = NULL;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("__enter__", 0);
+
+  /* "indexed_gzip.pyx":169
+ *     def __enter__(self):
+ *         """Returns this IndexedGzipFile. """
+ *         return self             # <<<<<<<<<<<<<<
+ * 
+ * 
+ */
+  __Pyx_XDECREF(__pyx_r);
+  __Pyx_INCREF(((PyObject *)__pyx_v_self));
+  __pyx_r = ((PyObject *)__pyx_v_self);
+  goto __pyx_L0;
+
+  /* "indexed_gzip.pyx":167
+ * 
+ * 
+ *     def __enter__(self):             # <<<<<<<<<<<<<<
+ *         """Returns this IndexedGzipFile. """
+ *         return self
+ */
+
+  /* function exit code */
+  __pyx_L0:;
+  __Pyx_XGIVEREF(__pyx_r);
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* "indexed_gzip.pyx":172
+ * 
+ * 
+ *     def __exit__(self):             # <<<<<<<<<<<<<<
+ *         """Calls close on this IndexedGzipFile. """
+ *         self.close()
+ */
+
+/* Python wrapper */
+static PyObject *__pyx_pw_12indexed_gzip_15IndexedGzipFile_17__exit__(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused); /*proto*/
+static char __pyx_doc_12indexed_gzip_15IndexedGzipFile_16__exit__[] = "Calls close on this IndexedGzipFile. ";
+static PyObject *__pyx_pw_12indexed_gzip_15IndexedGzipFile_17__exit__(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused) {
+  PyObject *__pyx_r = 0;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("__exit__ (wrapper)", 0);
+  __pyx_r = __pyx_pf_12indexed_gzip_15IndexedGzipFile_16__exit__(((struct __pyx_obj_12indexed_gzip_IndexedGzipFile *)__pyx_v_self));
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static PyObject *__pyx_pf_12indexed_gzip_15IndexedGzipFile_16__exit__(struct __pyx_obj_12indexed_gzip_IndexedGzipFile *__pyx_v_self) {
+  PyObject *__pyx_r = NULL;
+  __Pyx_RefNannyDeclarations
+  PyObject *__pyx_t_1 = NULL;
+  PyObject *__pyx_t_2 = NULL;
+  PyObject *__pyx_t_3 = NULL;
+  int __pyx_lineno = 0;
+  const char *__pyx_filename = NULL;
+  int __pyx_clineno = 0;
+  __Pyx_RefNannySetupContext("__exit__", 0);
+
+  /* "indexed_gzip.pyx":174
+ *     def __exit__(self):
+ *         """Calls close on this IndexedGzipFile. """
+ *         self.close()             # <<<<<<<<<<<<<<
+ * 
+ * 
+ */
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_n_s_close); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 174; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __Pyx_GOTREF(__pyx_t_2);
+  __pyx_t_3 = NULL;
+  if (CYTHON_COMPILING_IN_CPYTHON && likely(PyMethod_Check(__pyx_t_2))) {
+    __pyx_t_3 = PyMethod_GET_SELF(__pyx_t_2);
+    if (likely(__pyx_t_3)) {
+      PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_2);
+      __Pyx_INCREF(__pyx_t_3);
+      __Pyx_INCREF(function);
+      __Pyx_DECREF_SET(__pyx_t_2, function);
+    }
+  }
+  if (__pyx_t_3) {
+    __pyx_t_1 = __Pyx_PyObject_CallOneArg(__pyx_t_2, __pyx_t_3); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 174; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
+  } else {
+    __pyx_t_1 = __Pyx_PyObject_CallNoArg(__pyx_t_2); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 174; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  }
+  __Pyx_GOTREF(__pyx_t_1);
+  __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+
+  /* "indexed_gzip.pyx":172
+ * 
+ * 
+ *     def __exit__(self):             # <<<<<<<<<<<<<<
+ *         """Calls close on this IndexedGzipFile. """
+ *         self.close()
+ */
+
+  /* function exit code */
+  __pyx_r = Py_None; __Pyx_INCREF(Py_None);
+  goto __pyx_L0;
+  __pyx_L1_error:;
+  __Pyx_XDECREF(__pyx_t_1);
+  __Pyx_XDECREF(__pyx_t_2);
+  __Pyx_XDECREF(__pyx_t_3);
+  __Pyx_AddTraceback("indexed_gzip.IndexedGzipFile.__exit__", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __pyx_r = NULL;
+  __pyx_L0:;
+  __Pyx_XGIVEREF(__pyx_r);
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* "indexed_gzip.pyx":177
+ * 
+ * 
+ *     def __dealloc__(self):             # <<<<<<<<<<<<<<
+ *         """Frees the memory used by this IndexedGzipFile. If a file name was
+ *         passed to __cinit__, the file handle is closed.
+ */
+
+/* Python wrapper */
+static void __pyx_pw_12indexed_gzip_15IndexedGzipFile_19__dealloc__(PyObject *__pyx_v_self); /*proto*/
+static void __pyx_pw_12indexed_gzip_15IndexedGzipFile_19__dealloc__(PyObject *__pyx_v_self) {
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("__dealloc__ (wrapper)", 0);
+  __pyx_pf_12indexed_gzip_15IndexedGzipFile_18__dealloc__(((struct __pyx_obj_12indexed_gzip_IndexedGzipFile *)__pyx_v_self));
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+}
+
+static void __pyx_pf_12indexed_gzip_15IndexedGzipFile_18__dealloc__(struct __pyx_obj_12indexed_gzip_IndexedGzipFile *__pyx_v_self) {
+  __Pyx_RefNannyDeclarations
+  PyObject *__pyx_t_1 = NULL;
+  PyObject *__pyx_t_2 = NULL;
+  PyObject *__pyx_t_3 = NULL;
+  int __pyx_lineno = 0;
+  const char *__pyx_filename = NULL;
+  int __pyx_clineno = 0;
+  __Pyx_RefNannySetupContext("__dealloc__", 0);
+
+  /* "indexed_gzip.pyx":181
+ *         passed to __cinit__, the file handle is closed.
+ *         """
+ *         self.close()             # <<<<<<<<<<<<<<
+ * 
+ * 
+ */
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_n_s_close); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 181; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __Pyx_GOTREF(__pyx_t_2);
+  __pyx_t_3 = NULL;
+  if (CYTHON_COMPILING_IN_CPYTHON && likely(PyMethod_Check(__pyx_t_2))) {
+    __pyx_t_3 = PyMethod_GET_SELF(__pyx_t_2);
+    if (likely(__pyx_t_3)) {
+      PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_2);
+      __Pyx_INCREF(__pyx_t_3);
+      __Pyx_INCREF(function);
+      __Pyx_DECREF_SET(__pyx_t_2, function);
+    }
+  }
+  if (__pyx_t_3) {
+    __pyx_t_1 = __Pyx_PyObject_CallOneArg(__pyx_t_2, __pyx_t_3); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 181; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
+  } else {
+    __pyx_t_1 = __Pyx_PyObject_CallNoArg(__pyx_t_2); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 181; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  }
+  __Pyx_GOTREF(__pyx_t_1);
+  __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+
+  /* "indexed_gzip.pyx":177
+ * 
+ * 
+ *     def __dealloc__(self):             # <<<<<<<<<<<<<<
+ *         """Frees the memory used by this IndexedGzipFile. If a file name was
+ *         passed to __cinit__, the file handle is closed.
+ */
+
+  /* function exit code */
+  goto __pyx_L0;
+  __pyx_L1_error:;
+  __Pyx_XDECREF(__pyx_t_1);
+  __Pyx_XDECREF(__pyx_t_2);
+  __Pyx_XDECREF(__pyx_t_3);
+  __Pyx_WriteUnraisable("indexed_gzip.IndexedGzipFile.__dealloc__", __pyx_clineno, __pyx_lineno, __pyx_filename, 0, 0);
+  __pyx_L0:;
+  __Pyx_RefNannyFinishContext();
+}
+
+/* "indexed_gzip.pyx":184
  * 
  * 
  *     def build_full_index(self):             # <<<<<<<<<<<<<<
@@ -1235,20 +2027,20 @@ static int __pyx_pf_12indexed_gzip_15IndexedGzipFile___cinit__(struct __pyx_obj_
  */
 
 /* Python wrapper */
-static PyObject *__pyx_pw_12indexed_gzip_15IndexedGzipFile_3build_full_index(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused); /*proto*/
-static char __pyx_doc_12indexed_gzip_15IndexedGzipFile_2build_full_index[] = "Re-builds the full file index. ";
-static PyObject *__pyx_pw_12indexed_gzip_15IndexedGzipFile_3build_full_index(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused) {
+static PyObject *__pyx_pw_12indexed_gzip_15IndexedGzipFile_21build_full_index(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused); /*proto*/
+static char __pyx_doc_12indexed_gzip_15IndexedGzipFile_20build_full_index[] = "Re-builds the full file index. ";
+static PyObject *__pyx_pw_12indexed_gzip_15IndexedGzipFile_21build_full_index(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused) {
   PyObject *__pyx_r = 0;
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("build_full_index (wrapper)", 0);
-  __pyx_r = __pyx_pf_12indexed_gzip_15IndexedGzipFile_2build_full_index(((struct __pyx_obj_12indexed_gzip_IndexedGzipFile *)__pyx_v_self));
+  __pyx_r = __pyx_pf_12indexed_gzip_15IndexedGzipFile_20build_full_index(((struct __pyx_obj_12indexed_gzip_IndexedGzipFile *)__pyx_v_self));
 
   /* function exit code */
   __Pyx_RefNannyFinishContext();
   return __pyx_r;
 }
 
-static PyObject *__pyx_pf_12indexed_gzip_15IndexedGzipFile_2build_full_index(struct __pyx_obj_12indexed_gzip_IndexedGzipFile *__pyx_v_self) {
+static PyObject *__pyx_pf_12indexed_gzip_15IndexedGzipFile_20build_full_index(struct __pyx_obj_12indexed_gzip_IndexedGzipFile *__pyx_v_self) {
   PyObject *__pyx_r = NULL;
   __Pyx_RefNannyDeclarations
   int __pyx_t_1;
@@ -1259,7 +2051,7 @@ static PyObject *__pyx_pf_12indexed_gzip_15IndexedGzipFile_2build_full_index(str
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("build_full_index", 0);
 
-  /* "indexed_gzip.pyx":124
+  /* "indexed_gzip.pyx":187
  *         """Re-builds the full file index. """
  * 
  *         if zran.zran_build_index(&self.index, 0, 0) != 0:             # <<<<<<<<<<<<<<
@@ -1269,23 +2061,23 @@ static PyObject *__pyx_pf_12indexed_gzip_15IndexedGzipFile_2build_full_index(str
   __pyx_t_1 = ((zran_build_index((&__pyx_v_self->index), 0, 0) != 0) != 0);
   if (__pyx_t_1) {
 
-    /* "indexed_gzip.pyx":125
+    /* "indexed_gzip.pyx":188
  * 
  *         if zran.zran_build_index(&self.index, 0, 0) != 0:
  *             raise ZranError('zran_build_index returned error')             # <<<<<<<<<<<<<<
  * 
  * 
  */
-    __pyx_t_2 = __Pyx_GetModuleGlobalName(__pyx_n_s_ZranError); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 125; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __pyx_t_2 = __Pyx_GetModuleGlobalName(__pyx_n_s_ZranError); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 188; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
     __Pyx_GOTREF(__pyx_t_2);
-    __pyx_t_3 = __Pyx_PyObject_Call(__pyx_t_2, __pyx_tuple__4, NULL); if (unlikely(!__pyx_t_3)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 125; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __pyx_t_3 = __Pyx_PyObject_Call(__pyx_t_2, __pyx_tuple__5, NULL); if (unlikely(!__pyx_t_3)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 188; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
     __Pyx_GOTREF(__pyx_t_3);
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
     __Pyx_Raise(__pyx_t_3, 0, 0, 0);
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-    {__pyx_filename = __pyx_f[0]; __pyx_lineno = 125; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    {__pyx_filename = __pyx_f[0]; __pyx_lineno = 188; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
 
-    /* "indexed_gzip.pyx":124
+    /* "indexed_gzip.pyx":187
  *         """Re-builds the full file index. """
  * 
  *         if zran.zran_build_index(&self.index, 0, 0) != 0:             # <<<<<<<<<<<<<<
@@ -1294,7 +2086,7 @@ static PyObject *__pyx_pf_12indexed_gzip_15IndexedGzipFile_2build_full_index(str
  */
   }
 
-  /* "indexed_gzip.pyx":121
+  /* "indexed_gzip.pyx":184
  * 
  * 
  *     def build_full_index(self):             # <<<<<<<<<<<<<<
@@ -1316,7 +2108,7 @@ static PyObject *__pyx_pf_12indexed_gzip_15IndexedGzipFile_2build_full_index(str
   return __pyx_r;
 }
 
-/* "indexed_gzip.pyx":128
+/* "indexed_gzip.pyx":191
  * 
  * 
  *     def seek(self, offset):             # <<<<<<<<<<<<<<
@@ -1325,20 +2117,20 @@ static PyObject *__pyx_pf_12indexed_gzip_15IndexedGzipFile_2build_full_index(str
  */
 
 /* Python wrapper */
-static PyObject *__pyx_pw_12indexed_gzip_15IndexedGzipFile_5seek(PyObject *__pyx_v_self, PyObject *__pyx_v_offset); /*proto*/
-static char __pyx_doc_12indexed_gzip_15IndexedGzipFile_4seek[] = "Seeks to the specified position in the uncompressed data stream.\n\n        If this IndexedGzipFile was created with auto_build=False, and the\n        requested offset is not covered by the index, a NotCoveredError is\n        raised.\n        ";
-static PyObject *__pyx_pw_12indexed_gzip_15IndexedGzipFile_5seek(PyObject *__pyx_v_self, PyObject *__pyx_v_offset) {
+static PyObject *__pyx_pw_12indexed_gzip_15IndexedGzipFile_23seek(PyObject *__pyx_v_self, PyObject *__pyx_v_offset); /*proto*/
+static char __pyx_doc_12indexed_gzip_15IndexedGzipFile_22seek[] = "Seeks to the specified position in the uncompressed data stream.\n\n        If this IndexedGzipFile was created with auto_build=False, and the\n        requested offset is not covered by the index, a NotCoveredError is\n        raised.\n        ";
+static PyObject *__pyx_pw_12indexed_gzip_15IndexedGzipFile_23seek(PyObject *__pyx_v_self, PyObject *__pyx_v_offset) {
   PyObject *__pyx_r = 0;
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("seek (wrapper)", 0);
-  __pyx_r = __pyx_pf_12indexed_gzip_15IndexedGzipFile_4seek(((struct __pyx_obj_12indexed_gzip_IndexedGzipFile *)__pyx_v_self), ((PyObject *)__pyx_v_offset));
+  __pyx_r = __pyx_pf_12indexed_gzip_15IndexedGzipFile_22seek(((struct __pyx_obj_12indexed_gzip_IndexedGzipFile *)__pyx_v_self), ((PyObject *)__pyx_v_offset));
 
   /* function exit code */
   __Pyx_RefNannyFinishContext();
   return __pyx_r;
 }
 
-static PyObject *__pyx_pf_12indexed_gzip_15IndexedGzipFile_4seek(struct __pyx_obj_12indexed_gzip_IndexedGzipFile *__pyx_v_self, PyObject *__pyx_v_offset) {
+static PyObject *__pyx_pf_12indexed_gzip_15IndexedGzipFile_22seek(struct __pyx_obj_12indexed_gzip_IndexedGzipFile *__pyx_v_self, PyObject *__pyx_v_offset) {
   int __pyx_v_ret;
   PyObject *__pyx_r = NULL;
   __Pyx_RefNannyDeclarations
@@ -1355,17 +2147,17 @@ static PyObject *__pyx_pf_12indexed_gzip_15IndexedGzipFile_4seek(struct __pyx_ob
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("seek", 0);
 
-  /* "indexed_gzip.pyx":136
+  /* "indexed_gzip.pyx":199
  *         """
  * 
  *         ret = zran.zran_seek(&self.index, offset, SEEK_SET, NULL)             # <<<<<<<<<<<<<<
  * 
  *         if ret < 0:
  */
-  __pyx_t_1 = __Pyx_PyInt_As_off_t(__pyx_v_offset); if (unlikely((__pyx_t_1 == (off_t)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 136; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = __Pyx_PyInt_As_off_t(__pyx_v_offset); if (unlikely((__pyx_t_1 == (off_t)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 199; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __pyx_v_ret = zran_seek((&__pyx_v_self->index), __pyx_t_1, SEEK_SET, NULL);
 
-  /* "indexed_gzip.pyx":138
+  /* "indexed_gzip.pyx":201
  *         ret = zran.zran_seek(&self.index, offset, SEEK_SET, NULL)
  * 
  *         if ret < 0:             # <<<<<<<<<<<<<<
@@ -1375,23 +2167,23 @@ static PyObject *__pyx_pf_12indexed_gzip_15IndexedGzipFile_4seek(struct __pyx_ob
   __pyx_t_2 = ((__pyx_v_ret < 0) != 0);
   if (__pyx_t_2) {
 
-    /* "indexed_gzip.pyx":139
+    /* "indexed_gzip.pyx":202
  * 
  *         if ret < 0:
  *             raise ZranError('zran_seek returned error')             # <<<<<<<<<<<<<<
  * 
  *         elif ret > 0:
  */
-    __pyx_t_3 = __Pyx_GetModuleGlobalName(__pyx_n_s_ZranError); if (unlikely(!__pyx_t_3)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 139; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __pyx_t_3 = __Pyx_GetModuleGlobalName(__pyx_n_s_ZranError); if (unlikely(!__pyx_t_3)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 202; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
     __Pyx_GOTREF(__pyx_t_3);
-    __pyx_t_4 = __Pyx_PyObject_Call(__pyx_t_3, __pyx_tuple__5, NULL); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 139; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __pyx_t_4 = __Pyx_PyObject_Call(__pyx_t_3, __pyx_tuple__6, NULL); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 202; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
     __Pyx_GOTREF(__pyx_t_4);
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
     __Pyx_Raise(__pyx_t_4, 0, 0, 0);
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-    {__pyx_filename = __pyx_f[0]; __pyx_lineno = 139; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    {__pyx_filename = __pyx_f[0]; __pyx_lineno = 202; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
 
-    /* "indexed_gzip.pyx":138
+    /* "indexed_gzip.pyx":201
  *         ret = zran.zran_seek(&self.index, offset, SEEK_SET, NULL)
  * 
  *         if ret < 0:             # <<<<<<<<<<<<<<
@@ -1400,7 +2192,7 @@ static PyObject *__pyx_pf_12indexed_gzip_15IndexedGzipFile_4seek(struct __pyx_ob
  */
   }
 
-  /* "indexed_gzip.pyx":141
+  /* "indexed_gzip.pyx":204
  *             raise ZranError('zran_seek returned error')
  * 
  *         elif ret > 0:             # <<<<<<<<<<<<<<
@@ -1410,24 +2202,24 @@ static PyObject *__pyx_pf_12indexed_gzip_15IndexedGzipFile_4seek(struct __pyx_ob
   __pyx_t_2 = ((__pyx_v_ret > 0) != 0);
   if (__pyx_t_2) {
 
-    /* "indexed_gzip.pyx":142
+    /* "indexed_gzip.pyx":205
  * 
  *         elif ret > 0:
  *             raise NotCoveredError('Index does not cover '             # <<<<<<<<<<<<<<
  *                                   'offset {}'.format(offset))
  * 
  */
-    __pyx_t_3 = __Pyx_GetModuleGlobalName(__pyx_n_s_NotCoveredError); if (unlikely(!__pyx_t_3)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 142; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __pyx_t_3 = __Pyx_GetModuleGlobalName(__pyx_n_s_NotCoveredError); if (unlikely(!__pyx_t_3)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 205; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
     __Pyx_GOTREF(__pyx_t_3);
 
-    /* "indexed_gzip.pyx":143
+    /* "indexed_gzip.pyx":206
  *         elif ret > 0:
  *             raise NotCoveredError('Index does not cover '
  *                                   'offset {}'.format(offset))             # <<<<<<<<<<<<<<
  * 
  * 
  */
-    __pyx_t_6 = __Pyx_PyObject_GetAttrStr(__pyx_kp_s_Index_does_not_cover_offset, __pyx_n_s_format); if (unlikely(!__pyx_t_6)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 143; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __pyx_t_6 = __Pyx_PyObject_GetAttrStr(__pyx_kp_s_Index_does_not_cover_offset, __pyx_n_s_format); if (unlikely(!__pyx_t_6)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 206; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
     __Pyx_GOTREF(__pyx_t_6);
     __pyx_t_7 = NULL;
     if (CYTHON_COMPILING_IN_CPYTHON && likely(PyMethod_Check(__pyx_t_6))) {
@@ -1440,16 +2232,16 @@ static PyObject *__pyx_pf_12indexed_gzip_15IndexedGzipFile_4seek(struct __pyx_ob
       }
     }
     if (!__pyx_t_7) {
-      __pyx_t_5 = __Pyx_PyObject_CallOneArg(__pyx_t_6, __pyx_v_offset); if (unlikely(!__pyx_t_5)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 143; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+      __pyx_t_5 = __Pyx_PyObject_CallOneArg(__pyx_t_6, __pyx_v_offset); if (unlikely(!__pyx_t_5)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 206; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
       __Pyx_GOTREF(__pyx_t_5);
     } else {
-      __pyx_t_8 = PyTuple_New(1+1); if (unlikely(!__pyx_t_8)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 143; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+      __pyx_t_8 = PyTuple_New(1+1); if (unlikely(!__pyx_t_8)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 206; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
       __Pyx_GOTREF(__pyx_t_8);
       __Pyx_GIVEREF(__pyx_t_7); PyTuple_SET_ITEM(__pyx_t_8, 0, __pyx_t_7); __pyx_t_7 = NULL;
       __Pyx_INCREF(__pyx_v_offset);
       __Pyx_GIVEREF(__pyx_v_offset);
       PyTuple_SET_ITEM(__pyx_t_8, 0+1, __pyx_v_offset);
-      __pyx_t_5 = __Pyx_PyObject_Call(__pyx_t_6, __pyx_t_8, NULL); if (unlikely(!__pyx_t_5)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 143; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+      __pyx_t_5 = __Pyx_PyObject_Call(__pyx_t_6, __pyx_t_8, NULL); if (unlikely(!__pyx_t_5)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 206; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
       __Pyx_GOTREF(__pyx_t_5);
       __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
     }
@@ -1465,26 +2257,26 @@ static PyObject *__pyx_pf_12indexed_gzip_15IndexedGzipFile_4seek(struct __pyx_ob
       }
     }
     if (!__pyx_t_6) {
-      __pyx_t_4 = __Pyx_PyObject_CallOneArg(__pyx_t_3, __pyx_t_5); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 142; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+      __pyx_t_4 = __Pyx_PyObject_CallOneArg(__pyx_t_3, __pyx_t_5); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 205; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
       __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
       __Pyx_GOTREF(__pyx_t_4);
     } else {
-      __pyx_t_8 = PyTuple_New(1+1); if (unlikely(!__pyx_t_8)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 142; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+      __pyx_t_8 = PyTuple_New(1+1); if (unlikely(!__pyx_t_8)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 205; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
       __Pyx_GOTREF(__pyx_t_8);
       __Pyx_GIVEREF(__pyx_t_6); PyTuple_SET_ITEM(__pyx_t_8, 0, __pyx_t_6); __pyx_t_6 = NULL;
       __Pyx_GIVEREF(__pyx_t_5);
       PyTuple_SET_ITEM(__pyx_t_8, 0+1, __pyx_t_5);
       __pyx_t_5 = 0;
-      __pyx_t_4 = __Pyx_PyObject_Call(__pyx_t_3, __pyx_t_8, NULL); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 142; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+      __pyx_t_4 = __Pyx_PyObject_Call(__pyx_t_3, __pyx_t_8, NULL); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 205; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
       __Pyx_GOTREF(__pyx_t_4);
       __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
     }
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
     __Pyx_Raise(__pyx_t_4, 0, 0, 0);
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-    {__pyx_filename = __pyx_f[0]; __pyx_lineno = 142; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    {__pyx_filename = __pyx_f[0]; __pyx_lineno = 205; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
 
-    /* "indexed_gzip.pyx":141
+    /* "indexed_gzip.pyx":204
  *             raise ZranError('zran_seek returned error')
  * 
  *         elif ret > 0:             # <<<<<<<<<<<<<<
@@ -1493,7 +2285,7 @@ static PyObject *__pyx_pf_12indexed_gzip_15IndexedGzipFile_4seek(struct __pyx_ob
  */
   }
 
-  /* "indexed_gzip.pyx":128
+  /* "indexed_gzip.pyx":191
  * 
  * 
  *     def seek(self, offset):             # <<<<<<<<<<<<<<
@@ -1519,7 +2311,7 @@ static PyObject *__pyx_pf_12indexed_gzip_15IndexedGzipFile_4seek(struct __pyx_ob
   return __pyx_r;
 }
 
-/* "indexed_gzip.pyx":146
+/* "indexed_gzip.pyx":209
  * 
  * 
  *     def read(self, nbytes):             # <<<<<<<<<<<<<<
@@ -1528,20 +2320,20 @@ static PyObject *__pyx_pf_12indexed_gzip_15IndexedGzipFile_4seek(struct __pyx_ob
  */
 
 /* Python wrapper */
-static PyObject *__pyx_pw_12indexed_gzip_15IndexedGzipFile_7read(PyObject *__pyx_v_self, PyObject *__pyx_v_nbytes); /*proto*/
-static char __pyx_doc_12indexed_gzip_15IndexedGzipFile_6read[] = "Reads up to nbytes bytes from the uncompressed data stream. ";
-static PyObject *__pyx_pw_12indexed_gzip_15IndexedGzipFile_7read(PyObject *__pyx_v_self, PyObject *__pyx_v_nbytes) {
+static PyObject *__pyx_pw_12indexed_gzip_15IndexedGzipFile_25read(PyObject *__pyx_v_self, PyObject *__pyx_v_nbytes); /*proto*/
+static char __pyx_doc_12indexed_gzip_15IndexedGzipFile_24read[] = "Reads up to nbytes bytes from the uncompressed data stream. ";
+static PyObject *__pyx_pw_12indexed_gzip_15IndexedGzipFile_25read(PyObject *__pyx_v_self, PyObject *__pyx_v_nbytes) {
   PyObject *__pyx_r = 0;
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("read (wrapper)", 0);
-  __pyx_r = __pyx_pf_12indexed_gzip_15IndexedGzipFile_6read(((struct __pyx_obj_12indexed_gzip_IndexedGzipFile *)__pyx_v_self), ((PyObject *)__pyx_v_nbytes));
+  __pyx_r = __pyx_pf_12indexed_gzip_15IndexedGzipFile_24read(((struct __pyx_obj_12indexed_gzip_IndexedGzipFile *)__pyx_v_self), ((PyObject *)__pyx_v_nbytes));
 
   /* function exit code */
   __Pyx_RefNannyFinishContext();
   return __pyx_r;
 }
 
-static PyObject *__pyx_pf_12indexed_gzip_15IndexedGzipFile_6read(struct __pyx_obj_12indexed_gzip_IndexedGzipFile *__pyx_v_self, PyObject *__pyx_v_nbytes) {
+static PyObject *__pyx_pf_12indexed_gzip_15IndexedGzipFile_24read(struct __pyx_obj_12indexed_gzip_IndexedGzipFile *__pyx_v_self, PyObject *__pyx_v_nbytes) {
   void *__pyx_v_buf;
   int __pyx_v_ret;
   PyObject *__pyx_v_pybuf = NULL;
@@ -1556,17 +2348,17 @@ static PyObject *__pyx_pf_12indexed_gzip_15IndexedGzipFile_6read(struct __pyx_ob
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("read", 0);
 
-  /* "indexed_gzip.pyx":149
+  /* "indexed_gzip.pyx":212
  *         """Reads up to nbytes bytes from the uncompressed data stream. """
  * 
  *         cdef void *buf = PyMem_Malloc(nbytes);             # <<<<<<<<<<<<<<
  * 
  *         if not buf:
  */
-  __pyx_t_1 = __Pyx_PyInt_As_size_t(__pyx_v_nbytes); if (unlikely((__pyx_t_1 == (size_t)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 149; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = __Pyx_PyInt_As_size_t(__pyx_v_nbytes); if (unlikely((__pyx_t_1 == (size_t)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 212; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __pyx_v_buf = PyMem_Malloc(__pyx_t_1);
 
-  /* "indexed_gzip.pyx":151
+  /* "indexed_gzip.pyx":214
  *         cdef void *buf = PyMem_Malloc(nbytes);
  * 
  *         if not buf:             # <<<<<<<<<<<<<<
@@ -1576,20 +2368,20 @@ static PyObject *__pyx_pf_12indexed_gzip_15IndexedGzipFile_6read(struct __pyx_ob
   __pyx_t_2 = ((!(__pyx_v_buf != 0)) != 0);
   if (__pyx_t_2) {
 
-    /* "indexed_gzip.pyx":152
+    /* "indexed_gzip.pyx":215
  * 
  *         if not buf:
  *             raise MemoryError('PyMem_Malloc fail')             # <<<<<<<<<<<<<<
  * 
  *         ret = zran.zran_read(&self.index, buf, nbytes)
  */
-    __pyx_t_3 = __Pyx_PyObject_Call(__pyx_builtin_MemoryError, __pyx_tuple__6, NULL); if (unlikely(!__pyx_t_3)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 152; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __pyx_t_3 = __Pyx_PyObject_Call(__pyx_builtin_MemoryError, __pyx_tuple__7, NULL); if (unlikely(!__pyx_t_3)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 215; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
     __Pyx_GOTREF(__pyx_t_3);
     __Pyx_Raise(__pyx_t_3, 0, 0, 0);
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-    {__pyx_filename = __pyx_f[0]; __pyx_lineno = 152; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    {__pyx_filename = __pyx_f[0]; __pyx_lineno = 215; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
 
-    /* "indexed_gzip.pyx":151
+    /* "indexed_gzip.pyx":214
  *         cdef void *buf = PyMem_Malloc(nbytes);
  * 
  *         if not buf:             # <<<<<<<<<<<<<<
@@ -1598,17 +2390,17 @@ static PyObject *__pyx_pf_12indexed_gzip_15IndexedGzipFile_6read(struct __pyx_ob
  */
   }
 
-  /* "indexed_gzip.pyx":154
+  /* "indexed_gzip.pyx":217
  *             raise MemoryError('PyMem_Malloc fail')
  * 
  *         ret = zran.zran_read(&self.index, buf, nbytes)             # <<<<<<<<<<<<<<
  * 
  *         if ret <= 0:
  */
-  __pyx_t_1 = __Pyx_PyInt_As_size_t(__pyx_v_nbytes); if (unlikely((__pyx_t_1 == (size_t)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 154; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = __Pyx_PyInt_As_size_t(__pyx_v_nbytes); if (unlikely((__pyx_t_1 == (size_t)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 217; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __pyx_v_ret = zran_read((&__pyx_v_self->index), __pyx_v_buf, __pyx_t_1);
 
-  /* "indexed_gzip.pyx":156
+  /* "indexed_gzip.pyx":219
  *         ret = zran.zran_read(&self.index, buf, nbytes)
  * 
  *         if ret <= 0:             # <<<<<<<<<<<<<<
@@ -1618,7 +2410,7 @@ static PyObject *__pyx_pf_12indexed_gzip_15IndexedGzipFile_6read(struct __pyx_ob
   __pyx_t_2 = ((__pyx_v_ret <= 0) != 0);
   if (__pyx_t_2) {
 
-    /* "indexed_gzip.pyx":157
+    /* "indexed_gzip.pyx":220
  * 
  *         if ret <= 0:
  *             PyMem_Free(buf)             # <<<<<<<<<<<<<<
@@ -1627,7 +2419,7 @@ static PyObject *__pyx_pf_12indexed_gzip_15IndexedGzipFile_6read(struct __pyx_ob
  */
     PyMem_Free(__pyx_v_buf);
 
-    /* "indexed_gzip.pyx":156
+    /* "indexed_gzip.pyx":219
  *         ret = zran.zran_read(&self.index, buf, nbytes)
  * 
  *         if ret <= 0:             # <<<<<<<<<<<<<<
@@ -1636,7 +2428,7 @@ static PyObject *__pyx_pf_12indexed_gzip_15IndexedGzipFile_6read(struct __pyx_ob
  */
   }
 
-  /* "indexed_gzip.pyx":159
+  /* "indexed_gzip.pyx":222
  *             PyMem_Free(buf)
  * 
  *         if ret < -1:             # <<<<<<<<<<<<<<
@@ -1646,23 +2438,23 @@ static PyObject *__pyx_pf_12indexed_gzip_15IndexedGzipFile_6read(struct __pyx_ob
   __pyx_t_2 = ((__pyx_v_ret < -1L) != 0);
   if (__pyx_t_2) {
 
-    /* "indexed_gzip.pyx":160
+    /* "indexed_gzip.pyx":223
  * 
  *         if ret < -1:
  *             raise ZranError('zran_read returned error')             # <<<<<<<<<<<<<<
  * 
  *         elif ret == -1:
  */
-    __pyx_t_3 = __Pyx_GetModuleGlobalName(__pyx_n_s_ZranError); if (unlikely(!__pyx_t_3)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 160; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __pyx_t_3 = __Pyx_GetModuleGlobalName(__pyx_n_s_ZranError); if (unlikely(!__pyx_t_3)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 223; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
     __Pyx_GOTREF(__pyx_t_3);
-    __pyx_t_4 = __Pyx_PyObject_Call(__pyx_t_3, __pyx_tuple__7, NULL); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 160; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __pyx_t_4 = __Pyx_PyObject_Call(__pyx_t_3, __pyx_tuple__8, NULL); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 223; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
     __Pyx_GOTREF(__pyx_t_4);
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
     __Pyx_Raise(__pyx_t_4, 0, 0, 0);
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-    {__pyx_filename = __pyx_f[0]; __pyx_lineno = 160; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    {__pyx_filename = __pyx_f[0]; __pyx_lineno = 223; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
 
-    /* "indexed_gzip.pyx":159
+    /* "indexed_gzip.pyx":222
  *             PyMem_Free(buf)
  * 
  *         if ret < -1:             # <<<<<<<<<<<<<<
@@ -1671,7 +2463,7 @@ static PyObject *__pyx_pf_12indexed_gzip_15IndexedGzipFile_6read(struct __pyx_ob
  */
   }
 
-  /* "indexed_gzip.pyx":162
+  /* "indexed_gzip.pyx":225
  *             raise ZranError('zran_read returned error')
  * 
  *         elif ret == -1:             # <<<<<<<<<<<<<<
@@ -1681,23 +2473,23 @@ static PyObject *__pyx_pf_12indexed_gzip_15IndexedGzipFile_6read(struct __pyx_ob
   __pyx_t_2 = ((__pyx_v_ret == -1L) != 0);
   if (__pyx_t_2) {
 
-    /* "indexed_gzip.pyx":163
+    /* "indexed_gzip.pyx":226
  * 
  *         elif ret == -1:
  *             raise NotCoveredError('Index does not cover current offset')             # <<<<<<<<<<<<<<
  * 
  *         # 0 bytes read
  */
-    __pyx_t_4 = __Pyx_GetModuleGlobalName(__pyx_n_s_NotCoveredError); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 163; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __pyx_t_4 = __Pyx_GetModuleGlobalName(__pyx_n_s_NotCoveredError); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 226; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
     __Pyx_GOTREF(__pyx_t_4);
-    __pyx_t_3 = __Pyx_PyObject_Call(__pyx_t_4, __pyx_tuple__8, NULL); if (unlikely(!__pyx_t_3)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 163; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __pyx_t_3 = __Pyx_PyObject_Call(__pyx_t_4, __pyx_tuple__9, NULL); if (unlikely(!__pyx_t_3)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 226; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
     __Pyx_GOTREF(__pyx_t_3);
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
     __Pyx_Raise(__pyx_t_3, 0, 0, 0);
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-    {__pyx_filename = __pyx_f[0]; __pyx_lineno = 163; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    {__pyx_filename = __pyx_f[0]; __pyx_lineno = 226; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
 
-    /* "indexed_gzip.pyx":162
+    /* "indexed_gzip.pyx":225
  *             raise ZranError('zran_read returned error')
  * 
  *         elif ret == -1:             # <<<<<<<<<<<<<<
@@ -1706,7 +2498,7 @@ static PyObject *__pyx_pf_12indexed_gzip_15IndexedGzipFile_6read(struct __pyx_ob
  */
   }
 
-  /* "indexed_gzip.pyx":166
+  /* "indexed_gzip.pyx":229
  * 
  *         # 0 bytes read
  *         elif ret ==  0:             # <<<<<<<<<<<<<<
@@ -1716,19 +2508,19 @@ static PyObject *__pyx_pf_12indexed_gzip_15IndexedGzipFile_6read(struct __pyx_ob
   __pyx_t_2 = ((__pyx_v_ret == 0) != 0);
   if (__pyx_t_2) {
 
-    /* "indexed_gzip.pyx":167
+    /* "indexed_gzip.pyx":230
  *         # 0 bytes read
  *         elif ret ==  0:
  *             pybuf = bytes()             # <<<<<<<<<<<<<<
  * 
  *         # Some bytes read
  */
-    __pyx_t_3 = __Pyx_PyObject_Call(((PyObject *)(&PyBytes_Type)), __pyx_empty_tuple, NULL); if (unlikely(!__pyx_t_3)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 167; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __pyx_t_3 = __Pyx_PyObject_Call(((PyObject *)(&PyBytes_Type)), __pyx_empty_tuple, NULL); if (unlikely(!__pyx_t_3)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 230; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
     __Pyx_GOTREF(__pyx_t_3);
     __pyx_v_pybuf = ((PyObject*)__pyx_t_3);
     __pyx_t_3 = 0;
 
-    /* "indexed_gzip.pyx":166
+    /* "indexed_gzip.pyx":229
  * 
  *         # 0 bytes read
  *         elif ret ==  0:             # <<<<<<<<<<<<<<
@@ -1738,7 +2530,7 @@ static PyObject *__pyx_pf_12indexed_gzip_15IndexedGzipFile_6read(struct __pyx_ob
     goto __pyx_L5;
   }
 
-  /* "indexed_gzip.pyx":170
+  /* "indexed_gzip.pyx":233
  * 
  *         # Some bytes read
  *         elif ret > 0:             # <<<<<<<<<<<<<<
@@ -1748,7 +2540,7 @@ static PyObject *__pyx_pf_12indexed_gzip_15IndexedGzipFile_6read(struct __pyx_ob
   __pyx_t_2 = ((__pyx_v_ret > 0) != 0);
   if (__pyx_t_2) {
 
-    /* "indexed_gzip.pyx":171
+    /* "indexed_gzip.pyx":234
  *         # Some bytes read
  *         elif ret > 0:
  *             buf   = PyMem_Realloc(buf, ret)             # <<<<<<<<<<<<<<
@@ -1757,14 +2549,14 @@ static PyObject *__pyx_pf_12indexed_gzip_15IndexedGzipFile_6read(struct __pyx_ob
  */
     __pyx_v_buf = PyMem_Realloc(__pyx_v_buf, __pyx_v_ret);
 
-    /* "indexed_gzip.pyx":172
+    /* "indexed_gzip.pyx":235
  *         elif ret > 0:
  *             buf   = PyMem_Realloc(buf, ret)
  *             pybuf = <bytes>(<char *>buf)[:ret]             # <<<<<<<<<<<<<<
  * 
  *         return pybuf
  */
-    __pyx_t_3 = __Pyx_PyBytes_FromStringAndSize(((char *)__pyx_v_buf) + 0, __pyx_v_ret - 0); if (unlikely(!__pyx_t_3)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 172; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __pyx_t_3 = __Pyx_PyBytes_FromStringAndSize(((char *)__pyx_v_buf) + 0, __pyx_v_ret - 0); if (unlikely(!__pyx_t_3)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 235; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
     __Pyx_GOTREF(__pyx_t_3);
     __pyx_t_4 = __pyx_t_3;
     __Pyx_INCREF(__pyx_t_4);
@@ -1772,7 +2564,7 @@ static PyObject *__pyx_pf_12indexed_gzip_15IndexedGzipFile_6read(struct __pyx_ob
     __pyx_v_pybuf = ((PyObject*)__pyx_t_4);
     __pyx_t_4 = 0;
 
-    /* "indexed_gzip.pyx":170
+    /* "indexed_gzip.pyx":233
  * 
  *         # Some bytes read
  *         elif ret > 0:             # <<<<<<<<<<<<<<
@@ -1782,20 +2574,18 @@ static PyObject *__pyx_pf_12indexed_gzip_15IndexedGzipFile_6read(struct __pyx_ob
   }
   __pyx_L5:;
 
-  /* "indexed_gzip.pyx":174
+  /* "indexed_gzip.pyx":237
  *             pybuf = <bytes>(<char *>buf)[:ret]
  * 
  *         return pybuf             # <<<<<<<<<<<<<<
- * 
- * 
  */
   __Pyx_XDECREF(__pyx_r);
-  if (unlikely(!__pyx_v_pybuf)) { __Pyx_RaiseUnboundLocalError("pybuf"); {__pyx_filename = __pyx_f[0]; __pyx_lineno = 174; __pyx_clineno = __LINE__; goto __pyx_L1_error;} }
+  if (unlikely(!__pyx_v_pybuf)) { __Pyx_RaiseUnboundLocalError("pybuf"); {__pyx_filename = __pyx_f[0]; __pyx_lineno = 237; __pyx_clineno = __LINE__; goto __pyx_L1_error;} }
   __Pyx_INCREF(__pyx_v_pybuf);
   __pyx_r = __pyx_v_pybuf;
   goto __pyx_L0;
 
-  /* "indexed_gzip.pyx":146
+  /* "indexed_gzip.pyx":209
  * 
  * 
  *     def read(self, nbytes):             # <<<<<<<<<<<<<<
@@ -1814,108 +2604,6 @@ static PyObject *__pyx_pf_12indexed_gzip_15IndexedGzipFile_6read(struct __pyx_ob
   __Pyx_XGIVEREF(__pyx_r);
   __Pyx_RefNannyFinishContext();
   return __pyx_r;
-}
-
-/* "indexed_gzip.pyx":177
- * 
- * 
- *     def __dealloc__(self):             # <<<<<<<<<<<<<<
- *         """Frees the memory used by this IndexedGzipFile. If a file name was
- *         passed to __cinit__, the file handle is closed.
- */
-
-/* Python wrapper */
-static void __pyx_pw_12indexed_gzip_15IndexedGzipFile_9__dealloc__(PyObject *__pyx_v_self); /*proto*/
-static void __pyx_pw_12indexed_gzip_15IndexedGzipFile_9__dealloc__(PyObject *__pyx_v_self) {
-  __Pyx_RefNannyDeclarations
-  __Pyx_RefNannySetupContext("__dealloc__ (wrapper)", 0);
-  __pyx_pf_12indexed_gzip_15IndexedGzipFile_8__dealloc__(((struct __pyx_obj_12indexed_gzip_IndexedGzipFile *)__pyx_v_self));
-
-  /* function exit code */
-  __Pyx_RefNannyFinishContext();
-}
-
-static void __pyx_pf_12indexed_gzip_15IndexedGzipFile_8__dealloc__(struct __pyx_obj_12indexed_gzip_IndexedGzipFile *__pyx_v_self) {
-  __Pyx_RefNannyDeclarations
-  int __pyx_t_1;
-  PyObject *__pyx_t_2 = NULL;
-  PyObject *__pyx_t_3 = NULL;
-  PyObject *__pyx_t_4 = NULL;
-  int __pyx_lineno = 0;
-  const char *__pyx_filename = NULL;
-  int __pyx_clineno = 0;
-  __Pyx_RefNannySetupContext("__dealloc__", 0);
-
-  /* "indexed_gzip.pyx":182
- *         """
- * 
- *         zran.zran_free(&self.index)             # <<<<<<<<<<<<<<
- * 
- *         if self.own_file:
- */
-  zran_free((&__pyx_v_self->index));
-
-  /* "indexed_gzip.pyx":184
- *         zran.zran_free(&self.index)
- * 
- *         if self.own_file:             # <<<<<<<<<<<<<<
- *             self.pyfid.close()
- */
-  __pyx_t_1 = (__pyx_v_self->own_file != 0);
-  if (__pyx_t_1) {
-
-    /* "indexed_gzip.pyx":185
- * 
- *         if self.own_file:
- *             self.pyfid.close()             # <<<<<<<<<<<<<<
- */
-    __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_v_self->pyfid, __pyx_n_s_close); if (unlikely(!__pyx_t_3)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 185; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
-    __Pyx_GOTREF(__pyx_t_3);
-    __pyx_t_4 = NULL;
-    if (CYTHON_COMPILING_IN_CPYTHON && likely(PyMethod_Check(__pyx_t_3))) {
-      __pyx_t_4 = PyMethod_GET_SELF(__pyx_t_3);
-      if (likely(__pyx_t_4)) {
-        PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_3);
-        __Pyx_INCREF(__pyx_t_4);
-        __Pyx_INCREF(function);
-        __Pyx_DECREF_SET(__pyx_t_3, function);
-      }
-    }
-    if (__pyx_t_4) {
-      __pyx_t_2 = __Pyx_PyObject_CallOneArg(__pyx_t_3, __pyx_t_4); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 185; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
-      __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-    } else {
-      __pyx_t_2 = __Pyx_PyObject_CallNoArg(__pyx_t_3); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 185; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
-    }
-    __Pyx_GOTREF(__pyx_t_2);
-    __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-    __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-
-    /* "indexed_gzip.pyx":184
- *         zran.zran_free(&self.index)
- * 
- *         if self.own_file:             # <<<<<<<<<<<<<<
- *             self.pyfid.close()
- */
-  }
-
-  /* "indexed_gzip.pyx":177
- * 
- * 
- *     def __dealloc__(self):             # <<<<<<<<<<<<<<
- *         """Frees the memory used by this IndexedGzipFile. If a file name was
- *         passed to __cinit__, the file handle is closed.
- */
-
-  /* function exit code */
-  goto __pyx_L0;
-  __pyx_L1_error:;
-  __Pyx_XDECREF(__pyx_t_2);
-  __Pyx_XDECREF(__pyx_t_3);
-  __Pyx_XDECREF(__pyx_t_4);
-  __Pyx_WriteUnraisable("indexed_gzip.IndexedGzipFile.__dealloc__", __pyx_clineno, __pyx_lineno, __pyx_filename, 0, 0);
-  __pyx_L0:;
-  __Pyx_RefNannyFinishContext();
 }
 
 static PyObject *__pyx_tp_new_12indexed_gzip_IndexedGzipFile(PyTypeObject *t, PyObject *a, PyObject *k) {
@@ -1947,7 +2635,7 @@ static void __pyx_tp_dealloc_12indexed_gzip_IndexedGzipFile(PyObject *o) {
     PyObject *etype, *eval, *etb;
     PyErr_Fetch(&etype, &eval, &etb);
     ++Py_REFCNT(o);
-    __pyx_pw_12indexed_gzip_15IndexedGzipFile_9__dealloc__(o);
+    __pyx_pw_12indexed_gzip_15IndexedGzipFile_19__dealloc__(o);
     --Py_REFCNT(o);
     PyErr_Restore(etype, eval, etb);
   }
@@ -1974,9 +2662,17 @@ static int __pyx_tp_clear_12indexed_gzip_IndexedGzipFile(PyObject *o) {
 }
 
 static PyMethodDef __pyx_methods_12indexed_gzip_IndexedGzipFile[] = {
-  {"build_full_index", (PyCFunction)__pyx_pw_12indexed_gzip_15IndexedGzipFile_3build_full_index, METH_NOARGS, __pyx_doc_12indexed_gzip_15IndexedGzipFile_2build_full_index},
-  {"seek", (PyCFunction)__pyx_pw_12indexed_gzip_15IndexedGzipFile_5seek, METH_O, __pyx_doc_12indexed_gzip_15IndexedGzipFile_4seek},
-  {"read", (PyCFunction)__pyx_pw_12indexed_gzip_15IndexedGzipFile_7read, METH_O, __pyx_doc_12indexed_gzip_15IndexedGzipFile_6read},
+  {"close", (PyCFunction)__pyx_pw_12indexed_gzip_15IndexedGzipFile_3close, METH_NOARGS, __pyx_doc_12indexed_gzip_15IndexedGzipFile_2close},
+  {"closed", (PyCFunction)__pyx_pw_12indexed_gzip_15IndexedGzipFile_5closed, METH_NOARGS, __pyx_doc_12indexed_gzip_15IndexedGzipFile_4closed},
+  {"readable", (PyCFunction)__pyx_pw_12indexed_gzip_15IndexedGzipFile_7readable, METH_NOARGS, __pyx_doc_12indexed_gzip_15IndexedGzipFile_6readable},
+  {"writable", (PyCFunction)__pyx_pw_12indexed_gzip_15IndexedGzipFile_9writable, METH_NOARGS, __pyx_doc_12indexed_gzip_15IndexedGzipFile_8writable},
+  {"seekable", (PyCFunction)__pyx_pw_12indexed_gzip_15IndexedGzipFile_11seekable, METH_NOARGS, __pyx_doc_12indexed_gzip_15IndexedGzipFile_10seekable},
+  {"tell", (PyCFunction)__pyx_pw_12indexed_gzip_15IndexedGzipFile_13tell, METH_NOARGS, __pyx_doc_12indexed_gzip_15IndexedGzipFile_12tell},
+  {"__enter__", (PyCFunction)__pyx_pw_12indexed_gzip_15IndexedGzipFile_15__enter__, METH_NOARGS, __pyx_doc_12indexed_gzip_15IndexedGzipFile_14__enter__},
+  {"__exit__", (PyCFunction)__pyx_pw_12indexed_gzip_15IndexedGzipFile_17__exit__, METH_NOARGS, __pyx_doc_12indexed_gzip_15IndexedGzipFile_16__exit__},
+  {"build_full_index", (PyCFunction)__pyx_pw_12indexed_gzip_15IndexedGzipFile_21build_full_index, METH_NOARGS, __pyx_doc_12indexed_gzip_15IndexedGzipFile_20build_full_index},
+  {"seek", (PyCFunction)__pyx_pw_12indexed_gzip_15IndexedGzipFile_23seek, METH_O, __pyx_doc_12indexed_gzip_15IndexedGzipFile_22seek},
+  {"read", (PyCFunction)__pyx_pw_12indexed_gzip_15IndexedGzipFile_25read, METH_O, __pyx_doc_12indexed_gzip_15IndexedGzipFile_24read},
   {0, 0, 0, 0}
 };
 
@@ -2064,8 +2760,10 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_n_s_Exception, __pyx_k_Exception, sizeof(__pyx_k_Exception), 0, 0, 1, 1},
   {&__pyx_kp_s_Exception_raised_by_the_IndexedG, __pyx_k_Exception_raised_by_the_IndexedG, sizeof(__pyx_k_Exception_raised_by_the_IndexedG), 0, 0, 1, 0},
   {&__pyx_kp_s_Exception_raised_by_the_IndexedG_2, __pyx_k_Exception_raised_by_the_IndexedG_2, sizeof(__pyx_k_Exception_raised_by_the_IndexedG_2), 0, 0, 1, 0},
+  {&__pyx_n_s_IOError, __pyx_k_IOError, sizeof(__pyx_k_IOError), 0, 0, 1, 1},
   {&__pyx_kp_s_Index_does_not_cover_current_off, __pyx_k_Index_does_not_cover_current_off, sizeof(__pyx_k_Index_does_not_cover_current_off), 0, 0, 1, 0},
   {&__pyx_kp_s_Index_does_not_cover_offset, __pyx_k_Index_does_not_cover_offset, sizeof(__pyx_k_Index_does_not_cover_offset), 0, 0, 1, 0},
+  {&__pyx_kp_s_IndexedGzipFile_is_already_close, __pyx_k_IndexedGzipFile_is_already_close, sizeof(__pyx_k_IndexedGzipFile_is_already_close), 0, 0, 1, 0},
   {&__pyx_n_s_MemoryError, __pyx_k_MemoryError, sizeof(__pyx_k_MemoryError), 0, 0, 1, 1},
   {&__pyx_n_s_NotCoveredError, __pyx_k_NotCoveredError, sizeof(__pyx_k_NotCoveredError), 0, 0, 1, 1},
   {&__pyx_kp_s_One_of_fid_or_filename_must_be_s, __pyx_k_One_of_fid_or_filename_must_be_s, sizeof(__pyx_k_One_of_fid_or_filename_must_be_s), 0, 0, 1, 0},
@@ -2075,6 +2773,7 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_n_s_ZranError, __pyx_k_ZranError, sizeof(__pyx_k_ZranError), 0, 0, 1, 1},
   {&__pyx_n_s_auto_build, __pyx_k_auto_build, sizeof(__pyx_k_auto_build), 0, 0, 1, 1},
   {&__pyx_n_s_close, __pyx_k_close, sizeof(__pyx_k_close), 0, 0, 1, 1},
+  {&__pyx_n_s_closed, __pyx_k_closed, sizeof(__pyx_k_closed), 0, 0, 1, 1},
   {&__pyx_n_s_doc, __pyx_k_doc, sizeof(__pyx_k_doc), 0, 0, 1, 1},
   {&__pyx_n_s_fid, __pyx_k_fid, sizeof(__pyx_k_fid), 0, 0, 1, 1},
   {&__pyx_n_s_filename, __pyx_k_filename, sizeof(__pyx_k_filename), 0, 0, 1, 1},
@@ -2100,10 +2799,11 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {0, 0, 0, 0, 0, 0, 0}
 };
 static int __Pyx_InitCachedBuiltins(void) {
-  __pyx_builtin_Exception = __Pyx_GetBuiltinName(__pyx_n_s_Exception); if (!__pyx_builtin_Exception) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 18; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
-  __pyx_builtin_ValueError = __Pyx_GetBuiltinName(__pyx_n_s_ValueError); if (!__pyx_builtin_ValueError) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 95; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
-  __pyx_builtin_open = __Pyx_GetBuiltinName(__pyx_n_s_open); if (!__pyx_builtin_open) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 104; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
-  __pyx_builtin_MemoryError = __Pyx_GetBuiltinName(__pyx_n_s_MemoryError); if (!__pyx_builtin_MemoryError) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 152; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_builtin_Exception = __Pyx_GetBuiltinName(__pyx_n_s_Exception); if (!__pyx_builtin_Exception) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 19; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_builtin_ValueError = __Pyx_GetBuiltinName(__pyx_n_s_ValueError); if (!__pyx_builtin_ValueError) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 96; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_builtin_open = __Pyx_GetBuiltinName(__pyx_n_s_open); if (!__pyx_builtin_open) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 105; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_builtin_IOError = __Pyx_GetBuiltinName(__pyx_n_s_IOError); if (!__pyx_builtin_IOError) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 126; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_builtin_MemoryError = __Pyx_GetBuiltinName(__pyx_n_s_MemoryError); if (!__pyx_builtin_MemoryError) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 215; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   return 0;
   __pyx_L1_error:;
   return -1;
@@ -2113,93 +2813,104 @@ static int __Pyx_InitCachedConstants(void) {
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("__Pyx_InitCachedConstants", 0);
 
-  /* "indexed_gzip.pyx":95
+  /* "indexed_gzip.pyx":96
  *         if fid is None and filename is None:
  * 
  *             raise ValueError('One of fid or filename must be specified')             # <<<<<<<<<<<<<<
  * 
  *         if fid is not None and fid.mode != 'rb':
  */
-  __pyx_tuple_ = PyTuple_Pack(1, __pyx_kp_s_One_of_fid_or_filename_must_be_s); if (unlikely(!__pyx_tuple_)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 95; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_tuple_ = PyTuple_Pack(1, __pyx_kp_s_One_of_fid_or_filename_must_be_s); if (unlikely(!__pyx_tuple_)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 96; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_tuple_);
   __Pyx_GIVEREF(__pyx_tuple_);
 
-  /* "indexed_gzip.pyx":98
+  /* "indexed_gzip.pyx":99
  * 
  *         if fid is not None and fid.mode != 'rb':
  *             raise ValueError('The gzip file must be opened in '             # <<<<<<<<<<<<<<
  *                              'read-only binary ("rb") mode')
  * 
  */
-  __pyx_tuple__2 = PyTuple_Pack(1, __pyx_kp_s_The_gzip_file_must_be_opened_in); if (unlikely(!__pyx_tuple__2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 98; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_tuple__2 = PyTuple_Pack(1, __pyx_kp_s_The_gzip_file_must_be_opened_in); if (unlikely(!__pyx_tuple__2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 99; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_tuple__2);
   __Pyx_GIVEREF(__pyx_tuple__2);
 
-  /* "indexed_gzip.pyx":118
+  /* "indexed_gzip.pyx":119
  *                           readbuf_size=readbuf_size,
  *                           flags=flags):
  *             raise ZranError('zran_init returned error')             # <<<<<<<<<<<<<<
  * 
  * 
  */
-  __pyx_tuple__3 = PyTuple_Pack(1, __pyx_kp_s_zran_init_returned_error); if (unlikely(!__pyx_tuple__3)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 118; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_tuple__3 = PyTuple_Pack(1, __pyx_kp_s_zran_init_returned_error); if (unlikely(!__pyx_tuple__3)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 119; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_tuple__3);
   __Pyx_GIVEREF(__pyx_tuple__3);
 
-  /* "indexed_gzip.pyx":125
+  /* "indexed_gzip.pyx":126
+ * 
+ *         if self.closed():
+ *             raise IOError('IndexedGzipFile is already closed')             # <<<<<<<<<<<<<<
+ * 
+ *         zran.zran_free(&self.index)
+ */
+  __pyx_tuple__4 = PyTuple_Pack(1, __pyx_kp_s_IndexedGzipFile_is_already_close); if (unlikely(!__pyx_tuple__4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 126; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __Pyx_GOTREF(__pyx_tuple__4);
+  __Pyx_GIVEREF(__pyx_tuple__4);
+
+  /* "indexed_gzip.pyx":188
  * 
  *         if zran.zran_build_index(&self.index, 0, 0) != 0:
  *             raise ZranError('zran_build_index returned error')             # <<<<<<<<<<<<<<
  * 
  * 
  */
-  __pyx_tuple__4 = PyTuple_Pack(1, __pyx_kp_s_zran_build_index_returned_error); if (unlikely(!__pyx_tuple__4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 125; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
-  __Pyx_GOTREF(__pyx_tuple__4);
-  __Pyx_GIVEREF(__pyx_tuple__4);
+  __pyx_tuple__5 = PyTuple_Pack(1, __pyx_kp_s_zran_build_index_returned_error); if (unlikely(!__pyx_tuple__5)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 188; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __Pyx_GOTREF(__pyx_tuple__5);
+  __Pyx_GIVEREF(__pyx_tuple__5);
 
-  /* "indexed_gzip.pyx":139
+  /* "indexed_gzip.pyx":202
  * 
  *         if ret < 0:
  *             raise ZranError('zran_seek returned error')             # <<<<<<<<<<<<<<
  * 
  *         elif ret > 0:
  */
-  __pyx_tuple__5 = PyTuple_Pack(1, __pyx_kp_s_zran_seek_returned_error); if (unlikely(!__pyx_tuple__5)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 139; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
-  __Pyx_GOTREF(__pyx_tuple__5);
-  __Pyx_GIVEREF(__pyx_tuple__5);
+  __pyx_tuple__6 = PyTuple_Pack(1, __pyx_kp_s_zran_seek_returned_error); if (unlikely(!__pyx_tuple__6)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 202; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __Pyx_GOTREF(__pyx_tuple__6);
+  __Pyx_GIVEREF(__pyx_tuple__6);
 
-  /* "indexed_gzip.pyx":152
+  /* "indexed_gzip.pyx":215
  * 
  *         if not buf:
  *             raise MemoryError('PyMem_Malloc fail')             # <<<<<<<<<<<<<<
  * 
  *         ret = zran.zran_read(&self.index, buf, nbytes)
  */
-  __pyx_tuple__6 = PyTuple_Pack(1, __pyx_kp_s_PyMem_Malloc_fail); if (unlikely(!__pyx_tuple__6)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 152; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
-  __Pyx_GOTREF(__pyx_tuple__6);
-  __Pyx_GIVEREF(__pyx_tuple__6);
+  __pyx_tuple__7 = PyTuple_Pack(1, __pyx_kp_s_PyMem_Malloc_fail); if (unlikely(!__pyx_tuple__7)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 215; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __Pyx_GOTREF(__pyx_tuple__7);
+  __Pyx_GIVEREF(__pyx_tuple__7);
 
-  /* "indexed_gzip.pyx":160
+  /* "indexed_gzip.pyx":223
  * 
  *         if ret < -1:
  *             raise ZranError('zran_read returned error')             # <<<<<<<<<<<<<<
  * 
  *         elif ret == -1:
  */
-  __pyx_tuple__7 = PyTuple_Pack(1, __pyx_kp_s_zran_read_returned_error); if (unlikely(!__pyx_tuple__7)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 160; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
-  __Pyx_GOTREF(__pyx_tuple__7);
-  __Pyx_GIVEREF(__pyx_tuple__7);
+  __pyx_tuple__8 = PyTuple_Pack(1, __pyx_kp_s_zran_read_returned_error); if (unlikely(!__pyx_tuple__8)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 223; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __Pyx_GOTREF(__pyx_tuple__8);
+  __Pyx_GIVEREF(__pyx_tuple__8);
 
-  /* "indexed_gzip.pyx":163
+  /* "indexed_gzip.pyx":226
  * 
  *         elif ret == -1:
  *             raise NotCoveredError('Index does not cover current offset')             # <<<<<<<<<<<<<<
  * 
  *         # 0 bytes read
  */
-  __pyx_tuple__8 = PyTuple_Pack(1, __pyx_kp_s_Index_does_not_cover_current_off); if (unlikely(!__pyx_tuple__8)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 163; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
-  __Pyx_GOTREF(__pyx_tuple__8);
-  __Pyx_GIVEREF(__pyx_tuple__8);
+  __pyx_tuple__9 = PyTuple_Pack(1, __pyx_kp_s_Index_does_not_cover_current_off); if (unlikely(!__pyx_tuple__9)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 226; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __Pyx_GOTREF(__pyx_tuple__9);
+  __Pyx_GIVEREF(__pyx_tuple__9);
   __Pyx_RefNannyFinishContext();
   return 0;
   __pyx_L1_error:;
@@ -2306,9 +3017,9 @@ PyMODINIT_FUNC PyInit_indexed_gzip(void)
   /*--- Variable export code ---*/
   /*--- Function export code ---*/
   /*--- Type init code ---*/
-  if (PyType_Ready(&__pyx_type_12indexed_gzip_IndexedGzipFile) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 34; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  if (PyType_Ready(&__pyx_type_12indexed_gzip_IndexedGzipFile) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 35; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __pyx_type_12indexed_gzip_IndexedGzipFile.tp_print = 0;
-  if (PyObject_SetAttrString(__pyx_m, "IndexedGzipFile", (PyObject *)&__pyx_type_12indexed_gzip_IndexedGzipFile) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 34; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  if (PyObject_SetAttrString(__pyx_m, "IndexedGzipFile", (PyObject *)&__pyx_type_12indexed_gzip_IndexedGzipFile) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 35; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __pyx_ptype_12indexed_gzip_IndexedGzipFile = &__pyx_type_12indexed_gzip_IndexedGzipFile;
   /*--- Type import code ---*/
   /*--- Variable import code ---*/
@@ -2318,49 +3029,49 @@ PyMODINIT_FUNC PyInit_indexed_gzip(void)
   if (__Pyx_patch_abc() < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 1; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   #endif
 
-  /* "indexed_gzip.pyx":18
+  /* "indexed_gzip.pyx":19
  * 
  * 
  * class NotCoveredError(Exception):             # <<<<<<<<<<<<<<
  *     """Exception raised by the IndexedGzipFile when an attempt is made to seek
  *     to/read from a location that is not covered by the index. This exception
  */
-  __pyx_t_1 = PyTuple_New(1); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 18; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = PyTuple_New(1); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 19; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_INCREF(__pyx_builtin_Exception);
   __Pyx_GIVEREF(__pyx_builtin_Exception);
   PyTuple_SET_ITEM(__pyx_t_1, 0, __pyx_builtin_Exception);
-  __pyx_t_2 = __Pyx_CalculateMetaclass(NULL, __pyx_t_1); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 18; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_2 = __Pyx_CalculateMetaclass(NULL, __pyx_t_1); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 19; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_2);
-  __pyx_t_3 = __Pyx_Py3MetaclassPrepare(__pyx_t_2, __pyx_t_1, __pyx_n_s_NotCoveredError, __pyx_n_s_NotCoveredError, (PyObject *) NULL, __pyx_n_s_indexed_gzip, __pyx_kp_s_Exception_raised_by_the_IndexedG); if (unlikely(!__pyx_t_3)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 18; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_3 = __Pyx_Py3MetaclassPrepare(__pyx_t_2, __pyx_t_1, __pyx_n_s_NotCoveredError, __pyx_n_s_NotCoveredError, (PyObject *) NULL, __pyx_n_s_indexed_gzip, __pyx_kp_s_Exception_raised_by_the_IndexedG); if (unlikely(!__pyx_t_3)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 19; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_3);
-  __pyx_t_4 = __Pyx_Py3ClassCreate(__pyx_t_2, __pyx_n_s_NotCoveredError, __pyx_t_1, __pyx_t_3, NULL, 0, 1); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 18; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_4 = __Pyx_Py3ClassCreate(__pyx_t_2, __pyx_n_s_NotCoveredError, __pyx_t_1, __pyx_t_3, NULL, 0, 1); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 19; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_4);
-  if (PyDict_SetItem(__pyx_d, __pyx_n_s_NotCoveredError, __pyx_t_4) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 18; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_NotCoveredError, __pyx_t_4) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 19; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "indexed_gzip.pyx":27
+  /* "indexed_gzip.pyx":28
  * 
  * 
  * class ZranError(Exception):             # <<<<<<<<<<<<<<
  *     """Exception raised by the IndexedGzipFile when the zran library signals
  *     an error.
  */
-  __pyx_t_1 = PyTuple_New(1); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 27; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = PyTuple_New(1); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 28; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_INCREF(__pyx_builtin_Exception);
   __Pyx_GIVEREF(__pyx_builtin_Exception);
   PyTuple_SET_ITEM(__pyx_t_1, 0, __pyx_builtin_Exception);
-  __pyx_t_2 = __Pyx_CalculateMetaclass(NULL, __pyx_t_1); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 27; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_2 = __Pyx_CalculateMetaclass(NULL, __pyx_t_1); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 28; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_2);
-  __pyx_t_3 = __Pyx_Py3MetaclassPrepare(__pyx_t_2, __pyx_t_1, __pyx_n_s_ZranError, __pyx_n_s_ZranError, (PyObject *) NULL, __pyx_n_s_indexed_gzip, __pyx_kp_s_Exception_raised_by_the_IndexedG_2); if (unlikely(!__pyx_t_3)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 27; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_3 = __Pyx_Py3MetaclassPrepare(__pyx_t_2, __pyx_t_1, __pyx_n_s_ZranError, __pyx_n_s_ZranError, (PyObject *) NULL, __pyx_n_s_indexed_gzip, __pyx_kp_s_Exception_raised_by_the_IndexedG_2); if (unlikely(!__pyx_t_3)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 28; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_3);
-  __pyx_t_4 = __Pyx_Py3ClassCreate(__pyx_t_2, __pyx_n_s_ZranError, __pyx_t_1, __pyx_t_3, NULL, 0, 1); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 27; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_4 = __Pyx_Py3ClassCreate(__pyx_t_2, __pyx_n_s_ZranError, __pyx_t_1, __pyx_t_3, NULL, 0, 1); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 28; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_4);
-  if (PyDict_SetItem(__pyx_d, __pyx_n_s_ZranError, __pyx_t_4) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 27; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_ZranError, __pyx_t_4) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 28; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
@@ -2985,10 +3696,6 @@ static CYTHON_INLINE PyObject *__Pyx_GetModuleGlobalName(PyObject *name) {
     return result;
 }
 
-static CYTHON_INLINE void __Pyx_RaiseUnboundLocalError(const char *varname) {
-    PyErr_Format(PyExc_UnboundLocalError, "local variable '%s' referenced before assignment", varname);
-}
-
 static void __Pyx_WriteUnraisable(const char *name, CYTHON_UNUSED int clineno,
                                   CYTHON_UNUSED int lineno, CYTHON_UNUSED const char *filename,
                                   int full_traceback, CYTHON_UNUSED int nogil) {
@@ -3023,6 +3730,10 @@ static void __Pyx_WriteUnraisable(const char *name, CYTHON_UNUSED int clineno,
     if (nogil)
         PyGILState_Release(state);
 #endif
+}
+
+static CYTHON_INLINE void __Pyx_RaiseUnboundLocalError(const char *varname) {
+    PyErr_Format(PyExc_UnboundLocalError, "local variable '%s' referenced before assignment", varname);
 }
 
 static PyObject *__Pyx_CalculateMetaclass(PyTypeObject *metaclass, PyObject *bases) {
@@ -3679,6 +4390,32 @@ raise_neg_overflow:
     PyErr_SetString(PyExc_OverflowError,
         "can't convert negative value to uint32_t");
     return (uint32_t) -1;
+}
+
+static CYTHON_INLINE PyObject* __Pyx_PyInt_From_uint64_t(uint64_t value) {
+    const uint64_t neg_one = (uint64_t) -1, const_zero = (uint64_t) 0;
+    const int is_unsigned = neg_one > const_zero;
+    if (is_unsigned) {
+        if (sizeof(uint64_t) < sizeof(long)) {
+            return PyInt_FromLong((long) value);
+        } else if (sizeof(uint64_t) <= sizeof(unsigned long)) {
+            return PyLong_FromUnsignedLong((unsigned long) value);
+        } else if (sizeof(uint64_t) <= sizeof(unsigned PY_LONG_LONG)) {
+            return PyLong_FromUnsignedLongLong((unsigned PY_LONG_LONG) value);
+        }
+    } else {
+        if (sizeof(uint64_t) <= sizeof(long)) {
+            return PyInt_FromLong((long) value);
+        } else if (sizeof(uint64_t) <= sizeof(PY_LONG_LONG)) {
+            return PyLong_FromLongLong((PY_LONG_LONG) value);
+        }
+    }
+    {
+        int one = 1; int little = (int)*(unsigned char *)&one;
+        unsigned char *bytes = (unsigned char *)&value;
+        return _PyLong_FromByteArray(bytes, sizeof(uint64_t),
+                                     little, !is_unsigned);
+    }
 }
 
 static CYTHON_INLINE off_t __Pyx_PyInt_As_off_t(PyObject *x) {

@@ -4,6 +4,7 @@
 # Author: Paul McCarthy <pauldmccarthy@gmail.com>
 # 
 
+
 from libc.stdio  cimport (SEEK_SET,
                           FILE,
                           fdopen)
@@ -118,6 +119,68 @@ cdef class IndexedGzipFile:
             raise ZranError('zran_init returned error')
 
 
+    def close(self):
+        """Closes this IndexedGzipFile. """
+
+        if self.closed():
+            raise IOError('IndexedGzipFile is already closed')
+
+        zran.zran_free(&self.index)
+
+        if self.own_file:
+            self.pyfid.close()
+        
+        self.cfid  = NULL
+        self.pyfid = None
+
+        
+    def closed(self):
+        """Returns True if this IndexedGzipFile is closed, False otherwise. """
+        return self.pyfid is None
+
+
+    def readable(self):
+        """Returns True if this IndexedGzipFile is readable, False otherwise.
+        """
+        return not self.closed()
+
+    
+    def writable(self):
+        """Always returns False - the IndexedGzipFile does not support writing.
+        """
+        return False
+
+    
+    def seekable(self):
+        """Returns True if this IndexedGzipFile supports seeking, False
+        otherwise.
+        """
+        return not self.closed()
+
+    
+    def tell(self):
+        """Returns the current seek offset into the uncompressed data stream.
+        """
+        return self.index.uncmp_seek_offset
+
+    
+    def __enter__(self):
+        """Returns this IndexedGzipFile. """
+        return self
+
+
+    def __exit__(self):
+        """Calls close on this IndexedGzipFile. """
+        self.close()
+
+    
+    def __dealloc__(self):
+        """Frees the memory used by this IndexedGzipFile. If a file name was
+        passed to __cinit__, the file handle is closed.
+        """
+        self.close()
+
+
     def build_full_index(self):
         """Re-builds the full file index. """
         
@@ -172,14 +235,3 @@ cdef class IndexedGzipFile:
             pybuf = <bytes>(<char *>buf)[:ret]
 
         return pybuf
-
-    
-    def __dealloc__(self):
-        """Frees the memory used by this IndexedGzipFile. If a file name was
-        passed to __cinit__, the file handle is closed.
-        """
-        
-        zran.zran_free(&self.index)
-
-        if self.own_file:
-            self.pyfid.close()

@@ -15,6 +15,7 @@ setup(
     ext_modules=cythonize([
         Extension('indexed_gzip',
                   ['indexed_gzip.pyx', 'zran.c'],
-                  libraries=['z'])
+                  libraries=['z'],
+                  extra_compile_args=['-Wno-unused-function'])
     ])
 )

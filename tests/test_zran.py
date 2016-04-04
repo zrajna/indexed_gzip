@@ -7,6 +7,9 @@
 
 from . import ctest_zran
 
-def setup_module():    ctest_zran.setup_module()
-def teardown_module(): ctest_zran.teardown_module()
-def test_init():       ctest_zran.test_init()
+def setup_module():         ctest_zran.setup_module()
+def teardown_module():      ctest_zran.teardown_module()
+
+def test_init():            ctest_zran.test_init()
+def test_init_file_modes(): ctest_zran.test_init_file_modes()
+def test_seek_and_tell():   ctest_zran.test_seek_and_tell()

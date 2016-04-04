@@ -27,6 +27,6 @@ setup(
                   extra_compile_args=['-Wno-unused-function'])
     ]),
     setup_requires=['pytest-runner'],
-    tests_require=['pytest'],
+    tests_require=['pytest', 'numpy'],
     test_suite='tests',
 )

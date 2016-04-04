@@ -13,6 +13,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
+#include <fcntl.h>
 #include "zlib.h"
 
 #include "zran.h"
@@ -239,6 +240,10 @@ int zran_init(zran_index_t *index,
      * consecutive points less than the window size.
      */
     if (spacing <= window_size)
+      goto fail;
+
+    /* The file must be opened in read-only mode */
+    if ((fcntl(fileno(fd), F_GETFL) & O_ACCMODE) != O_RDONLY)
       goto fail;
 
     /*

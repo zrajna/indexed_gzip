@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# test_indexed_gzip.py -
+# benchmark_indexed_gzip.py -
 #
 # Author: Paul McCarthy <pauldmccarthy@gmail.com>
 #

@@ -95,7 +95,7 @@ in a Python environment right now, by following these instructions:
 ## Performance
 
 
-A small [test script](test_indexed_gzip.py) is included with `indexed_gzip`;
+A small [test script](benchmark_indexed_gzip.py) is included with `indexed_gzip`;
 this script compares the performance of the `IndexedGzipFile` class with the
 `gzip.GzipFile` class. This script does the following:
 
@@ -108,8 +108,8 @@ this script compares the performance of the `IndexedGzipFile` class with the
   3. Seeks to each location, and reads a chunk of data from the file.
 
 
-The following table contains results of running `test_indexed_gzip.py` on a
-range of different compressed files. The index was built with a seek-point 
+The following table contains results of running `benchmark_indexed_gzip.py` on 
+a range of different compressed files. The index was built with a seek-point 
 spacing of 1048576 bytes, and was generated on-demand. Times are in seconds, 
 median total time of three runs per number-of-seeks. Tests were performed on 
 my laptop (MacBookPro 11,3, OSX El Capitan), while I was playing music, typing

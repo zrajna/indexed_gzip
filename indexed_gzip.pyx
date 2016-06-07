@@ -110,7 +110,7 @@ cdef class IndexedGzipFile:
         if self.own_file: self.pyfid = open(filename, 'rb')
         else:             self.pyfid = fid
 
-        self.cfid = fdopen(fid.fileno(), 'rb')
+        self.cfid = fdopen(self.pyfid.fileno(), 'rb')
 
         if self.auto_build: flags = zran.ZRAN_AUTO_BUILD
         else:               flags = 0
@@ -240,3 +240,8 @@ cdef class IndexedGzipFile:
             pybuf = <bytes>(<char *>buf)[:ret]
 
         return pybuf
+
+
+    def write(self, *args, **kwargs):
+        """Raises a ``NotImplementedError``."""
+        raise NotImplementedError('IndexedGzipFile does not support writing')

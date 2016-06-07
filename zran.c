@@ -168,9 +168,6 @@ static int _zran_init_zlib_inflate(
  * Expands the index from its current end-point until the given offset (which
  * must be specified relative to the compressed data stream).
  *
- * If the offset is == 0, the index is expanded to cover the entire file
- * (i.e. it is fully built).
- *
  * Returns 0 on success, non-0 on failure.
  */
 static int _zran_expand_index(
@@ -399,6 +396,9 @@ int zran_build_index(zran_index_t *index, uint64_t from, uint64_t until)
     
     if (_zran_invalidate_index(index, from) != 0)
         return -1;
+
+    if (until == 0)
+      until = index->compressed_size;
 
     return _zran_expand_index(index, until);
 }
@@ -839,15 +839,6 @@ int _zran_expand_index(zran_index_t *index, uint64_t until)
     uint8_t       *window = NULL;
 
     /*
-     * If until == 0, we build the full 
-     * index, so we'll set it to the 
-     * compressed file size.
-     */
-    if (until == 0) {
-        until = index->compressed_size;
-    }
-
-    /*
      * In order to create a new index 
      * oint, we need to start reading 
      * at the last index point, so that 
@@ -884,6 +875,13 @@ int _zran_expand_index(zran_index_t *index, uint64_t until)
         goto fail;
 
     zran_log("zran_expand_index(%llu)\n", until);
+
+    /*
+     * Force some data to be read
+     */
+    if (until == 0) {
+      until += index->readbuf_size;
+    }
 
     /*
      * We start from the compressed data location

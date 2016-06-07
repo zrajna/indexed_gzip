@@ -214,30 +214,20 @@ cdef class IndexedGzipFile:
     def read(self, nbytes):
         """Reads up to nbytes bytes from the uncompressed data stream. """
 
-        cdef void *buf = PyMem_Malloc(nbytes);
-
-        if not buf:
-            raise MemoryError('PyMem_Malloc fail')
-
-        ret = zran.zran_read(&self.index, buf, nbytes)
-
-        if ret <= 0:
-            PyMem_Free(buf)
-
+        buf = ReadBuffer(nbytes)
+        ret = zran.zran_read(&self.index, buf.buffer, nbytes)
+        
         if ret < -1:
             raise ZranError('zran_read returned error')
         
         elif ret == -1:
             raise NotCoveredError('Index does not cover current offset')
 
-        # 0 bytes read
-        elif ret ==  0:
-            pybuf = bytes()
+        if ret == 0:
+            return bytes()
 
-        # Some bytes read
-        elif ret > 0:
-            buf   = PyMem_Realloc(buf, ret)
-            pybuf = <bytes>(<char *>buf)[:ret]
+        buf.resize(ret)
+        pybuf = <bytes>(<char *>buf.buffer)[:ret]
 
         return pybuf
 
@@ -245,3 +235,38 @@ cdef class IndexedGzipFile:
     def write(self, *args, **kwargs):
         """Raises a ``NotImplementedError``."""
         raise NotImplementedError('IndexedGzipFile does not support writing')
+
+
+cdef class ReadBuffer:
+   """Wrapper around a chunk of memory.
+
+   .. see:: http://docs.cython.org/src/tutorial/memory_allocation.html
+   """
+
+    cdef void *buffer
+    """A raw chunk of bytes. """
+
+    
+    def __cinit__(self, size_t size):
+        """Allocate ``size`` bytes of memory. """
+
+        self.buffer = PyMem_Malloc(size);
+
+        if not self.buffer:
+            raise MemoryError('PyMem_Malloc fail')
+
+
+    def resize(self, size_t size):
+        """Re-allocate the memory to the given ``size``. """
+        
+        buf = PyMem_Realloc(self.buffer, size)
+
+        if not buf:
+            raise MemoryError('PyMem_Realloc fail')
+
+        self.buffer = buf
+
+
+    def __dealloc__(self):
+        """Free the mwmory. """
+        PyMem_Free(self.buffer)

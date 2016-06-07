@@ -458,7 +458,7 @@ int _zran_get_point_at(
      */
     else {
         last      = &(index->list[index->npoints - 1]);
-        uncmp_max = last->uncmp_offset + index->spacing * 1.1;
+        uncmp_max = last->uncmp_offset + index->spacing * 2.0;
         cmp_max   = last->cmp_offset   + index->spacing;
         
         if (cmp_max > index->compressed_size)

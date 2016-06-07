@@ -238,10 +238,10 @@ cdef class IndexedGzipFile:
 
 
 cdef class ReadBuffer:
-   """Wrapper around a chunk of memory.
-
-   .. see:: http://docs.cython.org/src/tutorial/memory_allocation.html
-   """
+    """Wrapper around a chunk of memory.
+ 
+    .. see:: http://docs.cython.org/src/tutorial/memory_allocation.html
+    """
 
     cdef void *buffer
     """A raw chunk of bytes. """

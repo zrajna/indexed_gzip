@@ -831,6 +831,12 @@ int _zran_expand_index(zran_index_t *index, uint64_t until)
      */
     uint64_t       last_uncmp_offset;
 
+    /*
+     * Tally of the number of points 
+     * we have expanded the index by.
+     */
+    uint64_t       points_created = 0;
+
     /* Zlib stream struct */
     z_stream       strm;
 
@@ -980,6 +986,8 @@ int _zran_expand_index(zran_index_t *index, uint64_t until)
              * these boundaries.
              */
             ret = inflate(&strm, Z_BLOCK);
+            if      (ret == Z_STREAM_END) break;
+            else if (ret != Z_OK)         goto fail;
 
             /*
              * Adjust our offsets according to 
@@ -987,15 +995,6 @@ int _zran_expand_index(zran_index_t *index, uint64_t until)
              */
             cmp_offset   -= strm.avail_in;
             uncmp_offset -= strm.avail_out;
-
-            /* 
-             * Break at the end of the stream, or 
-             * when we've expanded the index far 
-             * enough.
-             */
-            if      (ret == Z_STREAM_END) break;
-            else if (ret != Z_OK)         goto fail;
-            if      (cmp_offset >= until) break;
 
             /* 
              * If we're at the begininng of the file (uncmp_offset == 0),
@@ -1016,12 +1015,32 @@ int _zran_expand_index(zran_index_t *index, uint64_t until)
                                     window) != 0) {
                     goto fail;
                 }
-                
+
+                points_created   += 1;
                 last_uncmp_offset = uncmp_offset;
             }
+
+            /* 
+             * Break when we've expanded the index 
+             * far enough. In some data there may 
+             * be a long distance between deflate 
+             * boundaries (longer than the desired 
+             * index point spacing), so ensure that 
+             * we have created at least one new 
+             * index point (hence the points_created 
+             * check). 
+             */
+            if (points_created > 0 && cmp_offset >= until) break; 
+
         } while (strm.avail_in != 0);
-        
-    } while (ret != Z_STREAM_END && cmp_offset < until);
+
+    /*
+     * Don't finish until we're at the end 
+     * of the stream, or we've expanded the 
+     * index far enough (and have created 
+     * at least one new index point).
+     */
+    } while (ret != Z_STREAM_END && (cmp_offset < until || points_created == 0));
 
     /*
      * The index may have over-allocated 

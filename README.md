@@ -60,7 +60,9 @@ Alder) which ships with the [zlib](http://www.zlib.net/) source code.
 
 Initial work on `indexed_gzip` took place at
 [Brainhack](http://www.brainhack.org/) Paris, at the Institut Pasteur,
-24th-26th February 2016.
+24th-26th February 2016, with the support of the 
+[FMRIB Centre](https://www.ndcn.ox.ac.uk/divisions/fmrib/), at the 
+University of Oxford, UK.
 
 
 ## Installation

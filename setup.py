@@ -5,15 +5,28 @@ from setuptools    import Extension
 from Cython.Build  import cythonize
 
 
-# TODO
-# if Cython present:
-#     build indexed_gzip.pyx
-#
-# else:
-#     build pre-generated indexed_gzip.c
-#
+import indexed_gzip as igzip
 
 setup(
+    name='indexed_gzip',
+    version=str(igzip.__version__),
+    author='Paul McCarthy',
+    author_email='pauldmccarthy@gmail.com',
+    description='Fast random access of gzip files in Python',
+    url='https://github.com/pauldmccarthy/indexed_gzip',
+    license='zlib',
+
+    classifiers=[
+        'Development Status :: 3 - Alpha',
+        'Intended Audience :: Developers',
+        'License :: OSI Approved :: zlib/libpng License',
+        'Programming Language :: C',
+        'Programming Language :: Cython',
+        'Programming Language :: Python :: 2',
+        'Programming Language :: Python :: 3',
+        'Topic :: System :: Archiving :: Compression',
+    ],
+    
     ext_modules=cythonize([
         Extension('indexed_gzip',
                   ['indexed_gzip.pyx', 'zran.c'],
@@ -26,6 +39,7 @@ setup(
                   include_dirs=['.'],
                   extra_compile_args=['-Wno-unused-function'])
     ]),
+
     setup_requires=['pytest-runner'],
     tests_require=['pytest', 'numpy'],
     test_suite='tests',

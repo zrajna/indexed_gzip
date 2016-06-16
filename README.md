@@ -45,14 +45,21 @@ in the file.
 ## Installation
 
 
-1. Make sure you have [cython](http://cython.org/) installed. 
+1. Make sure you have [cython](http://cython.org/) installed.
 
-2. Compile the python extension:
+
+2. Install into your Python environment:
+   ```sh
+   pip install git+https://github.com/pauldmccarthy/indexed_gzip.git
+   ```
+
+
+3. Or, if you don't want to install, compile the python extension:
     ```sh
     python setup.py build_ext --inplace
     ```
     
-3. Put the `indexed_gzip` directory on your `$PYTHONPATH`.
+   And put the `indexed_gzip` directory on your `$PYTHONPATH`.
 
 
 ## Usage

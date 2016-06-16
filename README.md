@@ -1,13 +1,14 @@
 # indexed_gzip
 
+
  *Fast random access of gzip files in Python*
 
 
  * [Overview](#overview)
- * [Acknowledgements](#acknowledgements)
  * [Installation](#installation)
  * [Usage](#usage)
  * [Performance](#performance)
+ * [Acknowledgements](#acknowledgements)
  * [License](#license)
 
 
@@ -41,31 +42,8 @@ only have to decompress (on average) 512KB of data to read from any location
 in the file.
 
 
-## Acknowledgements
-
-
-The `indexed_gzip` project is based upon the `zran.c` example (written by Mark
-Alder) which ships with the [zlib](http://www.zlib.net/) source code.
-
-
-`indexed_gzip` was originally inspired by:
-
-    Z. Rajna, A. Keskinarkaus, V. Kiviniemi and T. Seppanen
-    "Speeding up the file access of large compressed NIfTI neuroimaging data"
-    Engineering in Medicine and Biology Society (EMBC), 2015 37th Annual
-    International Conference of the IEEE, Milan, 2015, pp. 654-657.
-
-    https://sourceforge.net/projects/libznzwithzindex/
-
-
-Initial work on `indexed_gzip` took place at
-[Brainhack](http://www.brainhack.org/) Paris, at the Institut Pasteur,
-24th-26th February 2016, with the support of the 
-[FMRIB Centre](https://www.ndcn.ox.ac.uk/divisions/fmrib/), at the 
-University of Oxford, UK.
-
-
 ## Installation
+
 
 1. Make sure you have [cython](http://cython.org/) installed. 
 
@@ -227,6 +205,29 @@ If you don't want to look at the numbers:
 | 2542.21                   | 5619.39                     | 6               | 39.11           | 29.49                  |
 | 2542.21                   | 5619.39                     | 11              | 94.50           | 37.63                  |
 
+
+## Acknowledgements
+
+
+The `indexed_gzip` project is based upon the `zran.c` example (written by Mark
+Alder) which ships with the [zlib](http://www.zlib.net/) source code.
+
+
+`indexed_gzip` was originally inspired by:
+
+    Z. Rajna, A. Keskinarkaus, V. Kiviniemi and T. Seppanen
+    "Speeding up the file access of large compressed NIfTI neuroimaging data"
+    Engineering in Medicine and Biology Society (EMBC), 2015 37th Annual
+    International Conference of the IEEE, Milan, 2015, pp. 654-657.
+
+    https://sourceforge.net/projects/libznzwithzindex/
+
+
+Initial work on `indexed_gzip` took place at
+[Brainhack](http://www.brainhack.org/) Paris, at the Institut Pasteur,
+24th-26th February 2016, with the support of the 
+[FMRIB Centre](https://www.ndcn.ox.ac.uk/divisions/fmrib/), at the 
+University of Oxford, UK.
 
 
 ## License

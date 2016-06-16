@@ -10,6 +10,9 @@ to gzip files.
 """
 
 
+__version__ = '0.1'
+
+
 from libc.stdio  cimport (SEEK_SET,
                           FILE,
                           fdopen)
@@ -176,14 +179,16 @@ cdef class IndexedGzipFile:
 
     def __exit__(self):
         """Calls close on this IndexedGzipFile. """
-        self.close()
+        if not self.closed():
+            self.close()
 
     
     def __dealloc__(self):
         """Frees the memory used by this IndexedGzipFile. If a file name was
         passed to __cinit__, the file handle is closed.
         """
-        self.close()
+        if not self.closed():
+            self.close()
 
 
     def build_full_index(self):

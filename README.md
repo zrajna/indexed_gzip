@@ -80,50 +80,81 @@ University of Oxford, UK.
 ## Usage
 
 
-1. Use the `indexed_gzip` module directly:
-    ```python
-    import indexed_gzip as igzip
+You can use the `indexed_gzip` module directly:
 
-    # You can create an IndexedGzipFile instance
-    # by specifying a file name, or an open file
-    # handle. For the latter use, the file handle
-    # must be opened in read-only binary mode.
-    # Write support is currently non-existent.
-    myfile = igzip.IndexedGzipFile('big_file.gz')
 
-    some_offset_into_uncompressed_data = 234195
+```python
+import indexed_gzip as igzip
 
-    # The index will be automatically
-    # built on-demand when seeking or
-    # reading.
-    myfile.seek(some_offset_into_uncompressed_data)
-    data = myfile.read(1048576)
-    ```
+# You can create an IndexedGzipFile instance
+# by specifying a file name, or an open file
+# handle. For the latter use, the file handle
+# must be opened in read-only binary mode.
+# Write support is currently non-existent.
+myfile = igzip.IndexedGzipFile('big_file.gz')
 
-2. Use `indexed_gzip` with `nibabel`:
-    ```python
-    import nibabel      as nib
-    import indexed_gzip as igzip
+some_offset_into_uncompressed_data = 234195
 
-    # Here we are usin 4MB spacing between
-    # seek points, and using a larger read
-    # buffer (than the default size of 16KB).
-    fobj = igzip.IndexedGzipFile(
-        filename='big_image.nii.gz',
-        spacing=4194304,
-        readbuf_size=131072)
+# The index will be automatically
+# built on-demand when seeking or
+# reading.
+myfile.seek(some_offset_into_uncompressed_data)
+data = myfile.read(1048576)
+```
 
-    # Create a nibabel image using 
-    # the existing file handle.
-    fmap = nib.Nifti1Image.make_file_map()
-    fmap['image'].fileobj = fobj
-    image = nib.Nifti1Image.from_file_map(fmap)
+
+Or you can use `indexed_gzip` with `nibabel`:
+
+
+```python
+import nibabel      as nib
+import indexed_gzip as igzip
+
+# Here we are usin 4MB spacing between
+# seek points, and using a larger read
+# buffer (than the default size of 16KB).
+fobj = igzip.IndexedGzipFile(
+    filename='big_image.nii.gz',
+    spacing=4194304,
+    readbuf_size=131072)
+
+# Create a nibabel image using 
+# the existing file handle.
+fmap = nib.Nifti1Image.make_file_map()
+fmap['image'].fileobj = fobj
+image = nib.Nifti1Image.from_file_map(fmap)
     
-    # Use the image ArrayProxy to access the 
-    # data - the index will automatically be
-    # built as data is accessed.
-    vol3 = image.dataobj[:, :, :, 3]
-    ```
+# Use the image ArrayProxy to access the 
+# data - the index will automatically be
+# built as data is accessed.
+vol3 = image.dataobj[:, :, :, 3]
+```
+
+    
+`indexed_gzip` does not currently have any support for writing. Currently if you 
+wish to write to a file, you will need to save the file by alternate means (e.g. 
+via `gzip` or `nibabel`), and then re-create a new `IndexedGzipFile` instance. 
+Building on the `nibabel` example above:
+
+
+```python
+    
+# Load the entire image into memory
+data = image.get_data()
+    
+# Make changes to the data
+data[:, :, :, 5] *= 100
+    
+# Save the image using nibabel
+nib.save(data, 'big_image.nii.gz')
+    
+# Re-create an IndexedGzipFile and 
+# Nifti1Image instance as above
+fobj = igzip.IndexedGzipFile(...)
+fmap = nib.Nifti1Image.make_file_map()
+fmap['image'].fileobj = fobj
+image = nib.Nifti1Image.from_file_map(fmap)
+```
 
 ## Performance
 

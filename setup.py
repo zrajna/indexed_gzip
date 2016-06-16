@@ -5,11 +5,9 @@ from setuptools    import Extension
 from Cython.Build  import cythonize
 
 
-import indexed_gzip as igzip
-
 setup(
     name='indexed_gzip',
-    version=str(igzip.__version__),
+    version='0.1',
     author='Paul McCarthy',
     author_email='pauldmccarthy@gmail.com',
     description='Fast random access of gzip files in Python',

@@ -10,9 +10,6 @@ to gzip files.
 """
 
 
-__version__ = '0.1'
-
-
 from libc.stdio  cimport (SEEK_SET,
                           FILE,
                           fdopen)

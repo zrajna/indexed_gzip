@@ -5,6 +5,7 @@
 
  * [Overview](#overview)
  * [Acknowledgements](#acknowledgements)
+ * [Installation](#installation)
  * [Usage](#usage)
  * [Performance](#performance)
  * [License](#license)
@@ -16,6 +17,12 @@
 The `indexed_gzip` project is a Python extension which aims to provide a
 drop-in replacement for the built-in Python `gzip.GzipFile` class, the
 `IndexedGzipFile`.
+
+
+`indexed_gzip` was written to allow fast random access of compressed 
+[NIFTI1](http://nifti.nimh.nih.gov/) image files (for which GZIP is the 
+de-facto compression standard), but will work with any GZIP file. 
+`indexed_gzip` is easy to use with `nibabel` 2.0.2  (http://nipy.org/nibabel/).
 
 
 The standard `gzip.GzipFile` class exposes a random access-like interface (via
@@ -56,13 +63,7 @@ Initial work on `indexed_gzip` took place at
 24th-26th February 2016.
 
 
-## Usage
-
-
-As of March 2016, `indexed_gzip` is still under development, and has undergone
-minimal testing.  With this warning out of the way, you can use `indexed_gzip`
-in a Python environment right now, by following these instructions:
-
+## Installation
 
 1. Make sure you have [cython](http://cython.org/) installed. 
 
@@ -70,8 +71,14 @@ in a Python environment right now, by following these instructions:
     ```sh
     python setup.py build_ext --inplace
     ```
+    
+3. Put the `indexed_gzip` directory on your `$PYTHONPATH`.
 
-3. Use the `indexed_gzip` module in your Python code:
+
+## Usage
+
+
+1. Use the `indexed_gzip` module directly:
     ```python
     import indexed_gzip as igzip
 
@@ -91,6 +98,30 @@ in a Python environment right now, by following these instructions:
     data = myfile.read(1048576)
     ```
 
+2. Use `indexed_gzip` with `nibabel`:
+    ```python
+    import nibabel      as nib
+    import indexed_gzip as igzip
+
+    # Here we are usin 4MB spacing between
+    # seek points, and using a larger read
+    # buffer (than the default size of 16KB).
+    fobj = igzip.IndexedGzipFile(
+        filename='big_image.nii.gz',
+        spacing=4194304,
+        readbuf_size=131072)
+
+    # Create a nibabel image using 
+    # the existing file handle.
+    fmap = nib.Nifti1Image.make_file_map()
+    fmap['image'].fileobj = fobj
+    image = nib.Nifti1Image.from_file_map(fmap)
+    
+    # Use the image ArrayProxy to access the 
+    # data - the index will automatically be
+    # built as data is accessed.
+    vol3 = image.dataobj[:, :, :, 3]
+    ```
 
 ## Performance
 

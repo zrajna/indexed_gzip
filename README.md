@@ -57,6 +57,11 @@ this script compares the performance of the `IndexedGzipFile` class with the
 
   3. Seeks to each location, and reads a chunk of data from the file.
 
+
+This plot shows the results of this test for a few compresed files of varying
+sizes, with 1000 seeks:
+
+
 ![Indexed gzip performance](./performance.png)
 
 

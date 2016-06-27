@@ -5,9 +5,9 @@
 
 
  * [Overview](#overview)
+ * [Performance](#performance)
  * [Installation](#installation)
  * [Usage](#usage)
- * [Performance](#performance)
  * [Acknowledgements](#acknowledgements)
  * [License](#license)
 

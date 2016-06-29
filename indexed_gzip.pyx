@@ -4,9 +4,9 @@
 # Author: Paul McCarthy <pauldmccarthy@gmail.com>
 #
 
-"""This module provides the IndexedGzipFile class, a drop-in replacement
-for the built-in gzip.GzipFile class, for faster read-only random access
-to gzip files.
+"""This module provides the :class:`IndexedGzipFile` class, a drop-in
+replacement for the built-in ``gzip.GzipFile`` class, for faster read-only
+random access to gzip files.
 """
 
 
@@ -14,50 +14,59 @@ from libc.stdio  cimport (SEEK_SET,
                           FILE,
                           fdopen)
 
+from posix.types cimport  off_t
+
 from cpython.mem cimport (PyMem_Malloc,
                           PyMem_Realloc,
                           PyMem_Free)
 
 cimport zran
 
+import threading
+
 
 class NotCoveredError(Exception):
-    """Exception raised by the IndexedGzipFile when an attempt is made to seek
-    to/read from a location that is not covered by the index. This exception
-    will never be raised if the IndexedGzipFile was created with
-    auto_build=True.
+    """Exception raised by the :class:`IndexedGzipFile` when an attempt is
+    made to seek to/read from a location that is not covered by the
+    index. This exception will never be raised if the ``IndexedGzipFile`` was
+    created with ``auto_build=True``.
     """
     pass
 
 
 class ZranError(Exception):
-    """Exception raised by the IndexedGzipFile when the zran library signals
-    an error.
+    """Exception raised by the :class:`IndexedGzipFile` when the ``zran``
+    library signals an error.
     """
     pass
 
 
 cdef class IndexedGzipFile:
-    """The IndexedGzipFile class allows for fast random access of a gzip file
-    by using the zran library to build and maintain an index of seek points
-    into the file.
+    """The ``IndexedGzipFile`` class allows for fast random access of a gzip
+    file by using the ``zran`` library to build and maintain an index of seek
+    points into the file.
+
+    .. note:: The :meth:`seek` and :meth:`read` methods release the GIL while
+              calling ``zran`` functions, but the ``IndexedGzipFile`` is *not*
+              thread-safe. Use the ``SafeIndexedGzipFile`` class if you need
+              thread-safety.
     """
 
     
     cdef zran.zran_index_t index
-    """A reference to the zran_index struct. """
+    """A reference to the ``zran_index`` struct. """
 
     
     cdef bint auto_build
-    """Flag which is set to True if the file index is built automatically on
-    seeks/reads.
+    """Flag which is set to ``True`` if the file index is built automatically
+    on seeks/reads.
     """
 
     
     cdef bint own_file
-    """Flag which is set to True if the user specified a file name instead of
-    an open file handle. In this case, the IndexedGzipFile is responsible for
-    closing the file handle when it is destroyed.
+    """Flag which is set to ``True`` if the user specified a file name instead
+    of an open file handle. In this case, the IndexedGzipFile is responsible
+    for closing the file handle when it is destroyed.
     """
 
     
@@ -76,16 +85,16 @@ cdef class IndexedGzipFile:
                   spacing=1048576,
                   window_size=32768,
                   readbuf_size=16384):
-        """Create an IndexedGzipFile. The file may be specified either with an
-        open file handle, or with a filename. If the former, the file must have
-        been opened in 'rb' mode.
+        """Create an ``IndexedGzipFile``. The file may be specified either
+        with an open file handle, or with a filename. If the former, the file
+        must have been opened in ``'rb'`` mode.
 
         :arg fid:          Open file handle.
         
         :arg filename:     File name.
         
-        :arg auto_build:   If True (the default), the index is automatically 
-                           built on seeks/reads.
+        :arg auto_build:   If ``True`` (the default), the index is 
+                           automatically built on seeks/reads.
         
         :arg spacing:      Number of bytes between index seek points.
         
@@ -97,7 +106,6 @@ cdef class IndexedGzipFile:
         """
 
         if fid is None and filename is None:
-
             raise ValueError('One of fid or filename must be specified')
 
         if fid is not None and fid.mode != 'rb':
@@ -125,7 +133,7 @@ cdef class IndexedGzipFile:
 
 
     def close(self):
-        """Closes this IndexedGzipFile. """
+        """Closes this ``IndexedGzipFile``. """
 
         if self.closed():
             raise IOError('IndexedGzipFile is already closed')
@@ -140,25 +148,29 @@ cdef class IndexedGzipFile:
 
         
     def closed(self):
-        """Returns True if this IndexedGzipFile is closed, False otherwise. """
+        """Returns ``True`` if this ``IndexedGzipFile`` is closed, ``False``
+        otherwise.
+        """
         return self.pyfid is None
 
 
     def readable(self):
-        """Returns True if this IndexedGzipFile is readable, False otherwise.
+        """Returns ``True`` if this ``IndexedGzipFile`` is readable, ``False``
+        otherwise.
         """
         return not self.closed()
 
     
     def writable(self):
-        """Always returns False - the IndexedGzipFile does not support writing.
+        """Currently always returns ``False`` - the ``IndexedGzipFile`` does
+        not support writing yet.
         """
         return False
 
     
     def seekable(self):
-        """Returns True if this IndexedGzipFile supports seeking, False
-        otherwise.
+        """Returns ``True`` if this ``IndexedGzipFile`` supports seeking,
+        ``False`` otherwise.
         """
         return not self.closed()
 
@@ -170,19 +182,19 @@ cdef class IndexedGzipFile:
 
     
     def __enter__(self):
-        """Returns this IndexedGzipFile. """
+        """Returns this ``IndexedGzipFile``. """
         return self
 
 
     def __exit__(self):
-        """Calls close on this IndexedGzipFile. """
+        """Calls close on this ``IndexedGzipFile``. """
         if not self.closed():
             self.close()
 
     
     def __dealloc__(self):
-        """Frees the memory used by this IndexedGzipFile. If a file name was
-        passed to __cinit__, the file handle is closed.
+        """Frees the memory used by this ``IndexedGzipFile``. If a file name
+        was passed to :meth:`__cinit__`, the file handle is closed.
         """
         if not self.closed():
             self.close()
@@ -198,12 +210,20 @@ cdef class IndexedGzipFile:
     def seek(self, offset):
         """Seeks to the specified position in the uncompressed data stream.
 
-        If this IndexedGzipFile was created with auto_build=False, and the
-        requested offset is not covered by the index, a NotCoveredError is
-        raised.
+        If this ``IndexedGzipFile`` was created with ``auto_build=False``,
+        and the requested offset is not covered by the index, a
+        :exc:`NotCoveredError` is raised.
+
+        .. note:: This method releases the GIL while ``zran_seek`` is
+                  running.
         """
 
-        ret = zran.zran_seek(&self.index, offset, SEEK_SET, NULL)
+        cdef int                ret
+        cdef off_t              off   = offset
+        cdef zran.zran_index_t *index = &self.index
+        
+        with nogil:
+            ret = zran.zran_seek(index, off, SEEK_SET, NULL)
 
         if ret < 0:
             raise ZranError('zran_seek returned error')
@@ -214,11 +234,22 @@ cdef class IndexedGzipFile:
         
 
     def read(self, nbytes):
-        """Reads up to nbytes bytes from the uncompressed data stream. """
+        """Reads up to ``nbytes`` bytes from the uncompressed data stream.
+
+        .. note:: This method releases the GIL while ``zran_read`` is
+                  running. 
+        """
 
         buf = ReadBuffer(nbytes)
-        ret = zran.zran_read(&self.index, buf.buffer, nbytes)
-        
+
+        cdef zran.zran_index_t *index  = &self.index
+        cdef size_t             sz     = nbytes
+        cdef void              *buffer = buf.buffer
+        cdef int                ret
+
+        with nogil:
+            ret = zran.zran_read(index, buffer, sz)
+
         if ret < -1:
             raise ZranError('zran_read returned error')
         
@@ -235,7 +266,7 @@ cdef class IndexedGzipFile:
 
 
     def write(self, *args, **kwargs):
-        """Raises a ``NotImplementedError``."""
+        """Currently raises a :exc:`NotImplementedError`."""
         raise NotImplementedError('IndexedGzipFile does not support writing')
 
 
@@ -272,3 +303,55 @@ cdef class ReadBuffer:
     def __dealloc__(self):
         """Free the mwmory. """
         PyMem_Free(self.buffer)
+
+
+
+class SafeIndexedGzipFile(IndexedGzipFile):
+    """The ``SafeIndexedGzipFile`` is a sub-class of the
+    :class:`IndexedGzipFile` which provides (limited) thread-safe access to a
+    file. Access to the :meth:`seek`, :meth:`read`, and :meth:`write` methods
+    is mutually exclusive, i.e. only a single thread may accesss them at any
+    time.
+    """
+
+
+    def __mutex(func):
+        """Decorator which marks a method as being mutually exclusive. Access
+        to the method is protected by a ``threading.Lock`` object.
+        """
+
+        def decorator(self, *args, **kwargs):
+
+            self.__fileLock.acquire()
+            
+            try:
+                return func(self, *args, **kwargs)
+            
+            finally:
+                self.__fileLock.release()
+
+        return decorator
+
+
+    def __init__(self, *args, **kwargs):
+        """See :meth:`IndexedGzipFile.__cinit__`. """
+        IndexedGzipFile.__init__(self, *args, **kwargs) 
+        self.__fileLock = threading.Lock()
+
+
+    @__mutex
+    def seek(self, *args, **kwargs):
+        """See :meth:`IndexedGzipFile.seek`. """
+        return IndexedGzipFile.seek(self, *args, **kwargs) 
+
+    
+    @__mutex
+    def read(self, *args, **kwargs):
+        """See :meth:`IndexedGzipFile.read`. """
+        return IndexedGzipFile.read(self, *args, **kwargs) 
+
+    
+    @__mutex
+    def write(self, *args, **kwargs):
+        """See :meth:`IndexedGzipFile.write`. """
+        return IndexedGzipFile.write(self, *args, **kwargs)

@@ -30,15 +30,15 @@ cdef extern from "zran.h":
 
     bint zran_build_index(zran_index_t *index,
                           uint64_t      from_,
-                          uint64_t      until)
+                          uint64_t      until) nogil;
 
     long zran_tell(zran_index_t *index);
 
     int zran_seek(zran_index_t *index,
                   off_t         offset,
                   int           whence,
-                  zran_point_t *point)
+                  zran_point_t *point) nogil;
 
     int zran_read(zran_index_t *index,
                   void         *buf,
-                  size_t        len) 
+                  size_t        len) nogil;

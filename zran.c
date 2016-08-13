@@ -1138,13 +1138,13 @@ long zran_tell(zran_index_t *index)
 
 
 /* Read len bytes from the uncompressed data stream, storing them in buf. */
-int zran_read(zran_index_t *index,
-              void         *buf,
-              size_t        len)
+long zran_read(zran_index_t *index,
+               void         *buf,
+               size_t        len)
 {
 
     /* Used to store/check return values. */
-    int           ret;
+    long          ret;
 
     /* 
      * Counters keeping track of the 

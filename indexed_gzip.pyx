@@ -245,7 +245,7 @@ cdef class IndexedGzipFile:
         cdef zran.zran_index_t *index  = &self.index
         cdef size_t             sz     = nbytes
         cdef void              *buffer = buf.buffer
-        cdef int                ret
+        cdef long               ret
 
         with nogil:
             ret = zran.zran_read(index, buffer, sz)

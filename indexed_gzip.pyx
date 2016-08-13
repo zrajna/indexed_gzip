@@ -251,7 +251,7 @@ cdef class IndexedGzipFile:
             ret = zran.zran_read(index, buffer, sz)
 
         if ret < -1:
-            raise ZranError('zran_read returned error')
+            raise ZranError('zran_read returned error ({})'.format(ret))
         
         elif ret == -1:
             raise NotCoveredError('Index does not cover current offset')

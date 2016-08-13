@@ -155,12 +155,11 @@ static int _zran_init_zlib_inflate(
     zran_index_t *index,      /* The index */
     
     z_stream     *stream,     /* Pointer to a z_stream struct */
-    
-    uint64_t      cmp_offset, /* Current location in the compressed stream */
-    
-    zran_point_t *point       /* If not at the beginning of the stream, a
-                                 pointer to the index point corresponding to
-                                 the current location mus be passed in. */
+
+    zran_point_t *point       /* Pass in NULL to initialise for inflation from 
+                                 the beginning of the stream. Or pass a 
+                                 pointer to the index point corresponding to 
+                                 the location to start from. */
 );  
 
 
@@ -646,9 +645,10 @@ int _zran_add_point(zran_index_t  *index,
                     uint32_t       data_offset,
                     uint8_t       *data) {
 
-    zran_log("_zran_add_point(%i, c=%lld, u=%lld)\n",
+    zran_log("_zran_add_point(%i, c=%lld + %i, u=%lld)\n",
              index->npoints,
              cmp_offset,
+             bits > 0,
              uncmp_offset);
 
     uint8_t      *point_data = NULL;
@@ -708,7 +708,6 @@ fail:
 /* Initialise the given z_stream struct for decompression/inflation. */
 int _zran_init_zlib_inflate(zran_index_t *index,
                             z_stream     *stream,
-                            uint64_t      cmp_offset,
                             zran_point_t *point)
 {
 
@@ -731,16 +730,12 @@ int _zran_init_zlib_inflate(zran_index_t *index,
     stream->avail_in = 0;
     stream->next_in  = Z_NULL;
 
-    /* Bad input */
-    if (cmp_offset != 0 && point == NULL)
-        goto fail;
-
     /* 
      * If we're starting from the beginning 
      * of the file, we tell inflateInit2 to 
      * expect a file header
      */
-    if (cmp_offset == 0) {
+    if (point == NULL) {
         zran_log("zlib_init_zlib_inflate(0, n/a, n/a, %u + 32)\n", windowBits);
         if (inflateInit2(stream, windowBits + 32) != Z_OK) {
             goto fail;
@@ -754,8 +749,8 @@ int _zran_init_zlib_inflate(zran_index_t *index,
      * the index point.
      */
     else {
-        zran_log("zlib_init_zlib_inflate(%llu, %llu, %llu), -%u\n",
-                 cmp_offset,
+
+        zran_log("_zran_init_zlib_inflate(%llu, %llu, -%u)\n",
                  point->cmp_offset,
                  point->uncmp_offset,
                  windowBits);
@@ -846,7 +841,7 @@ int _zran_expand_index(zran_index_t *index, uint64_t until)
 
     /*
      * In order to create a new index 
-     * oint, we need to start reading 
+     * point, we need to start reading 
      * at the last index point, so that 
      * we read enough data to initialise 
      * the inflation.
@@ -880,7 +875,7 @@ int _zran_expand_index(zran_index_t *index, uint64_t until)
     if (window == NULL)
         goto fail;
 
-    zran_log("zran_expand_index(%llu)\n", until);
+    zran_log("_zran_expand_index(%llu)\n", until);
 
     /*
      * Force some data to be read
@@ -919,10 +914,7 @@ int _zran_expand_index(zran_index_t *index, uint64_t until)
     }
 
     /* Initialise the zlib struct for inflation */
-    ret = _zran_init_zlib_inflate(index,
-                                  &strm,
-                                  cmp_offset,
-                                  start);
+    ret = _zran_init_zlib_inflate(index, &strm, start);
 
     /* 
      * _zran_init_zlib_inflate will 
@@ -1179,7 +1171,7 @@ int zran_read(zran_index_t *index,
     if (len == 0)
         return 0;
     
-    zran_log("zran_read(%i)\n", len);
+    zran_log("zran_read(%zu)\n", len);
 
     /* 
      * Buffer to store compressed 
@@ -1225,10 +1217,7 @@ int zran_read(zran_index_t *index,
     if (ret > 0) goto not_covered_by_index;
 
     /* Initialise zlib for inflation */
-    ret = _zran_init_zlib_inflate(index,
-                                  &strm,
-                                  cmp_offset,
-                                  point);
+    ret = _zran_init_zlib_inflate(index, &strm, point);
 
     /* 
      * The init function will return > 0 
@@ -1249,6 +1238,11 @@ int zran_read(zran_index_t *index,
     skip          = 1;
     uncmp_offset -= point->uncmp_offset;
     strm.avail_in = 0;
+
+    zran_log("Attempting to read %li bytes from "
+             "uncompressed offset %llu (starting "
+             "from compressed offset %llu, )\n",
+             len, index->uncmp_seek_offset, point->cmp_offset);
 
     do {
         /*
@@ -1362,6 +1356,10 @@ int zran_read(zran_index_t *index,
               index->uncmp_seek_offset + len,
               SEEK_SET,
               NULL);
+
+    zran_log("Read succeeded - %li bytes read [compressed offset: %ld]\n",
+             len,
+             ftell(index->fd));
 
     free(input);
     free(discard);

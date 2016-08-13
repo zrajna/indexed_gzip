@@ -82,8 +82,11 @@ struct _zran_index {
     zran_point_t *list;
 
     /*
-     * Most recently requested seek location 
-     * into the uncompressed data stream.
+     * Most recently requested seek/read 
+     * location into the uncompressed data 
+     * stream - this is used to keep track 
+     * of where the calling code thinks it 
+     * is in the (uncompressed) file.
      */
     uint64_t      uncmp_seek_offset;
 

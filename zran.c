@@ -142,14 +142,11 @@ static uint64_t _zran_estimate_offset(
 
 
 /*
- * Used by _zran_expand_index, and _zran_read. Initialises zlib to start
- * decompressing/inflating from the specified compressed data offset.
- * Returns:
- *   - 0 for success.
- * 
- *   - < 0 to indicate failure.
+ * Used by _zran_expand_index, and _zran_read. Seeks to the specified
+ * compressed data offset, and initialises zlib to start
+ * decompressing/inflating from said offset.
  *
- *   - > 0 to indicate tha the file position has been adjusted by this amount.
+ * Returns 0 for success, non-0 on failure.
  */
 static int _zran_init_zlib_inflate(
     zran_index_t *index,      /* The index */
@@ -711,24 +708,38 @@ int _zran_init_zlib_inflate(zran_index_t *index,
                             zran_point_t *point)
 {
 
-    int ret;
-    int adjust_offset;
-    int windowBits;
+    int   ret;
+    int   windowBits;
+    off_t seek_loc;
     
     /* 
      * Calculate the  base2 logarithm 
      * of the window size - it is needed 
      * to initialise zlib inflation.
+     * And initialise the zlib struct.
      */
-    windowBits    = (int)round(log10(index->window_size) / log10(2)); 
-    adjust_offset = 0;
-
-    /* Initialise the zlib struct for inflation */
+    windowBits       = (int)round(log10(index->window_size) / log10(2)); 
     stream->zalloc   = Z_NULL;
     stream->zfree    = Z_NULL;
     stream->opaque   = Z_NULL;
     stream->avail_in = 0;
     stream->next_in  = Z_NULL;
+
+    /*
+     * Seek to the required location in the compressed 
+     * data stream. 
+     *
+     * The compressed offset for index points correspond 
+     * to the first full byte of compressed data. So if 
+     * the index point is not byte-aligned (bits > 0), we 
+     * need to seek to the previous byte, and tell zlib
+     * about it (via the inflatePrime call below).
+     */
+    if (point == NULL) seek_loc = 0;
+    else               seek_loc = point->cmp_offset - (point->bits > 0);
+
+    if (fseek(index->fd, seek_loc, SEEK_SET) != 0)
+        goto fail;
 
     /* 
      * If we're starting from the beginning 
@@ -736,6 +747,7 @@ int _zran_init_zlib_inflate(zran_index_t *index,
      * expect a file header
      */
     if (point == NULL) {
+
         zran_log("zlib_init_zlib_inflate(0, n/a, n/a, %u + 32)\n", windowBits);
         if (inflateInit2(stream, windowBits + 32) != Z_OK) {
             goto fail;
@@ -750,7 +762,8 @@ int _zran_init_zlib_inflate(zran_index_t *index,
      */
     else {
 
-        zran_log("_zran_init_zlib_inflate(%llu, %llu, -%u)\n",
+        zran_log("_zran_init_zlib_inflate(%lld, %llu, %llu, -%u)\n",
+                 seek_loc,
                  point->cmp_offset,
                  point->uncmp_offset,
                  windowBits);
@@ -766,8 +779,7 @@ int _zran_init_zlib_inflate(zran_index_t *index,
          */
         if (point->bits > 0) {
 
-            adjust_offset = 1;
-            ret           = getc(index->fd);
+            ret = getc(index->fd);
             
             if (ret == -1) 
                 goto fail;
@@ -787,7 +799,7 @@ int _zran_init_zlib_inflate(zran_index_t *index,
             goto fail; 
     }
 
-    return adjust_offset;
+    return 0;
 
 fail:
     return -1;
@@ -884,6 +896,10 @@ int _zran_expand_index(zran_index_t *index, uint64_t until)
       until += index->readbuf_size;
     }
 
+    /* Initialise the zlib struct for inflation */
+    if (_zran_init_zlib_inflate(index, &strm, start) != 0)
+        goto fail;
+
     /*
      * We start from the compressed data location
      * that correspods to the second to last point 
@@ -894,9 +910,6 @@ int _zran_expand_index(zran_index_t *index, uint64_t until)
         cmp_offset        = start->cmp_offset;
         uncmp_offset      = start->uncmp_offset;
         last_uncmp_offset = uncmp_offset;
-
-        if (start->bits > 0)
-            cmp_offset -= 1;
     }
 
     /* 
@@ -908,21 +921,6 @@ int _zran_expand_index(zran_index_t *index, uint64_t until)
         uncmp_offset      = 0;
         last_uncmp_offset = 0;
     }
-
-    if (fseek(index->fd, cmp_offset, SEEK_SET) != 0) {
-        goto fail;
-    }
-
-    /* Initialise the zlib struct for inflation */
-    ret = _zran_init_zlib_inflate(index, &strm, start);
-
-    /* 
-     * _zran_init_zlib_inflate will 
-     * return > 0 to indicate that it 
-     * has adjusted the file location.
-     */
-    if (ret < 0) goto fail;
-    else         cmp_offset += ret;
 
     /* 
      * Continue until the specified offset 
@@ -1184,48 +1182,31 @@ long zran_read(zran_index_t *index,
     /* 
      * We have to decompress from the beginning
      * of the index point corresponding to the 
-     * offset
+     * offset, throwing away the data until
+     * we reach the correct point in the 
+     * uncompressed stream.
      */
     discard = calloc(1, index->window_size);
     if (discard == NULL)
         goto fail;
 
-    /*
-     * Get the current location in the 
-     * compressed stream, and the most 
-     * recently requested seek location 
-     * in the uncompressed stream.
-     */
-    cmp_offset   = ftello(index->fd);
-    uncmp_offset = index->uncmp_seek_offset;
-
-    /* 
-     * Something is wrong with 
-     * the file descriptor 
-     */
-    if (cmp_offset < 0) 
-        goto fail;
-
     /* 
      * Search for the current index 
      * point that corresponds to 
-     * this location.
+     * our current location in the 
+     * uncompressed data stream.
      */
-    ret = _zran_get_point_with_expand(index, cmp_offset, 1, &point);
+    ret = _zran_get_point_with_expand(index,
+                                      index->uncmp_seek_offset,
+                                      0,
+                                      &point);
 
     if (ret < 0) goto fail;
     if (ret > 0) goto not_covered_by_index;
 
     /* Initialise zlib for inflation */
-    ret = _zran_init_zlib_inflate(index, &strm, point);
-
-    /* 
-     * The init function will return > 0 
-     * to indicate that it has adjusted 
-     * the file location.
-     */
-    if (ret < 0) goto fail;
-    else         cmp_offset += ret;
+    if (_zran_init_zlib_inflate(index, &strm, point) != 0)
+        goto fail;
 
     /* 
      * Read and decompress data from the 
@@ -1236,7 +1217,8 @@ long zran_read(zran_index_t *index,
      * be relative to the starting index point.
      */
     skip          = 1;
-    uncmp_offset -= point->uncmp_offset;
+    cmp_offset    = point->cmp_offset ;
+    uncmp_offset  = index->uncmp_seek_offset - point->uncmp_offset;
     strm.avail_in = 0;
 
     zran_log("Attempting to read %li bytes from "
@@ -1352,10 +1334,7 @@ long zran_read(zran_index_t *index,
      * Update the current uncompressed 
      * seek position.
      */
-    zran_seek(index,
-              index->uncmp_seek_offset + len,
-              SEEK_SET,
-              NULL);
+    index->uncmp_seek_offset += len;
 
     zran_log("Read succeeded - %li bytes read [compressed offset: %ld]\n",
              len,

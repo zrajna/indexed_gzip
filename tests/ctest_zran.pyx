@@ -48,9 +48,8 @@ def setup_module():
 
         
 def teardown_module():
-    pass
-
-
+    if op.exists(TEST_FILE):
+        os.remove(TEST_FILE)
 
 
 def gen_test_data(filename):

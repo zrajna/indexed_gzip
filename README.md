@@ -1,6 +1,9 @@
 # indexed_gzip
 
 
+[![Build Status](https://travis-ci.org/pauldmccarthy/indexed_gzip.svg?branch=master)](https://travis-ci.org/pauldmccarthy/indexed_gzip)
+
+
  *Fast random access of gzip files in Python*
 
 

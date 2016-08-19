@@ -13,8 +13,9 @@ import              sys
 import              gzip
 import              time
 import              random
-import              struct
 import              hashlib
+
+import numpy as np
 
 from libc.stdio cimport (SEEK_SET, FILE, fdopen)
 
@@ -36,12 +37,14 @@ TEST_FILE        = 'testdata.gz'
 
 def setup_module():
 
-    random.seed(1234567)
+    random   .seed(1234567)
+    np.random.seed(1234567)
 
     if not op.exists(TEST_FILE):
         gen_test_data(TEST_FILE)
 
-    random.seed(1234567)
+    random   .seed(1234567)
+    np.random.seed(1234567)
 
         
 def teardown_module():
@@ -59,16 +62,15 @@ def gen_test_data(filename):
     with gzip.GzipFile(filename, 'wb') as f:
 
         toWrite    = TEST_FILE_NELEMS
-        maxBufSize = 1000000
+        maxBufSize = 67108864
 
         while toWrite > 0:
 
             nvals    = min(maxBufSize, toWrite)
-            vals     = [random.randint(0, 65535) for  i in range(nvals)]
+            vals     = np.random.randint(0, 65535, nvals, dtype=np.uint16)
             toWrite -= nvals
-            buf      = struct.pack('{}H'.format(nvals), *vals)
-            
-            f.write(buf)
+
+            f.write(vals.tostring())
 
     end = time.time()
 

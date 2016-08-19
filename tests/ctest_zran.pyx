@@ -11,11 +11,10 @@ import os.path   as op
 import itertools as it
 import              sys
 import              gzip
+import              time
 import              random
+import              struct
 import              hashlib
-
-import numpy     as np
-
 
 from libc.stdio cimport (SEEK_SET, FILE, fdopen)
 
@@ -37,14 +36,12 @@ TEST_FILE        = 'testdata.gz'
 
 def setup_module():
 
-    random   .seed(1234567)
-    np.random.seed(1234567)
+    random.seed(1234567)
 
     if not op.exists(TEST_FILE):
         gen_test_data(TEST_FILE)
 
-    random   .seed(1234567)
-    np.random.seed(1234567)    
+    random.seed(1234567)
 
         
 def teardown_module():
@@ -57,11 +54,25 @@ def gen_test_data(filename):
     
     print('Generating test data')
 
-    data = np.random.randint(0, 65535, TEST_FILE_NELEMS)
-    data = np.array(data, dtype=np.uint16)
-                  
+    start = time.time()
+
     with gzip.GzipFile(filename, 'wb') as f:
-        f.write(data.tostring())
+
+        toWrite    = TEST_FILE_NELEMS
+        maxBufSize = 1000000
+
+        while toWrite > 0:
+
+            nvals    = min(maxBufSize, toWrite)
+            vals     = [random.randint(0, 65535) for  i in range(nvals)]
+            toWrite -= nvals
+            buf      = struct.pack('{}H'.format(nvals), *vals)
+            
+            f.write(buf)
+
+    end = time.time()
+
+    print('Done in {:0.2f} seconds'.format(end - start))
 
 
 def md5(data):

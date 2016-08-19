@@ -67,8 +67,10 @@ def gen_test_data(filename):
         while toWrite > 0:
 
             nvals    = min(maxBufSize, toWrite)
-            vals     = np.random.randint(0, 65535, nvals, dtype=np.uint16)
             toWrite -= nvals
+ 
+            vals     = np.random.randint(0, 65535, nvals)
+            vals     = np.array(vals, dtype=np.uint16)
 
             f.write(vals.tostring())
 

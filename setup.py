@@ -7,7 +7,7 @@ from Cython.Build  import cythonize
 
 setup(
     name='indexed_gzip',
-    version='0.1',
+    version='0.2',
     author='Paul McCarthy',
     author_email='pauldmccarthy@gmail.com',
     description='Fast random access of gzip files in Python',

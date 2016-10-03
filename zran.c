@@ -1136,13 +1136,17 @@ long zran_tell(zran_index_t *index)
 
 
 /* Read len bytes from the uncompressed data stream, storing them in buf. */
-long zran_read(zran_index_t *index,
-               void         *buf,
-               size_t        len)
+int64_t zran_read(zran_index_t *index,
+                  void         *buf,
+                  uint64_t      len)
 {
 
     /* Used to store/check return values. */
     long          ret;
+
+
+    /* Keeps track of the total number of bytes read */
+    uint64_t      total_read = 0;
 
     /* 
      * Counters keeping track of the 
@@ -1160,14 +1164,25 @@ long zran_read(zran_index_t *index,
      */
     int           skip;
 
-    /* Zlib stream struct. */
+    /* 
+     * Zlib stream struct and read/decompress buffers.
+     *
+     * z_stream.avail_out might not be able 
+     * to store numbers as big as what len
+     * can, so we may have to chunk up the 
+     * calls. 
+     *
+     * I'm assuming here is that 
+     * strm.avail_out is unsigned.
+     */
     z_stream      strm;
     zran_point_t *point;
-    uint8_t      *input   = NULL;
-    uint8_t      *discard = NULL;
+    uint64_t      avail_out_max = pow(2, (sizeof(strm.avail_out) * 8)) - 1;
+    uint8_t      *input         = NULL;
+    uint8_t      *discard       = NULL;
 
-    if (len == 0)
-        return 0;
+    if (len == 0)         return 0;
+    if (len >  INT64_MAX) goto fail;
     
     zran_log("zran_read(%zu)\n", len);
 
@@ -1234,7 +1249,10 @@ long zran_read(zran_index_t *index,
          * the requested bytes.
          */
         if (uncmp_offset == 0 && skip) {
-            strm.avail_out = len;
+
+            if (len > avail_out_max) strm.avail_out = avail_out_max;
+            else                     strm.avail_out = len;
+
             strm.next_out  = buf;
             skip           = 0; 
         }
@@ -1261,7 +1279,8 @@ long zran_read(zran_index_t *index,
          * data.
          */
         else if (uncmp_offset != 0) {
-            
+
+            // TODO Will uncmp_offset ever be > 2**32?
             strm.avail_out = (unsigned)uncmp_offset;
             strm.next_out  = discard;
             uncmp_offset   = 0;
@@ -1299,6 +1318,20 @@ long zran_read(zran_index_t *index,
             if      (ret == Z_STREAM_END) break;
             else if (ret != Z_OK)         goto fail;
 
+            /* 
+             * If the read request was for more than 2**32 
+             * bytes, we need to adjust z_stream.avail_out 
+             * (which is uint32), and continue reading.
+             */
+            if (!skip && strm.avail_out == 0 && len > avail_out_max) {
+
+                total_read += avail_out_max;
+                len        -= avail_out_max;
+
+                if (len > avail_out_max) strm.avail_out = avail_out_max;
+                else                     strm.avail_out = len;
+            }
+
         /* 
          * Break the read/decompress loop when 
          * our decompress buffer is full. 
@@ -1330,19 +1363,21 @@ long zran_read(zran_index_t *index,
     if (skip) len  = 0;
     else      len -= strm.avail_out;
 
+    total_read += len;
+
     /* 
      * Update the current uncompressed 
      * seek position.
      */
-    index->uncmp_seek_offset += len;
+    index->uncmp_seek_offset += total_read;
 
-    zran_log("Read succeeded - %li bytes read [compressed offset: %ld]\n",
-             len,
+    zran_log("Read succeeded - %llu bytes read [compressed offset: %ld]\n",
+             total_read,
              ftell(index->fd));
 
     free(input);
     free(discard);
-    return len;
+    return total_read;
 
 
 not_covered_by_index:

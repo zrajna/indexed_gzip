@@ -14,6 +14,8 @@ from libc.stdio  cimport (SEEK_SET,
                           FILE,
                           fdopen)
 
+from libc.stdint cimport int64_t
+
 from posix.types cimport  off_t
 
 from cpython.mem cimport (PyMem_Malloc,
@@ -264,7 +266,7 @@ cdef class IndexedGzipFile:
         cdef zran.zran_index_t *index  = &self.index
         cdef size_t             sz     = nbytes
         cdef void              *buffer = buf.buffer
-        cdef long               ret
+        cdef int64_t            ret
 
         with nogil:
             ret = zran.zran_read(index, buffer, sz)
@@ -281,7 +283,7 @@ cdef class IndexedGzipFile:
         buf.resize(ret)
         pybuf = <bytes>(<char *>buf.buffer)[:ret]
 
-        log.debug('{}.read({})'.format(type(self).__name__, nbytes)) 
+        log.debug('{}.read({})'.format(type(self).__name__, len(pybuf))) 
 
         return pybuf
 
@@ -309,6 +311,8 @@ cdef class ReadBuffer:
         if not self.buffer:
             raise MemoryError('PyMem_Malloc fail')
 
+        log.debug('ReadBuffer.__cinit__({})'.format(size))
+
 
     def resize(self, size_t size):
         """Re-allocate the memory to the given ``size``. """
@@ -318,12 +322,16 @@ cdef class ReadBuffer:
         if not buf:
             raise MemoryError('PyMem_Realloc fail')
 
+        log.debug('ReadBuffer.resize({})'.format(size))
+
         self.buffer = buf
 
 
     def __dealloc__(self):
         """Free the mwmory. """
         PyMem_Free(self.buffer)
+
+        log.debug('ReadBuffer.__dealloc__()')
 
 
 

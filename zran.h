@@ -234,10 +234,10 @@ long zran_tell(
  *
  *   - < -1 to indicate failure.
  */
-long zran_read(
+int64_t zran_read(
   zran_index_t  *index, /* The index                 */
   void          *buf,   /* Buffer to store len bytes */
-  size_t         len    /* Number of bytes to read   */
+  uint64_t       len    /* Number of bytes to read   */
 );
 
 #endif /* __ZRAN_H__ */

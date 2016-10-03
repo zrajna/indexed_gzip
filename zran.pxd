@@ -5,7 +5,7 @@
 #
 
 from libc.stdio  cimport FILE
-from libc.stdint cimport uint16_t, uint32_t, uint64_t
+from libc.stdint cimport uint16_t, uint32_t, uint64_t, int64_t
 from posix.types cimport off_t
 
 
@@ -39,6 +39,6 @@ cdef extern from "zran.h":
                   int           whence,
                   zran_point_t *point) nogil;
 
-    int zran_read(zran_index_t *index,
-                  void         *buf,
-                  size_t        len) nogil;
+    int64_t zran_read(zran_index_t *index,
+                      void         *buf,
+                      uint64_t      len) nogil;

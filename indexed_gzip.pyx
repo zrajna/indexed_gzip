@@ -23,6 +23,10 @@ from cpython.mem cimport (PyMem_Malloc,
 cimport zran
 
 import threading
+import logging
+
+
+log = logging.getLogger(__name__)
 
 
 class NotCoveredError(Exception):
@@ -131,6 +135,15 @@ cdef class IndexedGzipFile:
                           flags=flags):
             raise ZranError('zran_init returned error')
 
+        log.debug('{}.__init__({}, {}, {}, {}, {}, {})'.format(
+            type(self).__name__, 
+            fid,
+            filename,
+            auto_build,
+            spacing,
+            window_size,
+            readbuf_size))
+
 
     def close(self):
         """Closes this ``IndexedGzipFile``. """
@@ -145,6 +158,8 @@ cdef class IndexedGzipFile:
         
         self.cfid  = NULL
         self.pyfid = None
+
+        log.debug('{}.close()'.format(type(self).__name__))
 
         
     def closed(self):
@@ -186,7 +201,7 @@ cdef class IndexedGzipFile:
         return self
 
 
-    def __exit__(self):
+    def __exit__(self, *args):
         """Calls close on this ``IndexedGzipFile``. """
         if not self.closed():
             self.close()
@@ -205,6 +220,8 @@ cdef class IndexedGzipFile:
         
         if zran.zran_build_index(&self.index, 0, 0) != 0:
             raise ZranError('zran_build_index returned error')
+
+        log.debug('{}.build_fuill_index()'.format(type(self).__name__))
 
 
     def seek(self, offset):
@@ -231,6 +248,8 @@ cdef class IndexedGzipFile:
         elif ret > 0:
             raise NotCoveredError('Index does not cover '
                                   'offset {}'.format(offset))
+
+        log.debug('{}.seek({})'.format(type(self).__name__, offset)) 
         
 
     def read(self, nbytes):
@@ -261,6 +280,8 @@ cdef class IndexedGzipFile:
 
         buf.resize(ret)
         pybuf = <bytes>(<char *>buf.buffer)[:ret]
+
+        log.debug('{}.read({})'.format(type(self).__name__, nbytes)) 
 
         return pybuf
 

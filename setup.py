@@ -35,7 +35,13 @@ setup(
                   ['tests/ctest_zran.pyx', 'zran.c'],
                   libraries=['z'],
                   include_dirs=['.'],
-                  extra_compile_args=['-Wno-unused-function'])
+                  extra_compile_args=['-Wno-unused-function']),
+
+        Extension('tests.ctest_indexed_gzip',
+                  ['tests/ctest_indexed_gzip.pyx'],
+                  libraries=['z'],
+                  include_dirs=['.'],
+                  extra_compile_args=['-Wno-unused-function']) 
     ]),
 
     setup_requires=['pytest-runner'],

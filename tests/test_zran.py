@@ -5,6 +5,10 @@
 # Author: Paul McCarthy <pauldmccarthy@gmail.com>
 #
 
+import pytest
+pytestmark = pytest.mark.zran_test
+
+
 from . import ctest_zran
 
 def setup_module():            ctest_zran.setup_module()

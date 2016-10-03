@@ -30,9 +30,9 @@ cimport zran
 # 2**31 values, at 2 bytes each, is 4GB
 # 2**30 values, at 2 bytes each, is 2GB
 # 2**29 values, at 2 bytes each, is 1GB
-TEST_FILE_NELEMS = 2**29
+TEST_FILE_NELEMS = 2**30
 TEST_FILE_SIZE   = TEST_FILE_NELEMS * 2
-TEST_FILE        = 'testdata.gz'
+TEST_FILE        = 'ctest_zran_testdata.gz'
 
 
 def setup_module():
@@ -194,6 +194,9 @@ def test_init_file_modes():
             assert result == expected
 
             zran.zran_free(&index)
+
+        if filename == 'dummy.gz' and op.exists(filename):
+            os.remove(filename)
 
 
 def test_seek_and_tell():

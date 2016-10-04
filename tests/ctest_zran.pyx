@@ -6,14 +6,14 @@
 
 from __future__ import print_function
 
-import              os
-import os.path   as op
-import itertools as it
-import              sys
-import              gzip
-import              time
-import              random
-import              hashlib
+import               os
+import os.path    as op
+import itertools  as it
+import subprocess as sp
+import               sys
+import               time
+import               random
+import               hashlib
 
 import numpy as np
 
@@ -37,14 +37,17 @@ TEST_FILE        = 'ctest_zran_testdata.gz'
 
 def setup_module():
 
-    random   .seed(1234567)
-    np.random.seed(1234567)
-
     if not op.exists(TEST_FILE):
+
+        seed = np.random.randint(2 ** 32)
+        np.random.seed(seed)
+        print('Random seed for data generation: {}'.format(seed))
+
         gen_test_data(TEST_FILE)
 
-    random   .seed(1234567)
-    np.random.seed(1234567)
+    seed = np.random.randint(2 ** 32)
+    np.random.seed(seed)
+    print('Random seed for tests: {}'.format(seed)) 
 
         
 def teardown_module():
@@ -59,10 +62,17 @@ def gen_test_data(filename):
 
     start = time.time()
 
-    with gzip.GzipFile(filename, 'wb') as f:
+    # maxBufSize is in elements, not in bytes
+    toWrite    = TEST_FILE_NELEMS
+    maxBufSize = 134217728
 
-        toWrite    = TEST_FILE_NELEMS
-        maxBufSize = 67108864
+    print('Generating test data ({} bytes -> {})'.format(
+        toWrite * 2,
+        filename)) 
+
+    with open(filename, 'wb') as f:
+
+        i = 0
 
         while toWrite > 0:
 
@@ -71,8 +81,19 @@ def gen_test_data(filename):
  
             vals     = np.random.randint(0, 65535, nvals)
             vals     = np.array(vals, dtype=np.uint16)
+            vals     = vals.tostring()
 
-            f.write(vals.tostring())
+            print('Generated block {} ({} values, {} bytes)'.format(
+                i,
+                nvals,
+                len(vals)))
+
+            proc = sp.Popen(['gzip', '-c'], stdin=sp.PIPE, stdout=f)
+            proc.communicate(input=vals) 
+
+            print('Written block {} ({} bytes to go)'.format(
+                i,
+                toWrite)) 
 
     end = time.time()
 
@@ -153,11 +174,7 @@ def test_init():
             if r == 0: r = 16384
 
             expected = (w >= 32768) and (s > w)
-            
-            print('Testing zran_init(spacing={}, window_size={}, '
-                  'readbuf_size={}, flags={}) [{} == {} ?]'.format(
-                      s, w, r, f, expected, result))
-            
+
             assert result == expected
 
             zran.zran_free(&index)
@@ -185,9 +202,6 @@ def test_init_file_modes():
             cfid     = fdopen(pyfid.fileno(), cmode)
 
             expected = mode == 'r'
-
-            print('Opened file with mode=\'{}\' '
-                  '(expected: {})'.format(mode, expected))
 
             result = not zran.zran_init(&index, cfid, 0, 0, 0, 0)
 
@@ -220,7 +234,6 @@ def test_seek_and_tell():
             
             zran.zran_seek(&index, sp, SEEK_SET, NULL)
             zt = zran.zran_tell(&index)
-            print('{} == {}?'.format(zt, sp))
             assert zt == sp
 
         zran.zran_free(&index)

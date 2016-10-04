@@ -6,15 +6,15 @@
 
 from __future__ import print_function
 
-import              os
-import os.path   as op
-import itertools as it
-import              sys
-import              gzip
-import              time
-import              random
-import              struct
-import              hashlib
+import               os
+import os.path    as op
+import itertools  as it
+import subprocess as sp
+import               sys
+import               time
+import               random
+import               struct
+import               hashlib
 
 import numpy as np
 
@@ -30,14 +30,14 @@ TEST_FILE        = 'ctest_indexed_gzip_testdata.gz'
 
 
 def setup_module():
-    random   .seed(1234567)
-    np.random.seed(1234567)
 
     if not op.exists(TEST_FILE):
         gen_test_data(TEST_FILE)
 
-    random   .seed(1234567)
-    np.random.seed(1234567)
+    seed = np.random.randint(2 ** 32)
+    np.random.seed(seed)
+
+    print('Random seed for tests: {}'.format(seed))
 
         
 def teardown_module():
@@ -48,27 +48,45 @@ def teardown_module():
 def gen_test_data(filename):
     """Make some data to test with. """
     
-    print('Generating test data')
-
     start = time.time()
 
     # The file just contains a sequentially
     # increasing list of numbers
-    with gzip.GzipFile(filename, 'wb') as f:
 
-        toWrite    = TEST_FILE_NELEMS
-        maxBufSize = 67108864
-        index      = 0
-        
+    # maxBufSize is in elements, *not* in bytes
+    toWrite    = TEST_FILE_NELEMS
+    maxBufSize = 33554432
+    index      = 0
+
+    print('Generating test data ({} bytes -> {})'.format(
+        toWrite * 8,
+        filename))
+
+    with open(filename, 'wb') as f:
+
+        i = 0
+
         while toWrite > 0:
 
             nvals    = min(maxBufSize, toWrite)
             toWrite -= nvals
 
             vals     = np.arange(index, index + nvals, dtype=np.uint64)
+            vals     = vals.tostring()
             index   += nvals
 
-            f.write(vals.tostring())
+            print('Generated block {} ({} values, {} bytes)'.format(
+                i,
+                nvals,
+                len(vals)))
+
+            proc = sp.Popen(['gzip', '-c'], stdin=sp.PIPE, stdout=f)
+            proc.communicate(input=vals)
+
+            print('Written block {} ({} bytes to go)'.format(
+                i,
+                toWrite))
+            i += 1
 
     end = time.time()
 
@@ -94,8 +112,6 @@ def test_open_close():
     try:
         element = np.random.randint(0, TEST_FILE_NELEMS, 1)
         readval = read_element(f, element)
-
-        print('{} == {}?'.format(element, readval))
 
         assert readval == element
 

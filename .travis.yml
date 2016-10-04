@@ -6,9 +6,15 @@ python:
   - "3.4"
   - "3.5"
 install: "pip install -r requirements.txt"
+
+# Split test execution into several steps 
+# (data creation and individual test suites)
+# so each individual step doesn't take too
+# long.
 script:
-  - python             setup.py install
-  - travis_wait python setup.py test
-
-
+  - python setup.py install
+  - travis_wait 30 python -c from tests.test_zran import setup_module; setup_module()'
+  - travis_wait 30 py.test -v -s -m zran_test tests
+  - travis_wait 30 python -c from tests.test_indexed_gzip import setup_module; setup_module()'
+  - travis_wait 30 py.test -v -s -m indexed_gzip_test tests
 

@@ -60,6 +60,12 @@ struct _zran_index {
      */
     uint32_t      window_size;
 
+    /* 
+     * Base2 logarithm of the window size - it 
+     * is needed to initialise zlib inflation.
+     */ 
+    uint32_t      log_window_size;
+
     /*
      * Size, in bytes, of buffer used to store 
      * compressed data read from disk.

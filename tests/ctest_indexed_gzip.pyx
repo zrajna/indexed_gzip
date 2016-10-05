@@ -121,16 +121,18 @@ def test_read_all():
 
 def test_seek_and_read(niters=5000):
 
-    with igzip.IndexedGzipFile(filename=TEST_FILE) as f:
+    with igzip.IndexedGzipFile(filename=TEST_FILE) as f: 
         
         # Pick some random elements and make
         # sure their values are all right
-        for i, testval in enumerate(np.random.randint(0, TEST_FILE_NELEMS, niters)):
+        seekelems = np.random.randint(0, TEST_FILE_NELEMS, niters)
+        
+        for i, testval in enumerate(seekelems):
+
+            
             readval = read_element(f, testval)
 
             ft = f.tell()
 
             assert ft      == (testval + 1) * 8
             assert readval == testval
-
- 

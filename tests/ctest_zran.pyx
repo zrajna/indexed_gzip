@@ -64,7 +64,8 @@ def gen_test_data(filename):
 
     # maxBufSize is in elements, not in bytes
     toWrite    = TEST_FILE_NELEMS
-    maxBufSize = 134217728
+    maxBufSize = TEST_FILE_NELEMS
+    # maxBufSize = 134217728
 
     print('Generating test data ({} bytes -> {})'.format(
         toWrite * 2,

@@ -20,6 +20,9 @@ import numpy as np
 
 import indexed_gzip as igzip
 
+
+from . import ctest_zran
+
 # 2**30 values, at 8 bytes each, is 8GB
 # 2**29 values, at 8 bytes each, is 4GB
 # 2**28 values, at 8 bytes each, is 2GB
@@ -32,7 +35,7 @@ TEST_FILE        = 'ctest_indexed_gzip_testdata.gz'
 def setup_module():
 
     if not op.exists(TEST_FILE):
-        gen_test_data(TEST_FILE)
+        ctest_zran.gen_test_data(TEST_FILE, TEST_FILE_NELEMS)
 
     seed = np.random.randint(2 ** 32)
     np.random.seed(seed)
@@ -43,55 +46,6 @@ def setup_module():
 def teardown_module():
     if op.exists(TEST_FILE):
         os.remove(TEST_FILE)
-
-
-def gen_test_data(filename):
-    """Make some data to test with. """
-    
-    start = time.time()
-
-    # The file just contains a sequentially
-    # increasing list of numbers
-
-    # maxBufSize is in elements, *not* in bytes
-    toWrite    = TEST_FILE_NELEMS
-    maxBufSize = TEST_FILE_NELEMS
-    # maxBufSize = 33554432
-    index      = 0
-
-    print('Generating test data ({} bytes -> {})'.format(
-        toWrite * 8,
-        filename))
-
-    with open(filename, 'wb') as f:
-
-        i = 0
-
-        while toWrite > 0:
-
-            nvals    = min(maxBufSize, toWrite)
-            toWrite -= nvals
-
-            vals     = np.arange(index, index + nvals, dtype=np.uint64)
-            vals     = vals.tostring()
-            index   += nvals
-
-            print('Generated block {} ({} values, {} bytes)'.format(
-                i,
-                nvals,
-                len(vals)))
-
-            proc = sp.Popen(['gzip', '-c'], stdin=sp.PIPE, stdout=f)
-            proc.communicate(input=vals)
-
-            print('Written block {} ({} bytes to go)'.format(
-                i,
-                toWrite))
-            i += 1
-
-    end = time.time()
-
-    print('Done in {:0.2f} seconds'.format(end - start))
 
 
 def read_element(gzf, element, seek=True):
@@ -153,17 +107,16 @@ def test_create_from_open_handle():
         f.close()
 
 
-def test_read_all(niters=5000):
+def test_read_all():
 
     with igzip.IndexedGzipFile(filename=TEST_FILE) as f:
         data = f.read(TEST_FILE_SIZE)
 
     data = np.ndarray(shape=TEST_FILE_NELEMS, dtype=np.uint64, buffer=data)
 
-    # Pick some random elements and make
-    # sure their values are all right
-    for testval in np.random.randint(0, TEST_FILE_NELEMS, niters):
-        assert data[testval] == testval
+    # Check that every value is valid
+    for i, val in enumerate(data):
+        assert i == val
 
 
 def test_seek_and_read(niters=5000):
@@ -172,7 +125,12 @@ def test_seek_and_read(niters=5000):
         
         # Pick some random elements and make
         # sure their values are all right
-        for testval in np.random.randint(0, TEST_FILE_NELEMS, niters):
+        for i, testval in enumerate(np.random.randint(0, TEST_FILE_NELEMS, niters)):
             readval = read_element(f, testval)
-            
-            assert readval == testval 
+
+            ft = f.tell()
+
+            assert ft      == (testval + 1) * 8
+            assert readval == testval
+
+ 

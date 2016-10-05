@@ -1206,13 +1206,15 @@ int64_t zran_read(zran_index_t *index,
         goto fail;
 
     /* 
-     * Search for the current index 
+     * Search for the index 
      * point that corresponds to 
      * our current location in the 
-     * uncompressed data stream.
+     * uncompressed data stream (minus
+     * the number of bytes we need to 
+     * read in).
      */
     ret = _zran_get_point_with_expand(index,
-                                      index->uncmp_seek_offset,
+                                      index->uncmp_seek_offset - len,
                                       0,
                                       &point);
 

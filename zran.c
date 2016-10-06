@@ -557,11 +557,42 @@ int _zran_get_point_with_expand(zran_index_t  *index,
         else
             expand = offset;
 
+        /* 
+         * There's no point trying to 
+         * expand the index beyond the 
+         * size of the compressed data
+         *
+         */
+        if (offset >= index->compressed_size)
+            expand = index->compressed_size; 
+
+        /*
+         * Expand the index
+         */
         if (_zran_expand_index(index, expand) != 0) {
             goto fail;
         }
 
+        /*
+         * Index has been expanded, so there 
+         * should now be a point which covers 
+         * the requested offset.
+         */
         result = _zran_get_point_at(index, offset, compressed, point); 
+ 
+        /*
+         * If, above, we set expand to the compressed data 
+         * size, it means that the index has been expanded 
+         * to cover the entire file. But if _zran_get_point_at 
+         * is still returning "point not created", it means 
+         * that the offset that was passed in to this function 
+         * is past the end of the file.
+         */
+        if (result > 0 && expand == index->compressed_size) {
+
+            result = 0;
+            *point = &index->list[index->npoints - 1];
+        } 
     }
 
     /* 
@@ -576,7 +607,7 @@ int _zran_get_point_with_expand(zran_index_t  *index,
      * but didn't give me a point. 
      * This should never happen.
      */ 
-    if (result == 0 && point == NULL) {
+    if (result == 0 && *point == NULL) {
         goto fail;
     }
 
@@ -981,7 +1012,7 @@ int _zran_expand_index(zran_index_t *index, uint64_t until)
                  * of whether we have found a header.
                  */
                 z_ret = 0;
-                while (strm.avail_in > 2) {
+                while (strm.avail_in >= 2) {
                     if (strm.next_in[0] == 0x1f &&
                         strm.next_in[1] == 0x8b) {
                         z_ret = 1;

@@ -1291,8 +1291,12 @@ int64_t zran_read(zran_index_t *index,
      * the number of bytes we need to 
      * read in).
      */
+    uncmp_offset = index->uncmp_seek_offset - len;
+    if (uncmp_offset < 0)
+        uncmp_offset = 0;
+    
     ret = _zran_get_point_with_expand(index,
-                                      index->uncmp_seek_offset - len,
+                                      uncmp_offset,
                                       0,
                                       &point);
 

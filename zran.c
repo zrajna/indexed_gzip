@@ -67,9 +67,9 @@ static int _zran_free_unused(
 
 
 /*
- * Searches for the zran_point corresponding to the given offset, which may be
- * specified as being relative to the start of the compressed data, or the
- * uncompressed data.
+ * Searches for the zran_point which preceeds the given offset. The offset
+ * may be specified as being relative to the start of the compressed data, 
+ * or the uncompressed data.
  *
  * Returns:
  *
@@ -197,6 +197,41 @@ static int _zran_add_point(
     uint8_t      *data          /* Pointer to zran_index_t->window_size bytes
                                    of uncompressed data preceeding this index
                                    point. */
+);
+
+
+static int _zran_find_next_stream(
+    zran_index_t *index,
+    z_stream     *stream
+);
+
+
+/*
+ * Inflate the specified number of bytes, 
+ * or until the next Z_BLOCK/Z_STREAM_END 
+ * is reached
+ */
+
+/* _zran_inflate return codes */
+int ZRAN_INFLATE_ERROR          = -3;
+int ZRAN_INFLATE_NOT_COVERED    = -2;
+int ZRAN_INFLATE_BLOCK_BOUNDARY = -1;
+
+/* _zran_inflate input flags  */
+int ZRAN_INFLATE_MANAGE_Z_STREAM = 1;
+int ZRAN_INFLATE_STOP_AT_BLOCK   = 2;
+
+/*
+ * Returns 0 on success, otherwise returns one of the 
+ * error/status codes.
+ */
+static int _zran_inflate(
+    zran_index_t *index,
+    z_stream     *strm,
+    uint8_t       flags,
+    uint32_t     *total_read,
+    uint32_t      len,
+    uint8_t      *data
 );
 
 
@@ -839,6 +874,272 @@ fail:
 }
 
 
+int _zran_find_next_stream(zran_index_t *index, z_stream *stream) {
+
+    /* 
+     * Search for the beginning of the 
+     * next stream. GZIP files start with
+     * 0x1f8b. 
+     */
+    int offset = 0;
+    int found  = 0;
+    
+    while (stream->avail_in > 2) {
+        if (stream->next_in[0] == 0x1f &&
+            stream->next_in[1] == 0x8b) {
+            found = 1;
+            break;
+        }
+
+        offset           += 2;
+        stream->next_in  += 2;
+        stream->avail_in -= 2;
+    }
+
+    /* 
+     * No header found for the next stream.
+     * 
+     * TODO What if we just need to read in
+     *      some more bytes from the file
+     *      to get to the next header? 
+     *      Return a 'NOT FOUND' code instead
+     *      of error.
+     */
+    if (found == 0)
+        goto fail;
+
+    zran_log("New stream found, re-initialising inflation\n");
+
+    /*
+     * Re-configure for inflation from the new stream.
+     */
+    if (inflateEnd(stream) != Z_OK)
+        goto fail;
+
+    stream->zalloc    = Z_NULL;
+    stream->zfree     = Z_NULL;
+    stream->opaque    = Z_NULL;
+    stream->avail_out = 0;
+
+    if (inflateInit2(stream, index->log_window_size + 32) != Z_OK)
+        goto fail;
+
+    return offset;
+fail:
+    return -1;
+}
+
+
+static int _zran_inflate(zran_index_t *index,
+                         z_stream     *strm,
+                         uint8_t       flags,
+                         uint32_t     *total_read,
+                         uint32_t      len,
+                         uint8_t      *data) {
+
+    /*
+     * Used to store and check return values.
+     * f_ret is for fread, z_ret is for zlib
+     * functions.
+     */
+    size_t         f_ret;
+    int            z_ret;
+
+    uint8_t        at_block      = 0;
+    uint8_t        stop_at_block = (flags >> ZRAN_INFLATE_BLOCK_BOUNDARY)  & 1;
+    uint8_t        manage_stream = (flags >> ZRAN_INFLATE_MANAGE_Z_STREAM) & 1;
+
+    zran_point_t  *start   = NULL;
+    uint8_t       *readbuf = NULL;
+
+    if (len == 0)
+        return 0;
+
+    /*
+     * If starting from the beginning of the
+     * file, we don't need to have any points
+     * in the index. Otherwise, if the index
+     * does not cover the seek location, we
+     * can't do anything.
+     */
+    if (index->uncmp_seek_offset > 0) {
+
+        /*
+         * In order to successfully decompress data from the
+         * current uncompressed seek location, we need to
+         * start decompressing from the index point which
+         * preceeds it.
+         *
+         * TODO We may need to start decompressing from the
+         *      index point before the one which preceeds
+         *      the requested offset.
+         */
+        z_ret = _zran_get_point_at(index,
+                                   index->uncmp_seek_offset,
+                                   0,
+                                   &start);
+
+        if (z_ret < 0) return ZRAN_INFLATE_ERROR;
+        if (z_ret > 0) return ZRAN_INFLATE_NOT_COVERED;
+    }
+
+    /*
+     * Allocate memory for reading
+     * compressed data from the file
+     */
+    readbuf = calloc(1, index->readbuf_size);
+    if (readbuf == NULL)
+        goto fail;
+
+    /*
+     * Initialise the zlib struct
+     * for inflation, if requested.
+     * The _zran_init_zlib_inflate
+     * function seeks to the correct
+     * location in the file for us.
+     * 
+     * Or we assume that the file 
+     * is already at the correct 
+     * spot.
+     */
+    if (manage_stream) {
+        if (_zran_init_zlib_inflate(index, strm, start) != 0) {
+            goto fail;
+        }
+    }
+
+    /*
+     * Tell zlib where to store 
+     * the uncompressed data.
+     */
+    strm->avail_out = len;
+    strm->next_out  = data;
+    
+    /*
+     * Don't finish until we're at the end of
+     * the file, or we've read enough bytes.
+     */
+    while (!feof(index->fd) && strm->avail_out > 0) {
+
+        zran_log("Reading %u bytes from file\n", index->readbuf_size);
+
+        /* Read a block of compressed data */
+        f_ret = fread(readbuf, 1, index->readbuf_size, index->fd);
+
+        /*
+         * If this loop has been re-started, there
+         * should still be data to read from the
+         * file (hence the f_ret == 0 check.
+        */
+        if (ferror(index->fd)) goto fail;
+        if (f_ret == 0)        goto fail;
+
+        /*
+         * Process the block of compressed
+         * data that we just read in.
+         */
+        strm->avail_in = f_ret;
+        strm->next_in  = readbuf;
+
+        /*
+         * Decompress the block until it is
+         * gone (or we've read enough bytes)
+         */
+        z_ret = Z_OK;
+        while (strm->avail_in > 0) {
+
+            /*
+             * Re-initialise inflation if we have
+             * hit a new compressed stream.
+             */
+            if (z_ret == Z_STREAM_END) {
+
+                zran_log("End of stream - searching for another stream\n");
+
+                z_ret = _zran_find_next_stream(index, strm);
+
+                if (z_ret < 0)
+                    goto fail;
+            }
+
+            /*
+             * Inflate the block - the decompressed
+             * data is output straight to the provided
+             * data buffer.
+             * 
+             * If ZRAN_INFLATE_BLOCK_BOUNDARY is active,
+             * Z_BLOCK tells inflate to stop inflating
+             * at a compression block boundary. Otherwise,
+             * inflate stops when it comes to the end of a 
+             * stream, or it runs out of input or output.
+             */
+            if (stop_at_block) z_ret = inflate(strm, Z_BLOCK);
+            else               z_ret = inflate(strm, Z_NO_FLUSH);
+
+            /*
+             * If the file comprises a sequence of 
+             * concatenated gzip streams, we will 
+             * encounter Z_STREAM_END before the end 
+             * of the file (where one stream ends and 
+             * the other begins). So we only stop 
+             * when at Z_STREAM_END, *and* we are at 
+             * end of file (or 
+             * ZRAN_INFLATE_BLOCK_BOUNDARY is active).
+             *
+             * If at a new stream, we re-initialise
+             * inflation on the next loop iteration.
+             */
+            if (z_ret == Z_STREAM_END) {
+                
+                if (stop_at_block) {
+                    at_block = ZRAN_INFLATE_BLOCK_BOUNDARY;
+                }
+                
+                if (stop_at_block || feof(index->fd)) {
+                    break;
+                }
+            }
+
+            /* 
+             * No room left to store decompressed data
+             */
+            else if (z_ret == Z_BUF_ERROR) {
+                break;
+            }
+
+            else if (z_ret != Z_OK) {
+                zran_log("inflate failed (code: %i, msg: %s)\n",
+                         z_ret, strm.msg);
+                goto fail;
+            }
+        }
+
+        if (at_block != 0) {
+            break;
+        }
+    }
+    
+    free(readbuf);
+    readbuf = NULL;
+
+    if (manage_stream) {
+        if (inflateEnd(strm) != Z_OK)
+            goto fail;
+    }
+
+    if (total_read != NULL)
+        *total_read = len - strm->avail_out;
+
+    return at_block;
+fail:
+
+    if (readbuf != NULL)
+        free(readbuf);
+    return ZRAN_INFLATE_ERROR;
+}
+
+
+
 /*
  * Expands the index to encompass the compressed offset specified by 'until'.
  */
@@ -1005,50 +1306,12 @@ int _zran_expand_index(zran_index_t *index, uint64_t until)
 
                 zran_log("End of stream - searching for another stream\n");
 
-                /* 
-                 * Search for the beginning of the 
-                 * next stream. GZIP files start with
-                 * 0x1f8b. We use z_ret to keep track 
-                 * of whether we have found a header.
-                 */
-                z_ret = 0;
-                while (strm.avail_in >= 2) {
-                    if (strm.next_in[0] == 0x1f &&
-                        strm.next_in[1] == 0x8b) {
-                        z_ret = 1;
-                        break;
-                    }
+                z_ret = _zran_find_next_stream(index, &strm);
 
-                    strm.next_in  += 2;
-                    strm.avail_in -= 2;
-                    cmp_offset    += 2;
-                }
-
-                /* 
-                 * No header found for the next stream.
-                 * 
-                 * TODO What if we just need to read in
-                 *      some more bytes from the file
-                 *      to get to the next header?
-                 */
-                if (z_ret == 0)
+                if (z_ret < 0)
                     goto fail;
 
-                zran_log("New stream found, re-initialising inflation\n");
-
-                /*
-                 * Re-configure for inflation from the new stream.
-                 */
-                if (inflateEnd(&strm) != Z_OK)
-                    goto fail;
-
-                strm.zalloc    = Z_NULL;
-                strm.zfree     = Z_NULL;
-                strm.opaque    = Z_NULL;
-                strm.avail_out = 0;
-
-                if (inflateInit2(&strm, index->log_window_size + 32) != Z_OK)
-                    goto fail;
+                cmp_offset += z_ret;
             }
  
 
@@ -1469,7 +1732,8 @@ int64_t zran_read(zran_index_t *index,
     /* 
      * Clean up zlib
      */
-    inflateEnd(&strm);
+    if (inflateEnd(&strm) != Z_OK)
+        goto fail; 
 
     /* 
      * How many uncompressed bytes 

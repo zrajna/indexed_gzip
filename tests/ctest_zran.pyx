@@ -30,7 +30,7 @@ cimport zran
 # 2**29 values, at 8 bytes each, is 4GB
 # 2**28 values, at 8 bytes each, is 2GB
 # 2**27 values, at 8 bytes each, is 1GB
-TEST_FILE_NELEMS = 2**28 + 1
+TEST_FILE_NELEMS = 2**24 + 1
 TEST_FILE_SIZE   = TEST_FILE_NELEMS * 8
 TEST_FILE        = 'ctest_zran_testdata.gz'
 
@@ -376,7 +376,7 @@ def test_seek_then_read_block():
     
     indexSpacing = max(524288, TEST_FILE_SIZE / 1000)
     buf          = ReadBuffer(TEST_FILE_SIZE)
-    seekelems    = np.linspace(0, TEST_FILE_NELEMS - 1, 50, dtype=np.uint64)
+    seekelems    = np.linspace(0, TEST_FILE_NELEMS - 1, 5000, dtype=np.uint64)
     np.random.shuffle(seekelems)
     
     cdef zran.zran_index_t index
@@ -399,7 +399,7 @@ def test_seek_then_read_block():
             if se == TEST_FILE_NELEMS - 1:
                 readelems = 1
             else:
-                readelems = np.random.randint(1, TEST_FILE_NELEMS - se)
+                readelems = np.random.randint(1, min(TEST_FILE_NELEMS - se, 5000))
                 
             nbytes = zran.zran_read(&index, buffer, readelems * 8)
 
@@ -472,7 +472,7 @@ def test_build_then_read():
     
     indexSpacing = max(524288, TEST_FILE_SIZE / 1000)
     buf          = ReadBuffer(TEST_FILE_SIZE)
-    seekelems    = np.linspace(0, TEST_FILE_NELEMS - 1, 50, dtype=np.uint64)
+    seekelems    = np.linspace(0, TEST_FILE_NELEMS - 1, 5000, dtype=np.uint64)
     np.random.shuffle(seekelems) 
     
     cdef zran.zran_index_t index
@@ -497,7 +497,7 @@ def test_build_then_read():
             if se == TEST_FILE_NELEMS - 1:
                 readelems = 1
             else:
-                readelems = np.random.randint(1, TEST_FILE_NELEMS - se)
+                readelems = np.random.randint(1, min(TEST_FILE_NELEMS - se, 5000)) 
                 
             nbytes = zran.zran_read(&index, buffer, readelems * 8)
 

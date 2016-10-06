@@ -27,7 +27,7 @@ from . import ctest_zran
 # 2**29 values, at 8 bytes each, is 4GB
 # 2**28 values, at 8 bytes each, is 2GB
 # 2**27 values, at 8 bytes each, is 1GB
-TEST_FILE_NELEMS = 2**28 + 1
+TEST_FILE_NELEMS = 2**24 + 1
 TEST_FILE_SIZE   = TEST_FILE_NELEMS * 8
 TEST_FILE        = 'ctest_indexed_gzip_testdata.gz'
 

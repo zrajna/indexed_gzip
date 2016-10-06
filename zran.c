@@ -536,7 +536,7 @@ int _zran_get_point_with_expand(zran_index_t  *index,
 
     /*
      * See if there is an index point that 
-     * covers the specified offset. If there;s
+     * covers the specified offset. If there's
      * not, we're going to expand the index
      * until there is.
      */
@@ -813,7 +813,7 @@ int _zran_expand_index(zran_index_t *index, uint64_t until)
 {
 
     /* Used to store and check return values. */
-    int            ret;
+    int64_t        ret;
 
     /* 
      * Counters to keep track of where we are 
@@ -846,6 +846,9 @@ int _zran_expand_index(zran_index_t *index, uint64_t until)
 
     /* Zlib stream struct */
     z_stream       strm;
+
+    /* Temp var used for storing stream status */
+    uint8_t        status;
 
     /* Buffers to store compresed and uncompressed data */
     uint8_t       *input  = NULL;
@@ -938,8 +941,13 @@ int _zran_expand_index(zran_index_t *index, uint64_t until)
         /* Read a block of compressed data */
         ret = fread(input, 1, index->readbuf_size, index->fd);
 
-        if (ret <= 0)          goto fail;
+        /* 
+         * If this loop has been re-started, there 
+         * should still be data to read from the 
+         * file (hence the ret == 0 check.
+        */
         if (ferror(index->fd)) goto fail;
+        if (ret == 0)          goto fail;
 
         /* 
          * Process the block of compressed 
@@ -976,8 +984,28 @@ int _zran_expand_index(zran_index_t *index, uint64_t until)
              * these boundaries.
              */
             ret = inflate(&strm, Z_BLOCK);
-            if      (ret == Z_STREAM_END) break;
-            else if (ret != Z_OK)         goto fail;
+
+            /* 
+             * If the file comprises a sequence of concatenated
+             * gzip streams, we will encounter Z_STREAM_END before
+             * the end of the file (where one stream ends and the 
+             * other begins). So we only stop when at Z_STREAM_END,
+             * *and* we are at end of file.
+             */
+            if (ret == Z_STREAM_END) {
+
+                /* 
+                 * Stream end and end of file, nothing more to 
+                 * do. Or, end of a stream, but not end of the 
+                 * file - we need to re-initialise inflation.
+                 */
+                if (feof(index->fd))             break;
+                if (inflateReset(&strm) != Z_OK) goto fail;
+            }
+
+            else if (ret != Z_OK) {
+                goto fail;
+            }
 
             /*
              * Adjust our offsets according to 
@@ -987,13 +1015,20 @@ int _zran_expand_index(zran_index_t *index, uint64_t until)
             uncmp_offset -= strm.avail_out;
 
             /* 
-             * If we're at the begininng of the file (uncmp_offset == 0),
-             * or at the end of a deflate block, and index->spacing bytes
-             * have passed since the last index point that was created,
-             * we'll create a new index point at this location.
+             * If we're at the begininng of the file
+             * (uncmp_offset == 0), or at the end of 
+             * a deflate block or stream, and 
+             * index->spacing bytes have passed since 
+             * the last index point that was created,
+             * we'll create a new index point at this 
+             * location.
              */
-            if ( (strm.data_type & 128) &&
-                !(strm.data_type & 64)  &&
+
+            /* Status is 1 if we are at end-of-block or end-of-stream */
+            status = (strm.data_type & 128) && !(strm.data_type & 64);
+            status = status || (ret == Z_STREAM_END);
+
+            if (status &&
                 (uncmp_offset == 0 ||
                  uncmp_offset - last_uncmp_offset > index->spacing)) {
 
@@ -1026,11 +1061,13 @@ int _zran_expand_index(zran_index_t *index, uint64_t until)
 
     /*
      * Don't finish until we're at the end 
-     * of the stream, or we've expanded the 
-     * index far enough (and have created 
+     * of the stream/file, or we've expanded 
+     * the index far enough (and have created 
      * at least one new index point).
      */
-    } while (ret != Z_STREAM_END && (cmp_offset < until || points_created == 0));
+    } while (ret != Z_STREAM_END &&
+             !feof(index->fd)    &&
+             (cmp_offset < until || points_created == 0));
 
     /*
      * The index may have over-allocated 
@@ -1184,7 +1221,7 @@ int64_t zran_read(zran_index_t *index,
     if (len == 0)         return 0;
     if (len >  INT64_MAX) goto fail;
     
-    zran_log("zran_read(%zu)\n", len);
+    zran_log("zran_read(%llu)\n", len);
 
     /* 
      * Buffer to store compressed 
@@ -1238,7 +1275,7 @@ int64_t zran_read(zran_index_t *index,
     uncmp_offset  = index->uncmp_seek_offset - point->uncmp_offset;
     strm.avail_in = 0;
 
-    zran_log("Attempting to read %li bytes from "
+    zran_log("Attempting to read %llu bytes from "
              "uncompressed offset %llu (starting "
              "from compressed offset %llu, )\n",
              len, index->uncmp_seek_offset, point->cmp_offset);

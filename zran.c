@@ -1720,7 +1720,7 @@ int _zran_expand_index(zran_index_t *index, uint64_t until)
     if (index->readbuf != NULL) {
         free(index->readbuf);
         index->readbuf        = NULL;
-        index->readbuf_offset = NULL;
+        index->readbuf_offset = 0;
     } 
     
     free(data);
@@ -1733,7 +1733,7 @@ fail:
     if (index->readbuf != NULL) {
         free(index->readbuf);
         index->readbuf        = NULL;
-        index->readbuf_offset = NULL;
+        index->readbuf_offset = 0;
     }
     
     return -1;
@@ -1824,11 +1824,17 @@ int64_t zran_read(zran_index_t *index,
 {
 
     /* Used to store/check return values. */
-    long          ret;
+    int           ret;
+
+    uint32_t      bytes_consumed;
+    uint32_t      bytes_output;
+
+    uint16_t      inflate_flags;
+    uint8_t       first_inflate;
 
 
     /* Keeps track of the total number of bytes read */
-    uint64_t      total_read = 0;
+    uint64_t      total_read;
 
     /* 
      * Counters keeping track of the 
@@ -1840,28 +1846,26 @@ int64_t zran_read(zran_index_t *index,
     off_t         cmp_offset;
 
     /* 
-     * Flag used to control skipping 
-     * over uncompressed data until 
-     * we get to the right point.
-     */
-    int           skip;
-
-    /* 
-     * Zlib stream struct and read/decompress buffers.
-     *
-     * z_stream.avail_out might not be able 
-     * to store numbers as big as what len
-     * can, so we may have to chunk up the 
-     * calls. 
-     *
-     * I'm assuming here is that 
-     * strm.avail_out is unsigned.
+     * Zlib stream struct and starting point.
      */
     z_stream      strm;
-    zran_point_t *point;
-    uint64_t      avail_out_max = pow(2, (sizeof(strm.avail_out) * 8)) - 1;
-    uint8_t      *input         = NULL;
-    uint8_t      *discard       = NULL;
+    zran_point_t *start = NULL;
+
+    /*
+     * Memory used to store bytes that we skip 
+     * over before reaching the appropriate 
+     * point in the uncompressed data stream.
+     * Ideally we will only have to decompress 
+     * (on average) spacing / 2 bytes before
+     * reaching the seek location, but this 
+     * isn't a guarantee, so we allocate more
+     * to reduce the number of reads that are 
+     * required.
+     */
+    uint64_t      to_discard      = 0;
+    uint64_t      total_discarded = 0;
+    uint64_t      discard_size    = index->spacing * 4;
+    uint8_t      *discard         = NULL;
 
     if (len == 0)         return 0;
     if (len >  INT64_MAX) goto fail;
@@ -1869,190 +1873,149 @@ int64_t zran_read(zran_index_t *index,
     zran_log("zran_read(%llu)\n", len);
 
     /* 
-     * Buffer to store compressed 
-     * data from the file.
+     * Search for the index point that 
+     * corresponds to our current seek 
+     * location in the uncompressed 
+     * data stream. 
      */
-    input = calloc(1, index->readbuf_size);
-    if (input == NULL)
-        goto fail; 
-
-    /* 
-     * We have to decompress from the beginning
-     * of the index point corresponding to the 
-     * offset, throwing away the data until
-     * we reach the correct point in the 
-     * uncompressed stream.
-     */
-    discard = calloc(1, index->window_size);
-    if (discard == NULL)
-        goto fail;
-
-    /* 
-     * Search for the index 
-     * point that corresponds to 
-     * our current location in the 
-     * uncompressed data stream (minus
-     * the number of bytes we need to 
-     * read in).
-     */
-    uncmp_offset = index->uncmp_seek_offset - len;
-    if (uncmp_offset < 0)
-        uncmp_offset = 0;
-    
     ret = _zran_get_point_with_expand(index,
-                                      uncmp_offset,
+                                      index->uncmp_seek_offset,
                                       0,
-                                      &point);
+                                      &start);
 
     if (ret < 0) goto fail;
     if (ret > 0) goto not_covered_by_index;
 
-    /* Initialise zlib for inflation */
-    if (_zran_init_zlib_inflate(index, &strm, point) != 0)
-        goto fail;
-
-    /* 
-     * Read and decompress data from the 
-     * file, discarding the uncompressed 
-     * bytes, until we get to the end of the 
-     * file, or to the requested uncompressed 
-     * offset. The uncmp_offset is adjusted to
-     * be relative to the starting index point.
+    /*
+     * We have to start decompressing from 
+     * the index point that preceeds the seek 
+     * location, so we need to skip over bytes
+     * until we get to that location. We use
+     * this buffer to store those bytes. 
      */
-    skip          = 1;
-    cmp_offset    = point->cmp_offset ;
-    uncmp_offset  = index->uncmp_seek_offset - point->uncmp_offset;
-    strm.avail_in = 0;
+    discard = malloc(discard_size);
+    if (discard == NULL) {
+        goto fail;
+    }
 
     zran_log("Attempting to read %llu bytes from "
              "uncompressed offset %llu (starting "
-             "from compressed offset %llu, )\n",
-             len, index->uncmp_seek_offset, point->cmp_offset);
+             "from c=%llu, u=%llu)\n",
+             len,
+             index->uncmp_seek_offset,
+             start->cmp_offset,
+             start->uncmp_offset);
 
-    do {
-        /*
-         * We've skipped over enough 
-         * uncompressed bytes, and are 
-         * now able to read/decompress
-         * the requested bytes.
-         */
-        if (uncmp_offset == 0 && skip) {
+    /* 
+     * Inflate and discard data until we 
+     * reach the current seek location 
+     * into the uncompresesd data stream.
+     */
+    cmp_offset     = start->cmp_offset;
+    uncmp_offset    = start->uncmp_offset;
+    first_inflate   = 1;
+    total_discarded = 0;
+    
+    while (!feof(index->fd) && uncmp_offset < index->uncmp_seek_offset) {
 
-            if (len > avail_out_max) strm.avail_out = avail_out_max;
-            else                     strm.avail_out = len;
-
-            strm.next_out  = buf;
-            skip           = 0; 
+        if (first_inflate) {
+            first_inflate = 0;
+            inflate_flags = (ZRAN_INFLATE_INIT_Z_STREAM |
+                             ZRAN_INFLATE_INIT_READ_BUF |
+                             ZRAN_INFLATE_USE_OFFSET);
+        }
+        else {
+            inflate_flags = 0;
         }
 
         /* 
-         * We haven't yet reached the 
-         * requested uncompressed offset -
-         * skip over window_size uncompresed 
-         * bytes at a time until we get 
-         * to the right location.
+         * Don't read past the uncompressed seek 
+         * location - at this point, we will need 
+         * to stop discarding bytes, and fulfil 
+         * the read request.
          */
-        else if (uncmp_offset > index->window_size) {
-            strm.avail_out = index->window_size;
-            strm.next_out  = discard;
-            uncmp_offset  -= index->window_size;
+        to_discard = index->uncmp_seek_offset - uncmp_offset;
+        if (to_discard > discard_size)
+            to_discard = discard_size;
+
+        zran_log("Discarding %llu bytes (%llu < %llu)\n",
+                 to_discard,
+                 uncmp_offset,
+                 index->uncmp_seek_offset);
+
+        /* 
+         * _zran_inflate should return 0 if 
+         * it runs out of output space (which 
+         * is ok), or it has read enough bytes
+         * (which is perfect). Any other 
+         * return code means that something has
+         * gone wrong.
+         */ 
+        if (_zran_inflate(index,
+                          &strm,
+                          cmp_offset,
+                          inflate_flags,
+                          &bytes_consumed,
+                          &bytes_output,
+                          to_discard,
+                          discard) != 0)
+            goto fail;
+
+        cmp_offset      += bytes_consumed;
+        uncmp_offset    += bytes_output;
+        total_discarded += bytes_output;
+    }
+
+    /*
+     * Sanity check - we should be at the 
+     * correct location in the uncompressed 
+     * stream. 
+     */
+    if (uncmp_offset != index->uncmp_seek_offset)
+        goto fail;
+
+    zran_log("Discarded %llu bytes, ready to "
+             "read from %llu (== %llu)\n",
+             total_discarded,
+             uncmp_offset,
+             index->uncmp_seek_offset);
+
+    /*
+     * At this point, we are ready to inflate 
+     * from the uncompressed seek location. 
+     */
+    total_read = 0;
+    while (!feof(index->fd) && total_read < len) {
+
+        if (first_inflate) {
+            first_inflate = 0;
+            inflate_flags = (ZRAN_INFLATE_INIT_Z_STREAM |
+                             ZRAN_INFLATE_INIT_READ_BUF |
+                             ZRAN_INFLATE_USE_OFFSET);
         }
+        else {
+            inflate_flags = 0;
+        } 
 
-        /*
-         * We're almost at the right location
-         * (within window_size bytes of it).
-         * This will be the last blcok of bytes
-         * that we decompress and discard, before
-         * we can start reading in the requested
-         * data.
-         */
-        else if (uncmp_offset != 0) {
+        if (_zran_inflate(index,
+                          &strm,
+                          cmp_offset,
+                          inflate_flags,
+                          &bytes_consumed,
+                          &bytes_output,
+                          len,
+                          buf) != 0)
+            goto fail;
 
-            // TODO Will uncmp_offset ever be > 2**32?
-            strm.avail_out = (unsigned)uncmp_offset;
-            strm.next_out  = discard;
-            uncmp_offset   = 0;
-        }
+        cmp_offset   += bytes_consumed;
+        uncmp_offset += bytes_output;
+        total_read   += bytes_output;
 
-        /* 
-         * Read and decompress a block of 
-         * data until end of file. or our 
-         * decompressed data buffer is full.
-         */
-        do {
-            
-            /* 
-             * Read a block of compressed 
-             * bytes from the file 
-             */
-            if (strm.avail_in == 0) {
-                
-                ret = fread(input, 1, index->readbuf_size, index->fd);
-
-                if (ferror(index->fd)) goto fail;
-                if (ret == 0)          goto fail;
-
-                strm.avail_in = ret;
-                strm.next_in  = input;
-            }
-            
-            /* 
-             * Decompress the block 
-             * that we just read in.
-             */
-            ret = inflate(&strm, Z_NO_FLUSH);
-
-            /* End of file or something went wrong */
-            if      (ret == Z_STREAM_END) break;
-            else if (ret != Z_OK)         goto fail;
-
-            /* 
-             * If the read request was for more than 2**32 
-             * bytes, we need to adjust z_stream.avail_out 
-             * (which is uint32), and continue reading.
-             */
-            if (!skip && strm.avail_out == 0 && len > avail_out_max) {
-
-                total_read += avail_out_max;
-                len        -= avail_out_max;
-
-                if (len > avail_out_max) strm.avail_out = avail_out_max;
-                else                     strm.avail_out = len;
-            }
-
-        /* 
-         * Break the read/decompress loop when 
-         * our decompress buffer is full. 
-         */
-        } while (strm.avail_out != 0);
-
-        /* 
-         * End of file - break the main loop
-         */
-        if (ret == Z_STREAM_END)
-            break;
-
-    /* 
-     * Keep looping until we're at 
-     * the requested location in the 
-     * uncompressed data stream.
-     */
-    } while (skip);
-
-    /* 
-     * Clean up zlib
-     */
-    if (inflateEnd(&strm) != Z_OK)
-        goto fail; 
-
-    /* 
-     * How many uncompressed bytes 
-     * did we actually read?
-     */
-    if (skip) len  = 0;
-    else      len -= strm.avail_out;
-
-    total_read += len;
+        zran_log("Read %u bytes (%llu / %llu)\n",
+                 bytes_output,
+                 total_read,
+                 len); 
+    }
 
     /* 
      * Update the current uncompressed 
@@ -2064,24 +2027,29 @@ int64_t zran_read(zran_index_t *index,
              total_read,
              ftell(index->fd));
 
-    free(input);
     free(discard);
+
+    if (index->readbuf != NULL) {
+        free(index->readbuf);
+        index->readbuf        = NULL;
+        index->readbuf_offset = 0;
+    }
+    
     return total_read;
 
 
 not_covered_by_index:
-
-    if (input   != NULL) free(input);
-    if (discard != NULL) free(discard);
-    
-    inflateEnd(&strm);
     return -1;
 
 fail:
 
-    if (input   != NULL) free(input);
-    if (discard != NULL) free(discard);
-    
-    inflateEnd(&strm);
+    if (discard != NULL)
+        free(discard);
+
+    if (index->readbuf != NULL) {
+        free(index->readbuf);
+        index->readbuf        = NULL;
+        index->readbuf_offset = 0;
+    } 
     return -2;
 }

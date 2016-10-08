@@ -32,7 +32,8 @@ enum {
   
 
 /* 
- * Struct representing the index.
+ * Struct representing the index. None of the fields in this struct 
+ * should ever need to be accessed or modified directly.
  */
 struct _zran_index {
 
@@ -100,6 +101,29 @@ struct _zran_index {
      * Flags passed to zran_init
      */
     uint16_t      flags;
+
+    /* 
+     * All of the fields after this point are used 
+     * by the internal _zran_inflate function.
+     */
+
+    /*
+     * Refernece to a file input 
+     * buffer of size readbuf_size.
+     */
+    uint8_t      *readbuf;
+
+    /*
+     * An offset into readbuf.
+     */
+    uint32_t      readbuf_offset;
+
+    /* 
+     * Current offsets into the uncompressed and 
+     * compressed data streams.
+     */
+    uint64_t      inflate_cmp_offset;
+    uint64_t      inflate_uncmp_offset;
 };
 
 

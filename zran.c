@@ -264,7 +264,44 @@ uint32_t ZRAN_INFLATE_CLEAR_READBUF_OFFSETS = 64;
  * Z_BLOCK/Z_STREAM_END is reached.
  *
  * This is a complicated function which implements the core decompression
- * routine, and is used by both _zran_expand_index, and zran_read.
+ * routine, and is used by both _zran_expand_index, and zran_read. It reads
+ * compressed data from the file, starting from the specified compressed
+ * offset, inflates (a.k.a. decompresses) it, and copies the decompressed
+ * data to the provided output buffer.
+ *
+ * Specifically, this function does the following:
+ *
+ *   1. Figures out the starting offsets into the compressed/uncompressed
+ *      streams. If the ZRAN_INFLATE_USE_OFFSET flag is active, the index
+ *      point preceeding the specified offset is used as the starting point.
+ *      If there is no such point, ZRAN_INFLATE_NOT_COVERED is returned.  If
+ *      ZRAN_INFLATE_USE_OFFSET is not active, index->inflate_cmp_offset and
+ *      index->inflate_uncmp_offset are used as the starting point.
+ *   
+ * 
+ *   2. Initialise the z_stream struct (if 
+ *      ZRAN_INFLATE_INIT_Z_STREAM is active)
+ *
+ *   3. Create a read buffer (if 
+ *      ZRAN_INFLATE_INIT_READBUF is active)
+ *
+ *   4. Read some compressed data from the 
+ *      file into the read buffer (if needed)
+ *
+ *   5. Pass that data to the zlib inflate 
+ *      function.
+ *
+ *   6. Repeat steps 4 and 5 until:
+ *
+ *       - The requested number of bytes have 
+ *         been read, 
+ *
+ *       - The output buffer is full
+ * 
+ *       - End of file is reached
+ *
+ *       - ZRAN_INFLATE_STOP_AT_BLOCK is active,
+ *         and a block is reached
  *
  * 
  *
@@ -1053,10 +1090,9 @@ int _zran_find_next_stream(zran_index_t *index, z_stream *stream) {
     if (inflateEnd(stream) != Z_OK)
         goto fail;
 
-    stream->zalloc    = Z_NULL;
-    stream->zfree     = Z_NULL;
-    stream->opaque    = Z_NULL;
-    stream->avail_out = 0;
+    stream->zalloc = Z_NULL;
+    stream->zfree  = Z_NULL;
+    stream->opaque = Z_NULL;
 
     if (inflateInit2(stream, index->log_window_size + 32) != Z_OK)
         goto fail;
@@ -1122,6 +1158,9 @@ static int _zran_inflate(zran_index_t *index,
         goto fail;
     }
 
+    /*
+     * It begins...
+     */
     zran_log("_zran_inflate(%llu, block=%u, use_offset=%u, init_stream=%u,\n"
              "              free_stream=%u, init_readbuf=%u, free_readbuf=%u,\n"
              "              clear_offsets=%u, nbytes=%u)\n",
@@ -1134,21 +1173,6 @@ static int _zran_inflate(zran_index_t *index,
              inflate_free_readbuf(         flags),
              inflate_clear_readbuf_offsets(flags),
              len);
-
-    /*
-     * It begins...
-     *
-     *   1. Figure out the starting offsets into 
-     *      the compressed/uncompressed streams
-     * 
-     *   2. Initialise the z_stream struct (if 
-     *      ZRAN_INFLATE_INIT_Z_STREAM is active)
-     *
-     *   3. Create a read buffer (if 
-     *      ZRAN_INFLATE_INIT_READBUF is active)
-     *
-     *   4. 
-     */
 
     /*
      * The compressed/uncompressed offsets are initialised in
@@ -1407,6 +1431,15 @@ static int _zran_inflate(zran_index_t *index,
             /* 
              * If z_ret is not Z_STREAM_END or 
              * Z_OK, something has gone wrong.
+             *
+             * If the file comprises a sequence of 
+             * concatenated gzip streams, we will 
+             * encounter Z_STREAM_END before the end 
+             * of the file (where one stream ends and 
+             * the other begins). 
+             *
+             * If at a new stream, we re-initialise
+             * inflation on the next loop iteration.
              */
             if (z_ret != Z_OK && z_ret != Z_STREAM_END) {
                 zran_log("zlib inflate failed (code: %i, msg: %s)\n",
@@ -1415,36 +1448,22 @@ static int _zran_inflate(zran_index_t *index,
             }
             
             /*
-             * End of block or stream?
-             * 
-             * If the file comprises a sequence of 
-             * concatenated gzip streams, we will 
-             * encounter Z_STREAM_END before the end 
-             * of the file (where one stream ends and 
-             * the other begins). 
+             * End of a block? If INFLATE_STOP_AT_BLOCK 
+             * is active, we want to stop at a compression
+             * block boundary.
              *
              * If we used Z_BLOCK above, and inflate 
              * encountered a block boundary, it indicates
              * this in the the strm->data_type field.
-             *
-             * If either of these things occur, and 
-             * ZRAN_INFLATE_STOP_AT_BLOCK is active,
-             * we want to stop.
-             *
-             * If at a new stream, we re-initialise
-             * inflation on the next loop iteration.
              */
-            if (z_ret == Z_STREAM_END ||
+            if (inflate_stop_at_block(flags) && 
                 ((strm->data_type & 128) && !(strm->data_type & 64))) {
 
-                if (inflate_stop_at_block(flags)) {
+                zran_log("At block or stream boundary, "
+                         "stopping inflation\n");
                     
-                    zran_log("At block or stream boundary, "
-                             "stopping inflation\n");
-                    
-                    return_val = ZRAN_INFLATE_BLOCK_BOUNDARY;
-                    break;
-                }
+                return_val = ZRAN_INFLATE_BLOCK_BOUNDARY;
+                break;
             }
 
             /*

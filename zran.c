@@ -227,9 +227,12 @@ static int _zran_find_next_stream(
 
 
 /* _zran_inflate return codes */
-int ZRAN_INFLATE_ERROR          = -3;
-int ZRAN_INFLATE_NOT_COVERED    = -2;
-int ZRAN_INFLATE_BLOCK_BOUNDARY = -1;
+int ZRAN_INFLATE_ERROR          = -5;
+int ZRAN_INFLATE_NOT_COVERED    = -4;
+int ZRAN_INFLATE_OUTPUT_FULL    = -3;
+int ZRAN_INFLATE_BLOCK_BOUNDARY = -2;
+int ZRAN_INFLATE_EOF            = -1;
+int ZRAN_INFLATE_OK             = 0;
 
 /* 
  * _zran_inflate input flags. 
@@ -276,7 +279,9 @@ int ZRAN_INFLATE_STOP_AT_BLOCK = 32;
  *
  * Return codes:
  *   - ZRAN_INFLATE_NOT_COVERED
+ *   - ZRAN_INFLATE_OUTPUT_FULL
  *   - ZRAN_INFLATE_BLOCK_BOUNDARY
+ *   - ZRAN_INFLATE_EOF
  *   - ZRAN_INFLATE_ERROR
  */
 static int _zran_inflate(
@@ -1203,6 +1208,7 @@ static int _zran_inflate(zran_index_t *index,
      */
     if (inflate_init_read_buf(flags)) {
         index->readbuf_offset = 0;
+        index->readbuf_end    = 0;
         index->readbuf        = calloc(1, index->readbuf_size);
         if (index->readbuf == NULL)
             goto fail;
@@ -1237,8 +1243,10 @@ static int _zran_inflate(zran_index_t *index,
         /* We need to read in more data */
         if (strm->avail_in == 0) {
 
-            if (feof(index->fd))
+            if (feof(index->fd)) {
+                return_val = ZRAN_INFLATE_EOF;
                 break;
+            }
             
             /* Read a block of compressed data */
             zran_log("Reading from file %llu [ == %llu?]\n",
@@ -1356,7 +1364,14 @@ static int _zran_inflate(zran_index_t *index,
              * was actually consumed/decompressed.
              */
             cmp_offset   -= strm->avail_in;
-            uncmp_offset -= strm->avail_out; 
+            uncmp_offset -= strm->avail_out;
+
+            /* End of file */
+            if (feof(index->fd) && strm->avail_in <= 8) {
+                zran_log("End of file, stopping inflation\n");
+                return_val = ZRAN_INFLATE_EOF;
+                break;
+            }
 
             /*
              * If the file comprises a sequence of 
@@ -1383,11 +1398,6 @@ static int _zran_inflate(zran_index_t *index,
             if (z_ret == Z_STREAM_END ||
                 ((strm->data_type & 128) && !(strm->data_type & 64))) {
 
-                if (feof(index->fd) && strm->avail_in <= 8) {
-                    zran_log("End of file, stopping inflation\n");
-                    break;
-                }
-
                 /* 
                  * TODO  I think you can simplify the logic 
                  *       here (combine it with the z_ret == 
@@ -1401,8 +1411,6 @@ static int _zran_inflate(zran_index_t *index,
                     return_val = ZRAN_INFLATE_BLOCK_BOUNDARY;
                     break;
                 }
-
-                zran_log("Z_STREAM_END but not stopping or eof (dt: %u)\n", strm->data_type);
             }
 
             /* 
@@ -1410,6 +1418,7 @@ static int _zran_inflate(zran_index_t *index,
              */
             else if (z_ret == Z_BUF_ERROR) {
                 zran_log("Output buffer full - stopping inflation\n");
+                return_val = ZRAN_INFLATE_OUTPUT_FULL;
                 break;
             }
 
@@ -1421,6 +1430,7 @@ static int _zran_inflate(zran_index_t *index,
             
             if (strm->avail_out == 0) {
                 zran_log("Output buffer full - stopping inflation\n");
+                return_val = ZRAN_INFLATE_OUTPUT_FULL;
                 break;
             }
 
@@ -1431,6 +1441,9 @@ static int _zran_inflate(zran_index_t *index,
              */
             if (inflate_stop_at_block(flags) && strm->avail_in > 0)
                 return_val = ZRAN_INFLATE_BLOCK_BOUNDARY;
+
+            if (return_val != 0)
+                break;
         }
 
         /*
@@ -1439,13 +1452,8 @@ static int _zran_inflate(zran_index_t *index,
          * to non-0, it means we've found a 
          * block.
          */
-        if (return_val != 0) {
+        if (return_val != 0)
             break;
-        }
-
-        if (feof(index->fd) && strm->avail_in <= 8) {
-            break;
-        }
     }
 
     /*
@@ -1720,17 +1728,14 @@ int _zran_expand_index(zran_index_t *index, uint64_t until)
          * filled, or eof been reached?
          * 
          */
-        if (z_ret == 0) {
-
-            if (feof(index->fd) && strm.avail_in <= 8) break;
-            else                                       continue;
-        }
+        if      (z_ret == ZRAN_INFLATE_OUTPUT_FULL) continue;
+        else if (z_ret == ZRAN_INFLATE_EOF)         break;
 
         /* 
          * If z_ret != ZRAN_INFLATE_BLOCK_BOUNDARY, 
          * something has gone wrong.
          */
-        if (z_ret != ZRAN_INFLATE_BLOCK_BOUNDARY) {
+        else if (z_ret != ZRAN_INFLATE_BLOCK_BOUNDARY) {
             zran_log("_zran_inflate did not find a block boundary (ret=%i)!\n",
                      z_ret);
             goto fail;
@@ -1978,7 +1983,7 @@ int64_t zran_read(zran_index_t *index,
     first_inflate   = 1;
     total_discarded = 0;
     
-    while (!feof(index->fd) && uncmp_offset < index->uncmp_seek_offset) {
+    while (uncmp_offset < index->uncmp_seek_offset) {
 
         if (first_inflate) {
             first_inflate = 0;
@@ -2015,14 +2020,18 @@ int64_t zran_read(zran_index_t *index,
          * return code means that something has
          * gone wrong.
          */ 
-        if (_zran_inflate(index,
-                          &strm,
-                          cmp_offset,
-                          inflate_flags,
-                          &bytes_consumed,
-                          &bytes_output,
-                          to_discard,
-                          discard) != 0)
+        ret = _zran_inflate(index,
+                            &strm,
+                            cmp_offset,
+                            inflate_flags,
+                            &bytes_consumed,
+                            &bytes_output,
+                            to_discard,
+                            discard);
+
+        if (ret != ZRAN_INFLATE_OUTPUT_FULL &&
+            ret != ZRAN_INFLATE_EOF         &&
+            ret != ZRAN_INFLATE_OK)
             goto fail;
 
         cmp_offset      += bytes_consumed;
@@ -2049,7 +2058,7 @@ int64_t zran_read(zran_index_t *index,
      * from the uncompressed seek location. 
      */
     total_read = 0;
-    while (!feof(index->fd) && total_read < len) {
+    while (total_read < len) {
 
         if (first_inflate) {
             first_inflate = 0;
@@ -2061,19 +2070,24 @@ int64_t zran_read(zran_index_t *index,
             inflate_flags = 0;
         } 
 
-        if (_zran_inflate(index,
-                          &strm,
-                          cmp_offset,
-                          inflate_flags,
-                          &bytes_consumed,
-                          &bytes_output,
-                          len,
-                          buf) != 0)
-            goto fail;
+        ret =_zran_inflate(index,
+                           &strm,
+                           cmp_offset,
+                           inflate_flags,
+                           &bytes_consumed,
+                           &bytes_output,
+                           len,
+                           buf);
 
         cmp_offset   += bytes_consumed;
         uncmp_offset += bytes_output;
         total_read   += bytes_output;
+
+        if (ret == ZRAN_INFLATE_OUTPUT_FULL ||
+            ret == ZRAN_INFLATE_EOF)
+            break;
+        else if (ret != ZRAN_INFLATE_OK)
+            goto fail;
 
         zran_log("Read %u bytes (%llu / %llu)\n",
                  bytes_output,

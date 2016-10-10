@@ -238,20 +238,25 @@ int ZRAN_INFLATE_OK             = 0;
  * _zran_inflate input flags. 
  * Bit position, as a power of 2 
  */
-int ZRAN_INFLATE_INIT_Z_STREAM = 1;
-int ZRAN_INFLATE_FREE_Z_STREAM = 2;
-int ZRAN_INFLATE_INIT_READ_BUF = 4;
-int ZRAN_INFLATE_FREE_READ_BUF = 8;
-int ZRAN_INFLATE_USE_OFFSET    = 16;
-int ZRAN_INFLATE_STOP_AT_BLOCK = 32;
+uint32_t ZRAN_INFLATE_INIT_Z_STREAM         = 1;
+uint32_t ZRAN_INFLATE_FREE_Z_STREAM         = 2;
+uint32_t ZRAN_INFLATE_INIT_READBUF          = 4;
+uint32_t ZRAN_INFLATE_FREE_READBUF          = 8;
+uint32_t ZRAN_INFLATE_USE_OFFSET            = 16;
+uint32_t ZRAN_INFLATE_STOP_AT_BLOCK         = 32;
+uint32_t ZRAN_INFLATE_CLEAR_READBUF_OFFSETS = 64;
+
 
 /* Macros used by _zran_inflate for testing flags. */
-#define inflate_stop_at_block(flags) ((flags & ZRAN_INFLATE_STOP_AT_BLOCK) > 0)
-#define inflate_use_offset(   flags) ((flags & ZRAN_INFLATE_USE_OFFSET)    > 0)
 #define inflate_init_stream(  flags) ((flags & ZRAN_INFLATE_INIT_Z_STREAM) > 0)
 #define inflate_free_stream(  flags) ((flags & ZRAN_INFLATE_FREE_Z_STREAM) > 0)
-#define inflate_init_read_buf(flags) ((flags & ZRAN_INFLATE_INIT_READ_BUF) > 0)
-#define inflate_free_read_buf(flags) ((flags & ZRAN_INFLATE_FREE_READ_BUF) > 0)
+#define inflate_init_readbuf( flags) ((flags & ZRAN_INFLATE_INIT_READBUF)  > 0)
+#define inflate_free_readbuf( flags) ((flags & ZRAN_INFLATE_FREE_READBUF)  > 0)
+#define inflate_use_offset(   flags) ((flags & ZRAN_INFLATE_USE_OFFSET)    > 0)
+#define inflate_stop_at_block(flags) ((flags & ZRAN_INFLATE_STOP_AT_BLOCK) > 0)
+#define inflate_clear_readbuf_offsets(flags) \
+    ((flags & ZRAN_INFLATE_CLEAR_READBUF_OFFSETS) > 0)
+ 
 
 /*
  * TODO Make this documentation reflect reality
@@ -272,10 +277,11 @@ int ZRAN_INFLATE_STOP_AT_BLOCK = 32;
  * Flags:
  *   - ZRAN_INFLATE_INIT_Z_STREAM
  *   - ZRAN_INFLATE_FREE_Z_STREAM
- *   - ZRAN_INFLATE_INIT_READ_BUF
- *   - ZRAN_INFLATE_FREE_READ_BUF
+ *   - ZRAN_INFLATE_INIT_READBUF
+ *   - ZRAN_INFLATE_FREE_READBUF
  *   - ZRAN_INFLATE_USE_OFFSET
  *   - ZRAN_INFLATE_STOP_AT_BLOCK
+ *   - ZRAN_INFLATE_CLEAR_READBUF_OFFSETS
  *
  * Return codes:
  *   - ZRAN_INFLATE_NOT_COVERED
@@ -1086,6 +1092,9 @@ static int _zran_inflate(zran_index_t *index,
     uint64_t       cmp_offset;
     uint64_t       uncmp_offset;
 
+    uint32_t       _total_consumed = 0;
+    uint32_t       _total_output   = 0;
+
     /* 
      * Index point to start from 
      * (if ZRAN_INFLATE_USE_OFFSET 
@@ -1097,15 +1106,16 @@ static int _zran_inflate(zran_index_t *index,
         return 0;
 
     zran_log("_zran_inflate(%llu, block=%u, use_offset=%u, init_stream=%u,\n"
-             "              free_stream=%u, init_readbuf=%u, free_readbuf=%u\n"
-             "              nbytes=%u)\n",
+             "              free_stream=%u, init_readbuf=%u, free_readbuf=%u,\n"
+             "              clear_offsets=%u, nbytes=%u)\n",
              offset,
-             inflate_stop_at_block(flags),
-             inflate_use_offset(   flags),
-             inflate_init_stream(  flags),
-             inflate_free_stream(  flags),
-             inflate_init_read_buf(flags),
-             inflate_free_read_buf(flags), 
+             inflate_stop_at_block(        flags),
+             inflate_use_offset(           flags),
+             inflate_init_stream(          flags),
+             inflate_free_stream(          flags),
+             inflate_init_readbuf(         flags),
+             inflate_free_readbuf(         flags),
+             inflate_clear_readbuf_offsets(flags),
              len);
 
     /*
@@ -1202,16 +1212,19 @@ static int _zran_inflate(zran_index_t *index,
     }
 
     /*
-     * If ZRAN_INFLATE_INIT_READ_BUF, 
+     * If ZRAN_INFLATE_INIT_READBUF, 
      * allocate memory for reading 
      * compressed data from the file
      */
-    if (inflate_init_read_buf(flags)) {
-        index->readbuf_offset = 0;
-        index->readbuf_end    = 0;
-        index->readbuf        = calloc(1, index->readbuf_size);
+    if (inflate_init_readbuf(flags)) {
+        index->readbuf = calloc(1, index->readbuf_size);
         if (index->readbuf == NULL)
             goto fail;
+    }
+
+    if (inflate_clear_readbuf_offsets(flags)) {
+        index->readbuf_offset = 0;
+        index->readbuf_end    = 0;
     }
 
     /*
@@ -1317,7 +1330,8 @@ static int _zran_inflate(zran_index_t *index,
                  * bytes it skipped over before finding 
                  * it.
                  */
-                total_consumed += z_ret;
+                cmp_offset      += z_ret;
+                _total_consumed += z_ret;
             }
 
             /* 
@@ -1325,8 +1339,10 @@ static int _zran_inflate(zran_index_t *index,
              * we will adjust them after the 
              * inflate call.
              */
-            cmp_offset   += strm->avail_in;
-            uncmp_offset += strm->avail_out;
+            cmp_offset      += strm->avail_in;
+            uncmp_offset    += strm->avail_out;
+            _total_consumed += strm->avail_in;
+            _total_output   += strm->avail_out;
 
             zran_log("Before inflate - avail_in=%u, avail_out=%u\n",
                      strm->avail_in,
@@ -1363,8 +1379,10 @@ static int _zran_inflate(zran_index_t *index,
              * Adjust our offsets according to what
              * was actually consumed/decompressed.
              */
-            cmp_offset   -= strm->avail_in;
-            uncmp_offset -= strm->avail_out;
+            cmp_offset      -= strm->avail_in;
+            uncmp_offset    -= strm->avail_out;
+            _total_consumed -= strm->avail_in;
+            _total_output   -= strm->avail_out;
 
             /* End of file */
             if (feof(index->fd) && strm->avail_in <= 8) {
@@ -1372,6 +1390,16 @@ static int _zran_inflate(zran_index_t *index,
                 return_val = ZRAN_INFLATE_EOF;
                 break;
             }
+
+            /* 
+             * Z_BUF_ERROR indicates that the output buffer 
+             * is full; we clobber it though, as it makes the 
+             * code below a bit easier (and anyway, we can 
+             * tell if the output buffer is full by checking 
+             * strm->avail_out).
+             */
+            if (z_ret == Z_BUF_ERROR)
+                z_ret = Z_OK;
 
             /*
              * If the file comprises a sequence of 
@@ -1413,24 +1441,18 @@ static int _zran_inflate(zran_index_t *index,
                 }
             }
 
-            /* 
-             * No room left to store decompressed data
-             */
-            else if (z_ret == Z_BUF_ERROR) {
-                zran_log("Output buffer full - stopping inflation\n");
-                return_val = ZRAN_INFLATE_OUTPUT_FULL;
-                break;
-            }
-
             else if (z_ret != Z_OK) {
                 zran_log("inflate failed (code: %i, msg: %s)\n",
                          z_ret, strm->msg);
                 goto fail;
             }
-            
+
             if (strm->avail_out == 0) {
+
                 zran_log("Output buffer full - stopping inflation\n");
-                return_val = ZRAN_INFLATE_OUTPUT_FULL;
+
+                if (inflate_stop_at_block(flags) || _total_output < len) 
+                    return_val = ZRAN_INFLATE_OUTPUT_FULL;
                 break;
             }
 
@@ -1457,14 +1479,15 @@ static int _zran_inflate(zran_index_t *index,
     }
 
     /*
-     * If ZRAN_INFLATE_MANAGE_Z_STREAM is 
+     * If ZRAN_INFLATE_FREE_READBUF is 
      * active, clear input buffer memory.
      */
 
-    if (inflate_free_read_buf(flags)) {
+    if (inflate_free_readbuf(flags)) {
         free(index->readbuf);
         index->readbuf        = NULL;
         index->readbuf_offset = 0;
+        index->readbuf_end    = 0;
     }
     /*
      * Otherwise save the readbuf 
@@ -1487,17 +1510,8 @@ static int _zran_inflate(zran_index_t *index,
      * Update the total number of 
      * bytes that were consumed/read
      */
-    if (inflate_use_offset(flags)) {
-        if (start == NULL) *total_consumed = cmp_offset;
-        else               *total_consumed = cmp_offset - start->cmp_offset;
-
-        if (start == NULL) *total_output = uncmp_offset;
-        else               *total_output = uncmp_offset - start->uncmp_offset;
-    }
-    else {
-        *total_consumed = cmp_offset   - index->inflate_cmp_offset;
-        *total_output   = uncmp_offset - index->inflate_uncmp_offset;
-    }
+    *total_consumed = _total_consumed;
+    *total_output   = _total_output;
 
     /*
      * Update the compressed/uncompressed 
@@ -1520,6 +1534,7 @@ fail:
         free(index->readbuf);
         index->readbuf        = NULL;
         index->readbuf_offset = 0;
+        index->readbuf_end    = 0;
     }
     
     return ZRAN_INFLATE_ERROR;
@@ -1687,9 +1702,10 @@ int _zran_expand_index(zran_index_t *index, uint64_t until)
          */
         if (first_inflate) {
             first_inflate = 0;
-            inflate_flags = (ZRAN_INFLATE_INIT_Z_STREAM |
-                             ZRAN_INFLATE_INIT_READ_BUF |
-                             ZRAN_INFLATE_USE_OFFSET    | 
+            inflate_flags = (ZRAN_INFLATE_INIT_Z_STREAM         |
+                             ZRAN_INFLATE_INIT_READBUF          |
+                             ZRAN_INFLATE_USE_OFFSET            |
+                             ZRAN_INFLATE_CLEAR_READBUF_OFFSETS |
                              ZRAN_INFLATE_STOP_AT_BLOCK);
         }
 
@@ -1767,6 +1783,25 @@ int _zran_expand_index(zran_index_t *index, uint64_t until)
         }
     }
 
+    /* 
+     * A final call to _zran_inflate,  
+     * to clean up memory
+     */
+    z_ret = _zran_inflate(index,
+                          &strm,
+                          0,
+                          (ZRAN_INFLATE_CLEAR_READBUF_OFFSETS |
+                           ZRAN_INFLATE_FREE_Z_STREAM         |
+                           ZRAN_INFLATE_FREE_READBUF),
+                          &bytes_consumed,
+                          &bytes_output,
+                          1,
+                          data);
+
+    if (z_ret != ZRAN_INFLATE_OK && z_ret != ZRAN_INFLATE_EOF) {
+        goto fail;
+    }
+
     /*
      * The index may have over-allocated 
      * space for storing index points, so 
@@ -1776,32 +1811,13 @@ int _zran_expand_index(zran_index_t *index, uint64_t until)
         goto fail;
     }
 
-    /* 
-     * Clear the z_stream struct 
-     * and file buffer.
-     */
-    if (inflateEnd(&strm) != Z_OK) {
-        goto fail;
-    }
 
-    if (index->readbuf != NULL) {
-        free(index->readbuf);
-        index->readbuf        = NULL;
-        index->readbuf_offset = 0;
-    } 
-    
     free(data);
     return 0;
 
 fail:
     if (data != NULL)
         free(data);
-
-    if (index->readbuf != NULL) {
-        free(index->readbuf);
-        index->readbuf        = NULL;
-        index->readbuf_offset = 0;
-    }
     
     return -1;
 };
@@ -1987,8 +2003,9 @@ int64_t zran_read(zran_index_t *index,
 
         if (first_inflate) {
             first_inflate = 0;
-            inflate_flags = (ZRAN_INFLATE_INIT_Z_STREAM |
-                             ZRAN_INFLATE_INIT_READ_BUF |
+            inflate_flags = (ZRAN_INFLATE_INIT_Z_STREAM         |
+                             ZRAN_INFLATE_INIT_READBUF          |
+                             ZRAN_INFLATE_CLEAR_READBUF_OFFSETS |
                              ZRAN_INFLATE_USE_OFFSET);
         }
         else {
@@ -2062,8 +2079,9 @@ int64_t zran_read(zran_index_t *index,
 
         if (first_inflate) {
             first_inflate = 0;
-            inflate_flags = (ZRAN_INFLATE_INIT_Z_STREAM |
-                             ZRAN_INFLATE_INIT_READ_BUF |
+            inflate_flags = (ZRAN_INFLATE_INIT_Z_STREAM         |
+                             ZRAN_INFLATE_INIT_READBUF          |
+                             ZRAN_INFLATE_CLEAR_READBUF_OFFSETS |
                              ZRAN_INFLATE_USE_OFFSET);
         }
         else {
@@ -2096,6 +2114,25 @@ int64_t zran_read(zran_index_t *index,
     }
 
     /* 
+     * A final call to _zran_inflate,  
+     * to clean up memory
+     */
+    ret = _zran_inflate(index,
+                        &strm,
+                        0,
+                        (ZRAN_INFLATE_CLEAR_READBUF_OFFSETS |
+                         ZRAN_INFLATE_FREE_Z_STREAM         |
+                         ZRAN_INFLATE_FREE_READBUF),
+                        &bytes_consumed,
+                        &bytes_output,
+                        1,
+                        discard);
+
+    if (ret != ZRAN_INFLATE_OK && ret != ZRAN_INFLATE_EOF) {
+        goto fail;
+    }
+
+    /* 
      * Update the current uncompressed 
      * seek position.
      */
@@ -2106,15 +2143,8 @@ int64_t zran_read(zran_index_t *index,
              ftell(index->fd));
 
     free(discard);
-
-    if (index->readbuf != NULL) {
-        free(index->readbuf);
-        index->readbuf        = NULL;
-        index->readbuf_offset = 0;
-    }
     
     return total_read;
-
 
 not_covered_by_index:
     return -1;
@@ -2124,10 +2154,5 @@ fail:
     if (discard != NULL)
         free(discard);
 
-    if (index->readbuf != NULL) {
-        free(index->readbuf);
-        index->readbuf        = NULL;
-        index->readbuf_offset = 0;
-    } 
     return -2;
 }

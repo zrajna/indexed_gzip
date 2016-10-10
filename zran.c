@@ -783,16 +783,29 @@ int _zran_add_point(zran_index_t  *index,
                     uint32_t       data_size,
                     uint8_t       *data) {
 
-    zran_log("_zran_add_point(%i, c=%lld + %i, u=%lld)\n",
+    zran_log("_zran_add_point(%i, c=%lld + %i, u=%lld, data=%u / %u)\n",
              index->npoints,
              cmp_offset,
              bits > 0,
-             uncmp_offset);
+             uncmp_offset,
+             data_offset,
+             data_size);
+    
+    #ifdef ZRAN_VERBOSE
+    int doff;
+    if (data_offset >= index->window_size) doff = data_offset - index->window_size;
+    else                                   doff = data_size = (index->window_size - data_offset);
+    
+    if (data != NULL)
+        zran_log("Window data: [%02x %02x %02x %02x ...]\n",
+                 data[(data_offset - index->window_size + 0) % data_size],
+                 data[(data_offset - index->window_size + 1) % data_size],
+                 data[(data_offset - index->window_size + 2) % data_size],
+                 data[(data_offset - index->window_size + 3) % data_size]);
+    #endif
 
     uint8_t      *point_data = NULL;
     zran_point_t *next       = NULL;
-    uint32_t      end_bytes;
-    uint32_t      start_bytes;
 
     /* if list is full, make it bigger */
     if (index->npoints == index->size) {
@@ -806,9 +819,14 @@ int _zran_add_point(zran_index_t  *index,
      * uncompressed data (the "window")
      * associated with this point.
      */
-    point_data = calloc(1, index->window_size);
-    if (point_data == NULL)
-        goto fail;
+    if (uncmp_offset > 0) {
+        point_data = calloc(1, index->window_size);
+        if (point_data == NULL)
+            goto fail;
+    }
+    else {
+        point_data = NULL;
+    }
 
     next               = &(index->list[index->npoints]);
     next->bits         = bits;
@@ -825,19 +843,35 @@ int _zran_add_point(zran_index_t  *index,
      * window from the beginning of data. Does 
      * that make sense?
      */
-    end_bytes   = (data_size - data_offset) % data_size;
-    start_bytes = index->window_size - end_bytes;
+    if (uncmp_offset > 0) {
+        if (data_offset >= index->window_size) {
+        
+            memcpy(point_data, data + (data_offset - index->window_size), index->window_size);
 
-    /* 
-     * Sanity check - we should always have 
-     * exactly window_size bytes to copy.
-     */
-    if ((uint64_t)end_bytes + start_bytes != index->window_size) {
-        goto fail;
+            zran_log("Copy %u bytes from %u to %u\n",
+                     index->window_size,
+                     data_offset - index->window_size,
+                     data_offset);
+        }
+        else {
+            memcpy(point_data,
+                   data + (data_size - (index->window_size - data_offset)),
+                   (index->window_size - data_offset));
+        
+            memcpy(point_data + (index->window_size - data_offset),
+                   data,
+                   data_offset);
+
+            zran_log("Copy %u bytes from %u to %u, %u bytes from %u to %u\n",
+                     (index->window_size - data_offset),
+                     (data_size - (index->window_size - data_offset)),
+                     data_size,
+                     data_offset,
+                     0,
+                     data_offset);
+        }
     }
 
-    if (end_bytes   != 0) memcpy(point_data, data + data_offset, end_bytes);
-    if (start_bytes != 0) memcpy(point_data + end_bytes, data, start_bytes);
 
     index->npoints++;
 
@@ -943,10 +977,12 @@ int _zran_init_zlib_inflate(zran_index_t *index,
          * Initialise the inflate stream 
          * with the index point data.
          */
-        if (inflateSetDictionary(stream,
-                                 point->data,
-                                 index->window_size) != Z_OK)
-            goto fail; 
+        if (point->data != NULL) {
+            if (inflateSetDictionary(stream,
+                                     point->data,
+                                     index->window_size) != Z_OK)
+                goto fail;
+        }
     }
 
     return 0;
@@ -1178,8 +1214,11 @@ static int _zran_inflate(zran_index_t *index,
      * on a previous call, and use them.
      */
     else {
-        strm->next_in  = index->readbuf      + index->readbuf_offset;
-        strm->avail_in = index->readbuf_size - index->readbuf_offset;
+        zran_log("Setting avail_in to %u - %u = %u\n",
+                            index->readbuf_end,  index->readbuf_offset,
+                 (uint32_t)(index->readbuf_end - index->readbuf_offset));
+        strm->next_in  = index->readbuf     + index->readbuf_offset;
+        strm->avail_in = index->readbuf_end - index->readbuf_offset;
     }
 
     /*
@@ -1193,24 +1232,33 @@ static int _zran_inflate(zran_index_t *index,
      * Don't finish until we're at the end of
      * the file, or we've read enough bytes.
      */
-    while (!feof(index->fd) && strm->avail_out > 0) {
+    while (strm->avail_out > 0) {
 
         /* We need to read in more data */
         if (strm->avail_in == 0) {
-            
-            zran_log("Reading %u bytes from c=%llu, u=%llu\n",
-                     index->readbuf_size, cmp_offset, uncmp_offset);
 
+            if (feof(index->fd))
+                break;
+            
             /* Read a block of compressed data */
+            zran_log("Reading from file %llu [ == %llu?]\n",
+                     ftello(index->fd),
+                     cmp_offset);
             f_ret = fread(index->readbuf, 1, index->readbuf_size, index->fd);
 
-            /*
-             * If this loop has been re-started, 
-             * we shouldn't be at EOF(hence the 
-             * f_ret == 0 check.
-             */
             if (ferror(index->fd)) goto fail;
             if (f_ret == 0)        goto fail;
+
+            index->readbuf_end = f_ret;
+
+            zran_log("Read %lu bytes from file [c=%llu, u=%llu]\n",
+                     f_ret, cmp_offset, uncmp_offset);
+
+            zran_log("Block read: [%02x %02x %02x %02x ...]\n",
+                     index->readbuf[0],
+                     index->readbuf[1],
+                     index->readbuf[2],
+                     index->readbuf[3]);
 
             /*
              * Tell zlib about the block 
@@ -1276,6 +1324,15 @@ static int _zran_inflate(zran_index_t *index,
                      strm->avail_in,
                      strm->avail_out);
 
+            zran_log("Read buf location: (%u - %u): %u\n",
+                     index->readbuf_end,  strm->avail_in,
+                     index->readbuf_end - strm->avail_in);
+            zran_log("Read buffer: [%02x %02x %02x %02x ...]\n",
+                     strm->next_in[0],
+                     strm->next_in[1],
+                     strm->next_in[2],
+                     strm->next_in[3]);
+
             /*
              * Inflate the block - the decompressed
              * data is output straight to the provided
@@ -1293,12 +1350,6 @@ static int _zran_inflate(zran_index_t *index,
             zran_log("After inflate - avail_in=%u, avail_out=%u\n",
                      strm->avail_in,
                      strm->avail_out); 
-
-            /*
-             * TODO You need to discard output 
-             *      bytes until the requested 
-             *      offset has been reached.
-             */
 
             /*
              * Adjust our offsets according to what
@@ -1340,8 +1391,8 @@ static int _zran_inflate(zran_index_t *index,
                  *       the bottom of the outer loop?
                  */ 
                 if (inflate_stop_at_block(flags)) {
-                    zran_log("End of stream or block, stopping "
-                             "inflation at block boundary\n");
+                    zran_log("End of stream, stopping inflation "
+                             "(treating as block boundary)\n");
                     return_val = ZRAN_INFLATE_BLOCK_BOUNDARY;
                     break;
                 }
@@ -1350,6 +1401,8 @@ static int _zran_inflate(zran_index_t *index,
                     zran_log("End of file, stopping inflation\n");
                     break;
                 }
+
+                zran_log("Z_STREAM_END but not stopping or eof (dt: %u)\n", strm->data_type);
             }
 
             /* 
@@ -1360,22 +1413,24 @@ static int _zran_inflate(zran_index_t *index,
                 break;
             }
 
-            /* 
-             * If we used Z_BLOCK, and inflate 
-             * returned Z_OK, it means we've 
-             * found a block boundary.
-             */
-            else if (z_ret == Z_OK) {
-                
-                if (inflate_stop_at_block(flags))
-                    return_val = ZRAN_INFLATE_BLOCK_BOUNDARY;
-            }
-
             else if (z_ret != Z_OK) {
                 zran_log("inflate failed (code: %i, msg: %s)\n",
                          z_ret, strm->msg);
                 goto fail;
             }
+            
+            if (strm->avail_out == 0) {
+                zran_log("Output buffer full - stopping inflation\n");
+                break;
+            }
+
+            /* 
+             * If we used Z_BLOCK, and inflate 
+             * returned Z_OK, it means we've 
+             * found a block boundary.
+             */
+            if (inflate_stop_at_block(flags) && strm->avail_in > 0)
+                return_val = ZRAN_INFLATE_BLOCK_BOUNDARY;
         }
 
         /*
@@ -1404,7 +1459,7 @@ static int _zran_inflate(zran_index_t *index,
      * offset for next time.
      */
     else {
-        index->readbuf_offset = strm->next_in - index->readbuf;
+        index->readbuf_offset = index->readbuf_end - strm->avail_in;
     }
 
     /*
@@ -1430,7 +1485,7 @@ static int _zran_inflate(zran_index_t *index,
     else {
         *total_consumed = cmp_offset   - index->inflate_cmp_offset;
         *total_output   = uncmp_offset - index->inflate_uncmp_offset;
-    } 
+    }
 
     /*
      * Update the compressed/uncompressed 
@@ -1449,8 +1504,11 @@ static int _zran_inflate(zran_index_t *index,
     return return_val;
 
 fail:
-    if (index->readbuf != NULL)
+    if (index->readbuf != NULL) {
         free(index->readbuf);
+        index->readbuf        = NULL;
+        index->readbuf_offset = 0;
+    }
     
     return ZRAN_INFLATE_ERROR;
 }
@@ -1483,7 +1541,15 @@ int _zran_expand_index(zran_index_t *index, uint64_t until)
      * location (a block/stream boundary) 
      * is found, so we allocate more space.
      */
-    uint32_t       data_size = index->spacing * 4;
+
+    /* Buffer to store uncompressed data */
+    uint8_t       *data = NULL;
+ 
+    uint32_t       data_size   = index->spacing * 4;
+    /* 
+     * Current position in the data buffer.
+     */
+    uint32_t       data_offset = 0;
 
     /*
      * _zran_inflate control flags. We need 
@@ -1523,9 +1589,6 @@ int _zran_expand_index(zran_index_t *index, uint64_t until)
 
     /* Zlib stream struct */
     z_stream       strm;
-
-    /* Buffer to store uncompressed data */
-    uint8_t       *data = NULL;
 
     /*
      * In order to create a new index 
@@ -1601,7 +1664,8 @@ int _zran_expand_index(zran_index_t *index, uint64_t until)
      * distance between deflate boundaries (longer 
      * than the desired index point spacing).
      */
-    while (!feof(index->fd) && (cmp_offset < until || points_created == 0)) {
+    while ((cmp_offset < index->compressed_size) &&
+           (cmp_offset < until || points_created == 0)) {
 
         /* 
          * On the first call to _zran_inflate, we
@@ -1628,8 +1692,11 @@ int _zran_expand_index(zran_index_t *index, uint64_t until)
             inflate_flags = ZRAN_INFLATE_STOP_AT_BLOCK;
         }
 
-        zran_log("Searching for next block boundary (c=%llu, u=%llu)\n",
-                 cmp_offset, uncmp_offset);
+        zran_log("Searching for next block boundary\n"
+                 "       c=%llu, u=%llu,\n"
+                 "       data_offset=%u, data_space=%u\n",
+                 cmp_offset, uncmp_offset, data_offset,
+                 data_size - data_offset);
         
         z_ret = _zran_inflate(index,
                               &strm,
@@ -1637,20 +1704,20 @@ int _zran_expand_index(zran_index_t *index, uint64_t until)
                               inflate_flags,
                               &bytes_consumed,
                               &bytes_output,
-                              data_size,
-                              data);
+                              data_size - data_offset,
+                              data      + data_offset);
 
         cmp_offset   += bytes_consumed;
         uncmp_offset += bytes_output;
-
+        data_offset   = (data_offset + bytes_output) % data_size;
+ 
         /*
          * Has the output buffer been 
          * filled, or eof been reached?
          * 
          */
         if (z_ret == 0) {
-            if (feof(index->fd)) break;
-            else                 continue;
+            continue;
         }
 
         /* 
@@ -1674,22 +1741,11 @@ int _zran_expand_index(zran_index_t *index, uint64_t until)
         if (uncmp_offset == 0 ||
             uncmp_offset - last_uncmp_offset >= index->spacing) {
 
-            /*
-             * We use bytes_output here to store 
-             * the offset, into the data array, 
-             * of the beginning of the window 
-             * data associated with this point.
-             */
-            if (bytes_output < index->window_size)
-                bytes_output = data_size - bytes_output;
-            else 
-                bytes_output = 0;
-
             if (_zran_add_point(index,
                                 strm.data_type & 7,
                                 cmp_offset,
                                 uncmp_offset,
-                                bytes_output,
+                                data_offset,
                                 data_size,
                                 data) != 0) {
                 goto fail;
@@ -1933,6 +1989,8 @@ int64_t zran_read(zran_index_t *index,
          * location - at this point, we will need 
          * to stop discarding bytes, and fulfil 
          * the read request.
+         *
+         * TODO to_discard >= 2**32
          */
         to_discard = index->uncmp_seek_offset - uncmp_offset;
         if (to_discard > discard_size)

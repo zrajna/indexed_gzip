@@ -118,6 +118,11 @@ struct _zran_index {
      */
     uint32_t      readbuf_offset;
 
+    /*
+     * The current end of the readbuf contents.
+     */
+    uint32_t      readbuf_end;
+
     /* 
      * Current offsets into the uncompressed and 
      * compressed data streams.

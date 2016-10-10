@@ -1383,6 +1383,11 @@ static int _zran_inflate(zran_index_t *index,
             if (z_ret == Z_STREAM_END ||
                 ((strm->data_type & 128) && !(strm->data_type & 64))) {
 
+                if (feof(index->fd) && strm->avail_in <= 8) {
+                    zran_log("End of file, stopping inflation\n");
+                    break;
+                }
+
                 /* 
                  * TODO  I think you can simplify the logic 
                  *       here (combine it with the z_ret == 
@@ -1394,11 +1399,6 @@ static int _zran_inflate(zran_index_t *index,
                     zran_log("End of stream, stopping inflation "
                              "(treating as block boundary)\n");
                     return_val = ZRAN_INFLATE_BLOCK_BOUNDARY;
-                    break;
-                }
-
-                if (feof(index->fd)) {
-                    zran_log("End of file, stopping inflation\n");
                     break;
                 }
 
@@ -1440,6 +1440,10 @@ static int _zran_inflate(zran_index_t *index,
          * block.
          */
         if (return_val != 0) {
+            break;
+        }
+
+        if (feof(index->fd) && strm->avail_in <= 8) {
             break;
         }
     }
@@ -1717,7 +1721,9 @@ int _zran_expand_index(zran_index_t *index, uint64_t until)
          * 
          */
         if (z_ret == 0) {
-            continue;
+
+            if (feof(index->fd) && strm.avail_in <= 8) break;
+            else                                       continue;
         }
 
         /* 

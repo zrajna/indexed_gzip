@@ -6,18 +6,21 @@
 
 from __future__ import print_function
 
-import               os
-import os.path    as op
-import itertools  as it
-import subprocess as sp
-import               sys
-import               time
-import               random
-import               hashlib
+import                    os
+import os.path         as op
+import itertools       as it
+import subprocess      as sp
+import multiprocessing as mp
+import                    sys
+import                    time
+import                    random
+import                    hashlib
 
 import numpy as np
 
 from libc.stdio cimport (SEEK_SET, FILE, fdopen)
+
+from libc.string cimport memset
 
 from cpython.mem cimport (PyMem_Malloc,
                           PyMem_Realloc,
@@ -35,9 +38,8 @@ TEST_FILE_SIZE   = TEST_FILE_NELEMS * 8
 TEST_FILE        = 'ctest_zran_testdata.gz'
 
 
-# TODO Run all tests on both concatenated
-#      and single-stream gzip files
-
+# TODO - Run all tests on both concatenated
+#        and single-stream gzip files
 
 def setup_module():
 
@@ -125,6 +127,40 @@ cdef read_element(zran.zran_index_t *index, element, seek=True):
     return val[0]
 
 
+_test_data = None
+
+
+def _check_chunk(args):
+
+    startval, offset, chunksize = args
+
+    s      = startval + offset
+    e      = min(s + chunksize, len(_test_data))
+    nelems = e - s
+
+    valid  = np.arange(s, e, dtype=np.uint64)
+
+    val = np.all(_test_data[offset:offset + nelems] == valid)
+
+    return val
+
+
+def check_data_valid(data, startval):
+
+    global _test_data
+    _test_data = data
+    data = None
+    
+    pool      = mp.Pool()
+    chunksize = 1000000
+
+    offsets = np.arange(0, len(_test_data), chunksize)
+
+    args = [(startval, off, chunksize) for off in offsets]
+
+    return all(pool.map(_check_chunk, args))
+
+
 cdef class ReadBuffer:
     """Wrapper around a chunk of memory.
  
@@ -139,6 +175,8 @@ cdef class ReadBuffer:
         """Allocate ``size`` bytes of memory. """
 
         self.buffer = PyMem_Malloc(size);
+        memset(self.buffer, 0, size);
+        
 
         if not self.buffer:
             raise MemoryError('PyMem_Malloc fail')
@@ -368,8 +406,7 @@ def test_read_all():
     pybuf = <bytes>(<char *>buffer)[:nbytes]
     data  = np.ndarray(TEST_FILE_NELEMS, np.uint64, pybuf)
 
-    for i, val in enumerate(data):
-        assert val == i
+    assert check_data_valid(data, 0)
             
 
 def test_seek_then_read_block():
@@ -403,14 +440,27 @@ def test_seek_then_read_block():
                 
             nbytes = zran.zran_read(&index, buffer, readelems * 8)
 
-            assert nbytes                 == readelems * 8
-            assert zran.zran_tell(&index) == (se + readelems) * 8
+            try:
+                assert nbytes                 == readelems * 8
+                assert zran.zran_tell(&index) == (se + readelems) * 8
+            except:
+                print('seekelem:    {}'.format(se))
+                print('readelems:   {}'.format(readelems))
+                print('nbytes:      {}'.format(nbytes))
+                print('  should be: {}'.format(readelems * 8))
+                print('ftell:       {}'.format(zran.zran_tell(&index)))
+                print('  should be: {}'.format((se + readelems) * 8))
+                raise
 
             pybuf = <bytes>(<char *>buffer)[:nbytes]
             data  = np.ndarray(nbytes / 8, np.uint64, pybuf)
 
             for i, val in enumerate(data, se):
-                assert val == i
+                try:
+                    assert val == i
+                except:
+                    print("{} != {} [{:x} != {:x}]".format(val, i, val, i))
+                    raise
                     
         zran.zran_free(&index)
 
@@ -435,7 +485,12 @@ def test_random_seek_and_read():
         for se in seekelems:
 
             val = read_element(&index, se, True)
-            assert val == se
+
+            try:
+                assert val == se
+            except:
+                print("{} != {} [{:x} != {:x}]".format(val, se, val, se))
+                raise
 
         zran.zran_free(&index) 
 
@@ -459,11 +514,15 @@ def test_read_all_sequential():
                                   131072,
                                   zran.ZRAN_AUTO_BUILD)
 
-
         for se in seekelems:
 
             val = read_element(&index, se, True)
-            assert val == se
+            try:
+                assert val == se
+            except:
+                print("{} != {}".format(val, se))
+                print("{:x} != {:x}".format(val, se))
+                raise
 
         zran.zran_free(&index)
 
@@ -511,3 +570,52 @@ def test_build_then_read():
                 assert val == i
         
         zran.zran_free(&index) 
+
+
+def test_readbuf_spacing_sizes():
+
+    test_file        = 'ctest_zran_spacing_testdata.gz'
+    test_file_nelems = 2**24 + 1
+    test_file_size   = test_file_nelems * 8
+
+    if (test_file_nelems == TEST_FILE_NELEMS):
+        test_file = TEST_FILE
+
+    cdef zran.zran_index_t index
+
+    if not op.exists(test_file):
+        gen_test_data(test_file, test_file_nelems)
+
+    spacings = [262144,  524288,  1048576,
+                2097152, 4194304, 8388608]
+    bufsizes = [16384,   65536,   131072,  262144,
+                524288,  1048575, 1048576, 1048577,
+                2097152, 4194304, 8388608]
+
+    seekelems = np.random.randint(0, test_file_nelems, 2500)
+    seekelems = np.concatenate((spacings, bufsizes, seekelems))
+
+    for spacing, bufsize in it.product(spacings, bufsizes):
+
+        with open(test_file, 'rb') as pyfid:
+
+            cfid = fdopen(pyfid.fileno(), 'rb')
+
+            assert not zran.zran_init(&index,
+                                      cfid,
+                                      spacing,
+                                      32768,
+                                      bufsize,
+                                      zran.ZRAN_AUTO_BUILD)
+
+            for se in seekelems:
+
+                val = read_element(&index, se, seek=True)
+
+                assert val == se
+
+            zran.zran_free(&index)
+
+
+    if op.exists(test_file):
+        os.remove(test_file)

@@ -7,9 +7,19 @@
 
 
 import pytest
-pytestmark = pytest.mark.indexed_gzip_test
+
+import numpy as np
 
 from . import ctest_indexed_gzip
+
+
+pytestmark = pytest.mark.indexed_gzip_test
+
+
+def setup_module():
+    seed = np.random.randint(2 ** 32)
+    np.random.seed(seed)
+    print('Seed for random number generator: {}'.format(seed))
 
 
 def test_open_close(             testfile, nelems):         ctest_indexed_gzip.test_open_close(             testfile, nelems)

@@ -5,12 +5,23 @@
 # Author: Paul McCarthy <pauldmccarthy@gmail.com>
 #
 
+from __future__ import print_function
+
 import pytest
+
+import numpy as np
 
 from . import ctest_zran
 
 
 pytestmark = pytest.mark.zran_test
+
+
+def setup_module():
+    seed = np.random.randint(2 ** 32)
+    np.random.seed(seed)
+    print('Seed for random number generator: {}'.format(seed))
+
 
 def test_init(                  testfile):                 ctest_zran.test_init(                  testfile)
 def test_init_file_modes(       testfile):                 ctest_zran.test_init_file_modes(       testfile)

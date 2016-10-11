@@ -12,9 +12,10 @@ env:
   - TEST_SUITE=indexed_gzip_test
   - TEST_PATTERN="not test_readbuf_spacing_sizes and not test_seek_then_read_block"
   - TEST_PATTERN="test_readbuf_spacing_sizes"
-  - TEST_PATTERN="test_seek_then_read_block" 
+  - TEST_PATTERN="test_seek_then_read_block"
+  - NITERS=1000
   - NELEMS=16777216
-  - NELEMS=268435456
+#   - NELEMS=268435456
 
 # TODO This is needed for testing reads greater than 4GB (i.e.
 #      reading >= 2**32 bytes in one go). They need time and
@@ -25,5 +26,5 @@ install: "pip install -r requirements.txt"
 
 script:
   - python setup.py install
-  - travis_wait 30 py.test -v -s -m $TEST_SUITE -k $TEST_PATTERN --nelems $NELEMS
-  - travis_wait 30 py.test -v -s -m $TEST_SUITE -k $TEST_PATTERN --nelems $NELEMS --concat
+  - travis_wait 30 py.test -v -s -m $TEST_SUITE -k $TEST_PATTERN --nelems $NELEMS --niters $NITERS
+  - travis_wait 30 py.test -v -s -m $TEST_SUITE -k $TEST_PATTERN --nelems $NELEMS --niters $NITERS --concat

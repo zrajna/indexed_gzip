@@ -1977,9 +1977,11 @@ int64_t zran_read(zran_index_t *index,
     int ret;
 
     /*
-     * Number of bytes read/output on 
-     * each call to _zran_inflate.
+     * Number of bytes we try to read, and
+     * number of bytes actually read/output 
+     * on each call to _zran_inflate.
      */
+    uint64_t bytes_to_read;
     uint32_t bytes_consumed;
     uint32_t bytes_output;
 
@@ -2102,8 +2104,6 @@ int64_t zran_read(zran_index_t *index,
          * location - at this point, we will need 
          * to stop discarding bytes, and start 
          * fulfilling the read request.
-         *
-         * TODO to_discard >= 2**32
          */
         to_discard = index->uncmp_seek_offset - uncmp_offset;
         if (to_discard > discard_size)
@@ -2161,9 +2161,7 @@ int64_t zran_read(zran_index_t *index,
      * At this point, we are ready to inflate 
      * from the uncompressed seek location. 
      */
-    // 
-    // TODO Support len >= 2**32
-    // 
+
     total_read = 0;
     while (total_read < len) {
 
@@ -2183,24 +2181,45 @@ int64_t zran_read(zran_index_t *index,
         }
         else {
             inflate_flags = 0;
-        } 
+        }
 
-        ret =_zran_inflate(index,
-                           &strm,
-                           cmp_offset,
-                           inflate_flags,
-                           &bytes_consumed,
-                           &bytes_output,
-                           len,
-                           buf);
+        /* 
+         * _zran_inflate only allows us to
+         * read max(uint32_t) at a time. If 
+         * len is greater than this, we need
+         * to split it into multiple calls.
+         */
+        bytes_to_read = len - total_read;
+        if (bytes_to_read > 4294967295) {
+            bytes_to_read = 4294967295;
+        }
+
+        ret = _zran_inflate(index,
+                            &strm,
+                            cmp_offset,
+                            inflate_flags,
+                            &bytes_consumed,
+                            &bytes_output,
+                            bytes_to_read,
+                            buf + total_read);
 
         cmp_offset   += bytes_consumed;
         uncmp_offset += bytes_output;
         total_read   += bytes_output;
 
-        if (ret == ZRAN_INFLATE_OUTPUT_FULL ||
-            ret == ZRAN_INFLATE_EOF)
+        if (ret == ZRAN_INFLATE_EOF)
             break;
+
+        else if (ret == ZRAN_INFLATE_OUTPUT_FULL) {
+
+            /* 
+             * We might be reading 2**32 sized chunks 
+             * of data on each call to _zran_inflate.
+             */
+            if (bytes_to_read == len) {
+                break;
+            }
+        }
         else if (ret != ZRAN_INFLATE_OK)
             goto fail;
 

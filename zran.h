@@ -47,6 +47,12 @@ struct _zran_index {
      * is calculated in zran_init.
      */
     size_t        compressed_size;
+
+    /*
+     * Size of the uncompressed data. This is
+     * only updated when it becomes known.
+     */
+    size_t        uncompressed_size;
     
     /* 
      * Spacing size in bytes, relative to the compressed 

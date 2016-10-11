@@ -422,6 +422,7 @@ int zran_init(zran_index_t *index,
     index->fd                   = fd;
     index->flags                = flags;
     index->compressed_size      = compressed_size;
+    index->uncompressed_size    = 0;
     index->spacing              = spacing;
     index->window_size          = window_size;
     index->log_window_size      = (int)round(log10(window_size) / log10(2));
@@ -1499,6 +1500,17 @@ static int _zran_inflate(zran_index_t *index,
                 zran_log("End of file, stopping inflation\n");
                 
                 return_val = ZRAN_INFLATE_EOF;
+
+                /* 
+                 * We now know how big the
+                 * uncompressed data is.
+                 */
+                if (index->uncompressed_size == 0) {
+
+                    zran_log("Updating uncompressed data "
+                             "size: %llu\n", uncmp_offset);
+                    index->uncompressed_size = uncmp_offset;
+                }
                 break;
             }
 
@@ -1903,6 +1915,15 @@ int zran_seek(zran_index_t  *index,
     if (offset < 0) {
       goto fail;
     }
+
+    /* 
+     * Requested offset is past the end of the 
+     * uncompressed data. The uncompressed_size 
+     * field is updated by _zran_inflate when 
+     * it knows what it is.
+     */
+    if (index->uncompressed_size > 0 && offset >= index->uncompressed_size)
+        offset = index->uncompressed_size - 1;
 
     /*
      * Get the index point that 

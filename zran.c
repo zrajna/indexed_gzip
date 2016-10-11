@@ -1061,7 +1061,7 @@ int _zran_find_next_stream(zran_index_t *index, z_stream *stream) {
     int offset = 0;
     int found  = 0;
     
-    while (stream->avail_in > 2) {
+    while (stream->avail_in >= 2) {
         
         if (stream->next_in[0] == 0x1f &&
             stream->next_in[1] == 0x8b) {

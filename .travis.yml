@@ -11,13 +11,21 @@ python:
   - "3.5"
 install: "pip install -r requirements.txt"
 
-# Split test execution into several steps 
-# (data creation and individual test suites)
-# so each individual step doesn't take too
-# long.
 script:
   - python setup.py install
-  - travis_wait 30 python -c "from tests.test_zran import setup_module; setup_module()"
-  - travis_wait 30 py.test -v -s -m zran_test tests
-  - travis_wait 30 python -c "from tests.test_indexed_gzip import setup_module; setup_module()"
-  - travis_wait 30 py.test -v -s -m indexed_gzip_test tests
+  - travis_wait 20 py.test -v -s -m zran_test         --nelems 16777216
+  - travis_wait 20 py.test -v -s -m zran_test         --nelems 16777216  --concat
+  - travis_wait 20 py.test -v -s -m indexed_gzip_test --nelems 16777216
+  - travis_wait 20 py.test -v -s -m indexed_gzip_test --nelems 16777216  --concat
+  - travis_wait 30 py.test -v -s -m zran_test         --nelems 268435456
+  - travis_wait 30 py.test -v -s -m zran_test         --nelems 268435456 --concat
+  - travis_wait 30 py.test -v -s -m indexed_gzip_test --nelems 268435456
+  - travis_wait 30 py.test -v -s -m indexed_gzip_test --nelems 268435456 --concat
+
+# TODO These are needed for testing reads greater than 4GB (i.e.
+#      reading >= 2**32 bytes in one go). They need time and
+#      > 4GB of RAM. I don't think travis-ci can handle them.
+#  - travis_wait 40 py.test -v -s -m zran_test         --nelems 536871012
+#  - travis_wait 40 py.test -v -s -m zran_test         --nelems 536871012  --concat
+#  - travis_wait 40 py.test -v -s -m indexed_gzip_test --nelems 536871012
+#  - travis_wait 40 py.test -v -s -m indexed_gzip_test --nelems 536871012  --concat 

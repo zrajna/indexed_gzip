@@ -5,27 +5,25 @@ branches:
 language: python
 python:
   - "2.7"
-  - "3.2"
-  - "3.3"
-  - "3.4"
   - "3.5"
+
+env:
+  - TEST_SUITE=zran_test
+  - TEST_SUITE=indexed_gzip_test
+  - TEST_PATTERN="not test_readbuf_spacing_sizes and not test_seek_then_read_block"
+  - TEST_PATTERN="test_readbuf_spacing_sizes"
+  - TEST_PATTERN="test_seek_then_read_block" 
+  - NELEMS=16777216
+  - NELEMS=268435456
+
+# TODO This is needed for testing reads greater than 4GB (i.e.
+#      reading >= 2**32 bytes in one go). They need time and
+#      > 4GB of RAM. I don't think travis-ci can handle them. 
+#  - NELEMS=536871012
+  
 install: "pip install -r requirements.txt"
 
 script:
   - python setup.py install
-  - travis_wait 20 py.test -v -s -m zran_test         --nelems 16777216
-  - travis_wait 20 py.test -v -s -m zran_test         --nelems 16777216  --concat
-  - travis_wait 20 py.test -v -s -m indexed_gzip_test --nelems 16777216
-  - travis_wait 20 py.test -v -s -m indexed_gzip_test --nelems 16777216  --concat
-  - travis_wait 30 py.test -v -s -m zran_test         --nelems 268435456
-  - travis_wait 30 py.test -v -s -m zran_test         --nelems 268435456 --concat
-  - travis_wait 30 py.test -v -s -m indexed_gzip_test --nelems 268435456
-  - travis_wait 30 py.test -v -s -m indexed_gzip_test --nelems 268435456 --concat
-
-# TODO These are needed for testing reads greater than 4GB (i.e.
-#      reading >= 2**32 bytes in one go). They need time and
-#      > 4GB of RAM. I don't think travis-ci can handle them.
-#  - travis_wait 40 py.test -v -s -m zran_test         --nelems 536871012
-#  - travis_wait 40 py.test -v -s -m zran_test         --nelems 536871012  --concat
-#  - travis_wait 40 py.test -v -s -m indexed_gzip_test --nelems 536871012
-#  - travis_wait 40 py.test -v -s -m indexed_gzip_test --nelems 536871012  --concat 
+  - travis_wait 30 py.test -v -s -m $TEST_SUITE -k $TEST_PATTERN --nelems $NELEMS
+  - travis_wait 30 py.test -v -s -m $TEST_SUITE -k $TEST_PATTERN --nelems $NELEMS --concat

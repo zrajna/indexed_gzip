@@ -577,16 +577,9 @@ def test_build_then_read(testfile, nelems):
         zran.zran_free(&index) 
 
 
-def test_readbuf_spacing_sizes(concat, niters):
-
-    test_file        = 'ctest_zran_spacing_testdata.gz'
-    test_file_nelems = 2**24 + 1
-    test_file_size   = test_file_nelems * 8
+def test_readbuf_spacing_sizes(testfile, nelems, niters):
 
     cdef zran.zran_index_t index
-
-    if not op.exists(test_file):
-        gen_test_data(test_file, test_file_nelems, concat)
 
     spacings = [262144,  524288,  1048576,
                 2097152, 4194304, 8388608]
@@ -594,12 +587,12 @@ def test_readbuf_spacing_sizes(concat, niters):
                 524288,  1048575, 1048576, 1048577,
                 2097152, 4194304, 8388608]
 
-    seekelems = np.random.randint(0, test_file_nelems, niters / 2)
+    seekelems = np.random.randint(0, nelems, niters / 2)
     seekelems = np.concatenate((spacings, bufsizes, seekelems))
 
     for i, (spacing, bufsize) in enumerate(it.product(spacings, bufsizes)):
 
-        with open(test_file, 'rb') as pyfid:
+        with open(testfile, 'rb') as pyfid:
 
             cfid = fdopen(pyfid.fileno(), 'rb')
 
@@ -617,7 +610,3 @@ def test_readbuf_spacing_sizes(concat, niters):
                 assert val == se
 
             zran.zran_free(&index)
-
-
-    if op.exists(test_file):
-        os.remove(test_file)

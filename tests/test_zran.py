@@ -23,4 +23,4 @@ def test_seek_then_read_block(  testfile, nelems, niters): ctest_zran.test_seek_
 def test_random_seek_and_read(  testfile, nelems, niters): ctest_zran.test_random_seek_and_read(  testfile, nelems, niters)
 def test_read_all_sequential(   testfile, nelems):         ctest_zran.test_read_all_sequential(   testfile, nelems)
 def test_build_then_read(       testfile, nelems):         ctest_zran.test_build_then_read(       testfile, nelems)
-def test_readbuf_spacing_sizes( concat, niters):           ctest_zran.test_readbuf_spacing_sizes( concat, niters)
+def test_readbuf_spacing_sizes( testfile, nelems, niters): ctest_zran.test_readbuf_spacing_sizes( testfile, nelems, niters)

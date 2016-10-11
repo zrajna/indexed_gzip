@@ -285,9 +285,14 @@ def test_seek_beyond_end(testfile, nelems):
     cdef zran.zran_index_t index
 
     filesize     = nelems * 8
-
-    seek_point   = filesize + 10
     indexSpacing = max(524288, filesize / 1500)
+    seekpoints   = [filesize - 10,
+                    filesize - 2,
+                    filesize - 1,
+                    filesize,
+                    filesize + 1,
+                    filesize + 2,
+                    filesize + 10]
 
     with open(testfile, 'rb') as pyfid:
         cfid = fdopen(pyfid.fileno(), 'rb')
@@ -298,12 +303,14 @@ def test_seek_beyond_end(testfile, nelems):
                                   32768,
                                   131072,
                                   zran.ZRAN_AUTO_BUILD)
-            
-        assert zran.zran_seek(&index, seek_point, SEEK_SET, NULL) == 0
-        
-        zt = zran.zran_tell(&index)
 
-        assert zt == filesize
+        for sp in seekpoints:
+            
+            assert zran.zran_seek(&index, sp, SEEK_SET, NULL) == 0
+        
+            zt = zran.zran_tell(&index)
+
+            assert zt == min(sp, filesize - 1)
 
         zran.zran_free(&index) 
 
@@ -332,8 +339,9 @@ def test_sequential_seek_to_end(testfile, nelems, niters):
             assert zran.zran_seek(&index, sp, SEEK_SET, NULL) == 0
             
             zt = zran.zran_tell(&index)
-        
-            assert zt == sp
+
+            if sp >= filesize: assert zt == sp - 1
+            else:              assert zt == sp 
 
         zran.zran_free(&index) 
 

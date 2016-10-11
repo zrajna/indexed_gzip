@@ -23,30 +23,6 @@ import indexed_gzip as igzip
 
 from . import ctest_zran
 
-# 2**30 values, at 8 bytes each, is 8GB
-# 2**29 values, at 8 bytes each, is 4GB
-# 2**28 values, at 8 bytes each, is 2GB
-# 2**27 values, at 8 bytes each, is 1GB
-TEST_FILE_NELEMS = 2**24 + 1
-TEST_FILE_SIZE   = TEST_FILE_NELEMS * 8
-TEST_FILE        = 'ctest_indexed_gzip_testdata.gz'
-
-
-def setup_module():
-
-    if not op.exists(TEST_FILE):
-        ctest_zran.gen_test_data(TEST_FILE, TEST_FILE_NELEMS)
-
-    seed = np.random.randint(2 ** 32)
-    np.random.seed(seed)
-
-    print('Random seed for tests: {}'.format(seed))
-
-        
-def teardown_module():
-    if op.exists(TEST_FILE):
-        os.remove(TEST_FILE)
-
 
 def read_element(gzf, element, seek=True):
 
@@ -60,12 +36,12 @@ def read_element(gzf, element, seek=True):
     
 
 
-def test_open_close():
+def test_open_close(testfile, nelems):
 
-    f = igzip.IndexedGzipFile(filename=TEST_FILE)
+    f = igzip.IndexedGzipFile(filename=testfile)
 
     try:
-        element = np.random.randint(0, TEST_FILE_NELEMS, 1)
+        element = np.random.randint(0, nelems, 1)
         readval = read_element(f, element)
 
         assert readval == element
@@ -76,23 +52,23 @@ def test_open_close():
     assert f.closed()
 
 
-def test_open_close_ctxmanager():
+def test_open_close_ctxmanager(testfile, nelems):
 
-    with igzip.IndexedGzipFile(filename=TEST_FILE) as f:
+    with igzip.IndexedGzipFile(filename=testfile) as f:
 
-        element = np.random.randint(0, TEST_FILE_NELEMS, 1)
+        element = np.random.randint(0, nelems, 1)
         readval = read_element(f, element)
 
     assert readval == element
     assert f.closed()
 
 
-def test_create_from_open_handle():
+def test_create_from_open_handle(testfile, nelems):
 
-    f   = open(TEST_FILE, 'rb')
+    f   = open(testfile, 'rb')
     gzf = igzip.IndexedGzipFile(fid=f)
 
-    element = np.random.randint(0, TEST_FILE_NELEMS, 1)
+    element = np.random.randint(0, nelems, 1)
     readval = read_element(gzf, element)
 
     gzf.close()
@@ -107,29 +83,27 @@ def test_create_from_open_handle():
         f.close()
 
 
-def test_read_all():
+def test_read_all(testfile, nelems):
 
-    with igzip.IndexedGzipFile(filename=TEST_FILE) as f:
-        data = f.read(TEST_FILE_SIZE)
+    with igzip.IndexedGzipFile(filename=testfile) as f:
+        data = f.read(nelems * 8)
 
-    data = np.ndarray(shape=TEST_FILE_NELEMS, dtype=np.uint64, buffer=data)
+    data = np.ndarray(shape=nelems, dtype=np.uint64, buffer=data)
 
     # Check that every value is valid
-    for i, val in enumerate(data):
-        assert i == val
+    assert ctest_zran.check_data_valid(data, 0)
 
 
-def test_seek_and_read(niters=5000):
+def test_seek_and_read(testfile, nelems, niters):
 
-    with igzip.IndexedGzipFile(filename=TEST_FILE) as f: 
+    with igzip.IndexedGzipFile(filename=testfile) as f: 
         
         # Pick some random elements and make
         # sure their values are all right
-        seekelems = np.random.randint(0, TEST_FILE_NELEMS, niters)
+        seekelems = np.random.randint(0, nelems, niters)
         
         for i, testval in enumerate(seekelems):
 
-            
             readval = read_element(f, testval)
 
             ft = f.tell()

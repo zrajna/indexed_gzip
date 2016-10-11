@@ -29,34 +29,7 @@ from cpython.mem cimport (PyMem_Malloc,
 cimport zran
 
 
-# 2**30 values, at 8 bytes each, is 8GB
-# 2**29 values, at 8 bytes each, is 4GB
-# 2**28 values, at 8 bytes each, is 2GB
-# 2**27 values, at 8 bytes each, is 1GB
-TEST_FILE_NELEMS = 2**24 + 1
-TEST_FILE_SIZE   = TEST_FILE_NELEMS * 8
-TEST_FILE        = 'ctest_zran_testdata.gz'
-
-
-# TODO - Run all tests on both concatenated
-#        and single-stream gzip files
-
-def setup_module():
-
-    if not op.exists(TEST_FILE):
-        gen_test_data(TEST_FILE)
-
-    seed = np.random.randint(2 ** 32)
-    np.random.seed(seed)
-
-
-        
-def teardown_module():
-    if op.exists(TEST_FILE):
-        os.remove(TEST_FILE)
-
-
-def gen_test_data(filename, nelems=TEST_FILE_NELEMS, concat=False):
+def gen_test_data(filename, nelems, concat):
     """Make some data to test with. """
     
     start = time.time()
@@ -127,15 +100,12 @@ cdef read_element(zran.zran_index_t *index, element, seek=True):
     return val[0]
 
 
-_test_data = None
-
-
 def _check_chunk(args):
 
-    startval, offset, chunksize = args
+    startval, endval, offset, chunksize = args
 
     s      = startval + offset
-    e      = min(s + chunksize, len(_test_data))
+    e      = min(s + chunksize, endval)
     nelems = e - s
 
     valid  = np.arange(s, e, dtype=np.uint64)
@@ -145,20 +115,34 @@ def _check_chunk(args):
     return val
 
 
-def check_data_valid(data, startval):
+_test_data = None
+
+
+def check_data_valid(data, startval, endval=None):
 
     global _test_data
-    _test_data = data
-    data = None
     
-    pool      = mp.Pool()
+    _test_data = data
+    data       = None
+
+    if endval is None:
+        endval = len(_test_data)
+
+    pool = mp.Pool()
+
     chunksize = 1000000
 
+    startval = int(startval)
+    endval   = int(endval)
+    
     offsets = np.arange(0, len(_test_data), chunksize)
 
-    args = [(startval, off, chunksize) for off in offsets]
+    args   = [(startval, endval, off, chunksize) for off in offsets]
+    result = all(pool.map(_check_chunk, args))
 
-    return all(pool.map(_check_chunk, args))
+    pool.terminate()
+
+    return result
 
 
 cdef class ReadBuffer:
@@ -198,7 +182,7 @@ cdef class ReadBuffer:
         PyMem_Free(self.buffer)
 
     
-def test_init():
+def test_init(testfile):
     """Tests a bunch of permutations of the parameters to zran_init. """
 
     spacings      = [0, 16384, 32768, 65536, 524288, 1048576, 2097152, 4194304]
@@ -209,7 +193,7 @@ def test_init():
     cdef zran.zran_index_t index
     cdef FILE             *cfid
 
-    with open(TEST_FILE, 'rb') as pyfid:
+    with open(testfile, 'rb') as pyfid:
         
         cfid = fdopen(pyfid.fileno(), 'rb')
 
@@ -236,11 +220,11 @@ def test_init():
             zran.zran_free(&index)
 
 
-def test_init_file_modes():
+def test_init_file_modes(testfile):
 
     modes = ['r', 'r+', 'w', 'w+', 'a', 'a+']
 
-    files = [TEST_FILE, TEST_FILE,
+    files = [testfile, testfile,
              'dummy.gz', 'dummy.gz', 'dummy.gz', 'dummy.gz']
 
     cdef zran.zran_index_t index
@@ -268,14 +252,16 @@ def test_init_file_modes():
             os.remove(filename)
 
 
-def test_seek_to_end():
+def test_seek_to_end(testfile, nelems):
     
     cdef zran.zran_index_t index
 
-    seek_point   = TEST_FILE_SIZE - 1
-    indexSpacing = max(524288, TEST_FILE_SIZE / 1500)
+    filesize = nelems * 8
 
-    with open(TEST_FILE, 'rb') as pyfid:
+    seek_point   = filesize - 1
+    indexSpacing = max(524288, filesize / 1500)
+
+    with open(testfile, 'rb') as pyfid:
         cfid = fdopen(pyfid.fileno(), 'rb')
 
         assert not zran.zran_init(&index,
@@ -294,14 +280,16 @@ def test_seek_to_end():
         zran.zran_free(&index)
 
 
-def test_seek_beyond_end():
+def test_seek_beyond_end(testfile, nelems):
     
     cdef zran.zran_index_t index
 
-    seek_point   = TEST_FILE_SIZE + 10
-    indexSpacing = max(524288, TEST_FILE_SIZE / 1500)
+    filesize     = nelems * 8
 
-    with open(TEST_FILE, 'rb') as pyfid:
+    seek_point   = filesize + 10
+    indexSpacing = max(524288, filesize / 1500)
+
+    with open(testfile, 'rb') as pyfid:
         cfid = fdopen(pyfid.fileno(), 'rb')
 
         assert not zran.zran_init(&index,
@@ -315,19 +303,21 @@ def test_seek_beyond_end():
         
         zt = zran.zran_tell(&index)
 
-        assert zt == TEST_FILE_SIZE
+        assert zt == filesize
 
         zran.zran_free(&index) 
 
         
-def test_sequential_seek_to_end():
+def test_sequential_seek_to_end(testfile, nelems, niters):
     
     cdef zran.zran_index_t index
 
-    seek_points = np.linspace(0, TEST_FILE_SIZE, 5000, dtype=np.uint64)
-    indexSpacing = max(524288, TEST_FILE_SIZE / 2000)
+    filesize   = nelems * 8
 
-    with open(TEST_FILE, 'rb') as pyfid:
+    seek_points = np.linspace(0, filesize, niters, dtype=np.uint64)
+    indexSpacing = max(524288, filesize / 2000)
+
+    with open(testfile, 'rb') as pyfid:
         cfid = fdopen(pyfid.fileno(), 'rb')
 
         assert not zran.zran_init(&index,
@@ -348,14 +338,16 @@ def test_sequential_seek_to_end():
         zran.zran_free(&index) 
 
 
-def test_random_seek():
+def test_random_seek(testfile, nelems, niters):
 
     cdef zran.zran_index_t index
 
-    seekpoints   = [random.randint(0, TEST_FILE_SIZE) for i in range(500)]
-    indexSpacing = max(524288, TEST_FILE_SIZE / 1000)
+    filesize = nelems * 8
 
-    with open(TEST_FILE, 'rb') as pyfid:
+    seekpoints   = [random.randint(0, filesize) for i in range(niters)]
+    indexSpacing = max(524288, filesize / 1000)
+
+    with open(testfile, 'rb') as pyfid:
         cfid = fdopen(pyfid.fileno(), 'rb')
 
         assert not zran.zran_init(&index,
@@ -376,17 +368,18 @@ def test_random_seek():
         zran.zran_free(&index)
 
 
-def test_read_all():
+def test_read_all(testfile, nelems):
 
-    indexSpacing = max(524288, TEST_FILE_SIZE / 1000)
+    filesize = nelems * 8
+    indexSpacing = max(524288, filesize / 1000)
     
     cdef zran.zran_index_t index
     cdef void             *buffer
 
-    buf    = ReadBuffer(TEST_FILE_SIZE) 
+    buf    = ReadBuffer(filesize) 
     buffer = buf.buffer
 
-    with open(TEST_FILE, 'rb') as pyfid:
+    with open(testfile, 'rb') as pyfid:
         cfid = fdopen(pyfid.fileno(), 'rb')
 
         assert not zran.zran_init(&index,
@@ -396,30 +389,33 @@ def test_read_all():
                                   131072,
                                   zran.ZRAN_AUTO_BUILD)
 
-        nbytes = zran.zran_read(&index, buffer, TEST_FILE_SIZE)
+        nbytes = zran.zran_read(&index, buffer, filesize)
 
-        assert nbytes                 == TEST_FILE_SIZE
+        assert nbytes                 == filesize
         assert zran.zran_tell(&index) == nbytes
         
         zran.zran_free(&index)
 
     pybuf = <bytes>(<char *>buffer)[:nbytes]
-    data  = np.ndarray(TEST_FILE_NELEMS, np.uint64, pybuf)
+    data  = np.ndarray(nelems, np.uint64, pybuf)
 
     assert check_data_valid(data, 0)
             
 
-def test_seek_then_read_block():
+def test_seek_then_read_block(testfile, nelems, niters):
     
-    indexSpacing = max(524288, TEST_FILE_SIZE / 1000)
-    buf          = ReadBuffer(TEST_FILE_SIZE)
-    seekelems    = np.linspace(0, TEST_FILE_NELEMS - 1, 5000, dtype=np.uint64)
+    filesize  = nelems * 8
+    
+    indexSpacing = max(524288, filesize / 1000)
+    buf          = ReadBuffer(filesize)
+    seekelems    = np.linspace(0, nelems - 1, niters, dtype=np.uint64)
+    
     np.random.shuffle(seekelems)
     
     cdef zran.zran_index_t index
     cdef void             *buffer = buf.buffer
 
-    with open(TEST_FILE, 'rb') as pyfid:
+    with open(testfile, 'rb') as pyfid:
         cfid = fdopen(pyfid.fileno(), 'rb')
 
         assert not zran.zran_init(&index,
@@ -433,10 +429,10 @@ def test_seek_then_read_block():
 
             zran.zran_seek(&index, se * 8, SEEK_SET, NULL)
 
-            if se == TEST_FILE_NELEMS - 1:
+            if se == nelems - 1:
                 readelems = 1
             else:
-                readelems = np.random.randint(1, min(TEST_FILE_NELEMS - se, 5000))
+                readelems = np.random.randint(1, nelems - se)
                 
             nbytes = zran.zran_read(&index, buffer, readelems * 8)
 
@@ -455,24 +451,21 @@ def test_seek_then_read_block():
             pybuf = <bytes>(<char *>buffer)[:nbytes]
             data  = np.ndarray(nbytes / 8, np.uint64, pybuf)
 
-            for i, val in enumerate(data, se):
-                try:
-                    assert val == i
-                except:
-                    print("{} != {} [{:x} != {:x}]".format(val, i, val, i))
-                    raise
+            assert check_data_valid(data, se, se + readelems)
                     
         zran.zran_free(&index)
 
 
-def test_random_seek_and_read():
+def test_random_seek_and_read(testfile, nelems, niters):
 
     cdef zran.zran_index_t index
 
-    seekelems    = [random.randint(0, TEST_FILE_NELEMS) for i in range(10000)]
-    indexSpacing = max(524288, TEST_FILE_SIZE / 1000)
+    filesize = nelems * 8
 
-    with open(TEST_FILE, 'rb') as pyfid:
+    seekelems    = [random.randint(0, nelems) for i in range(niters)]
+    indexSpacing = max(524288, filesize / 1000)
+
+    with open(testfile, 'rb') as pyfid:
         cfid = fdopen(pyfid.fileno(), 'rb')
 
         assert not zran.zran_init(&index,
@@ -495,16 +488,18 @@ def test_random_seek_and_read():
         zran.zran_free(&index) 
 
 
-def test_read_all_sequential():
+def test_read_all_sequential(testfile, nelems):
 
     cdef zran.zran_index_t index
 
-    indexSpacing = max(524288, TEST_FILE_SIZE / 1000)
+    filesize = nelems * 8
+
+    indexSpacing = max(524288, filesize / 1000)
 
     # Takes too long to read all elements
-    seekelems = np.linspace(0, TEST_FILE_NELEMS - 1, 10000, dtype=np.uint64)
+    seekelems = np.linspace(0, nelems - 1, 10000, dtype=np.uint64)
 
-    with open(TEST_FILE, 'rb') as pyfid:
+    with open(testfile, 'rb') as pyfid:
         cfid = fdopen(pyfid.fileno(), 'rb')
 
         assert not zran.zran_init(&index,
@@ -527,17 +522,19 @@ def test_read_all_sequential():
         zran.zran_free(&index)
 
 
-def test_build_then_read():
+def test_build_then_read(testfile, nelems):
+
+    filesize = nelems * 8
     
-    indexSpacing = max(524288, TEST_FILE_SIZE / 1000)
-    buf          = ReadBuffer(TEST_FILE_SIZE)
-    seekelems    = np.linspace(0, TEST_FILE_NELEMS - 1, 5000, dtype=np.uint64)
+    indexSpacing = max(524288, filesize / 1000)
+    buf          = ReadBuffer(filesize)
+    seekelems    = np.linspace(0, nelems - 1, 5000, dtype=np.uint64)
     np.random.shuffle(seekelems) 
     
     cdef zran.zran_index_t index
     cdef void             *buffer = buf.buffer
 
-    with open(TEST_FILE, 'rb') as pyfid:
+    with open(testfile, 'rb') as pyfid:
         cfid = fdopen(pyfid.fileno(), 'rb')
 
         assert not zran.zran_init(&index,
@@ -553,10 +550,10 @@ def test_build_then_read():
 
             assert zran.zran_seek(&index, se * 8, SEEK_SET, NULL) == 0
 
-            if se == TEST_FILE_NELEMS - 1:
+            if se == nelems - 1:
                 readelems = 1
             else:
-                readelems = np.random.randint(1, min(TEST_FILE_NELEMS - se, 5000)) 
+                readelems = np.random.randint(1, min(nelems - se, 5000)) 
                 
             nbytes = zran.zran_read(&index, buffer, readelems * 8)
 
@@ -572,19 +569,16 @@ def test_build_then_read():
         zran.zran_free(&index) 
 
 
-def test_readbuf_spacing_sizes():
+def test_readbuf_spacing_sizes(concat, niters):
 
     test_file        = 'ctest_zran_spacing_testdata.gz'
     test_file_nelems = 2**24 + 1
     test_file_size   = test_file_nelems * 8
 
-    if (test_file_nelems == TEST_FILE_NELEMS):
-        test_file = TEST_FILE
-
     cdef zran.zran_index_t index
 
     if not op.exists(test_file):
-        gen_test_data(test_file, test_file_nelems)
+        gen_test_data(test_file, test_file_nelems, concat)
 
     spacings = [262144,  524288,  1048576,
                 2097152, 4194304, 8388608]
@@ -592,10 +586,10 @@ def test_readbuf_spacing_sizes():
                 524288,  1048575, 1048576, 1048577,
                 2097152, 4194304, 8388608]
 
-    seekelems = np.random.randint(0, test_file_nelems, 2500)
+    seekelems = np.random.randint(0, test_file_nelems, niters / 2)
     seekelems = np.concatenate((spacings, bufsizes, seekelems))
 
-    for spacing, bufsize in it.product(spacings, bufsizes):
+    for i, (spacing, bufsize) in enumerate(it.product(spacings, bufsizes)):
 
         with open(test_file, 'rb') as pyfid:
 
@@ -608,7 +602,7 @@ def test_readbuf_spacing_sizes():
                                       bufsize,
                                       zran.ZRAN_AUTO_BUILD)
 
-            for se in seekelems:
+            for i, se in enumerate(seekelems):
 
                 val = read_element(&index, se, seek=True)
 

@@ -6,23 +6,21 @@
 #
 
 import pytest
-pytestmark = pytest.mark.zran_test
-
 
 from . import ctest_zran
 
-def setup_module():                ctest_zran.setup_module()
-def teardown_module():             ctest_zran.teardown_module()
 
-def test_init():                   ctest_zran.test_init()
-def test_init_file_modes():        ctest_zran.test_init_file_modes()
-def test_seek_to_end():            ctest_zran.test_seek_to_end()
-def test_seek_beyond_end():        ctest_zran.test_seek_beyond_end()
-def test_sequential_seek_to_end(): ctest_zran.test_sequential_seek_to_end()
-def test_random_seek():            ctest_zran.test_random_seek()
-def test_read_all():               ctest_zran.test_read_all()
-def test_seek_then_read_block():   ctest_zran.test_seek_then_read_block()
-def test_random_seek_and_read():   ctest_zran.test_random_seek_and_read()
-def test_read_all_sequential():    ctest_zran.test_read_all_sequential()
-def test_build_then_read():        ctest_zran.test_build_then_read()
-def test_readbuf_spacing_sizes():  ctest_zran.test_readbuf_spacing_sizes()
+pytestmark = pytest.mark.zran_test
+
+def test_init(                  testfile):                 ctest_zran.test_init(                  testfile)
+def test_init_file_modes(       testfile):                 ctest_zran.test_init_file_modes(       testfile)
+def test_seek_to_end(           testfile, nelems):         ctest_zran.test_seek_to_end(           testfile, nelems)
+def test_seek_beyond_end(       testfile, nelems):         ctest_zran.test_seek_beyond_end(       testfile, nelems)
+def test_sequential_seek_to_end(testfile, nelems, niters): ctest_zran.test_sequential_seek_to_end(testfile, nelems, niters)
+def test_random_seek(           testfile, nelems, niters): ctest_zran.test_random_seek(           testfile, nelems, niters)
+def test_read_all(              testfile, nelems):         ctest_zran.test_read_all(              testfile, nelems)
+def test_seek_then_read_block(  testfile, nelems, niters): ctest_zran.test_seek_then_read_block(  testfile, nelems, niters)
+def test_random_seek_and_read(  testfile, nelems, niters): ctest_zran.test_random_seek_and_read(  testfile, nelems, niters)
+def test_read_all_sequential(   testfile, nelems):         ctest_zran.test_read_all_sequential(   testfile, nelems)
+def test_build_then_read(       testfile, nelems):         ctest_zran.test_build_then_read(       testfile, nelems)
+def test_readbuf_spacing_sizes( concat, niters):           ctest_zran.test_readbuf_spacing_sizes( concat, niters)

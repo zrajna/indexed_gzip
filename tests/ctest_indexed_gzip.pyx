@@ -36,7 +36,7 @@ def read_element(gzf, element, seek=True):
     
 
 
-def test_open_close(testfile, nelems):
+def test_open_close(testfile, nelems, seed):
 
     f = igzip.IndexedGzipFile(filename=testfile)
 
@@ -52,7 +52,7 @@ def test_open_close(testfile, nelems):
     assert f.closed()
 
 
-def test_open_close_ctxmanager(testfile, nelems):
+def test_open_close_ctxmanager(testfile, nelems, seed):
 
     with igzip.IndexedGzipFile(filename=testfile) as f:
 
@@ -63,7 +63,7 @@ def test_open_close_ctxmanager(testfile, nelems):
     assert f.closed()
 
 
-def test_create_from_open_handle(testfile, nelems):
+def test_create_from_open_handle(testfile, nelems, seed):
 
     f   = open(testfile, 'rb')
     gzf = igzip.IndexedGzipFile(fid=f)
@@ -94,7 +94,7 @@ def test_read_all(testfile, nelems):
     assert ctest_zran.check_data_valid(data, 0)
 
 
-def test_seek_and_read(testfile, nelems, niters):
+def test_seek_and_read(testfile, nelems, niters, seed):
 
     with igzip.IndexedGzipFile(filename=testfile) as f: 
         

@@ -346,7 +346,7 @@ def test_sequential_seek_to_end(testfile, nelems, niters):
         zran.zran_free(&index) 
 
 
-def test_random_seek(testfile, nelems, niters):
+def test_random_seek(testfile, nelems, niters, seed):
 
     cdef zran.zran_index_t index
 
@@ -410,7 +410,7 @@ def test_read_all(testfile, nelems):
     assert check_data_valid(data, 0)
             
 
-def test_seek_then_read_block(testfile, nelems, niters):
+def test_seek_then_read_block(testfile, nelems, niters, seed):
     
     filesize  = nelems * 8
     
@@ -464,7 +464,7 @@ def test_seek_then_read_block(testfile, nelems, niters):
         zran.zran_free(&index)
 
 
-def test_random_seek_and_read(testfile, nelems, niters):
+def test_random_seek_and_read(testfile, nelems, niters, seed):
 
     cdef zran.zran_index_t index
 
@@ -530,7 +530,7 @@ def test_read_all_sequential(testfile, nelems):
         zran.zran_free(&index)
 
 
-def test_build_then_read(testfile, nelems):
+def test_build_then_read(testfile, nelems, seed):
 
     filesize = nelems * 8
     
@@ -577,7 +577,7 @@ def test_build_then_read(testfile, nelems):
         zran.zran_free(&index) 
 
 
-def test_readbuf_spacing_sizes(testfile, nelems, niters):
+def test_readbuf_spacing_sizes(testfile, nelems, niters, seed):
 
     cdef zran.zran_index_t index
 

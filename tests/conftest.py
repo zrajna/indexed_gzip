@@ -26,6 +26,11 @@ def pytest_addoption(parser):
                      help='Generate test data made of '
                           'concatenated GZIP streams')
 
+
+    parser.addoption('--seed',
+                     type=int,
+                     help='Seed for random number generator') 
+
     parser.addoption('--testfile',
                      action='store',
                      help='Name of test file') 
@@ -54,6 +59,20 @@ def concat(request):
 
 
 @pytest.fixture
+def seed(request):
+    
+    seed = request.config.getoption('--seed')
+
+    if seed is None:
+        seed = np.random.randint(2 ** 32)
+        
+    np.random.seed(seed)
+    print('Seed for random number generator: {}'.format(seed))
+    return seed
+
+
+
+@pytest.fixture
 def testfile(request):
 
     filename = request.config.getoption('--testfile')
@@ -67,3 +86,4 @@ def testfile(request):
         ctest_zran.gen_test_data(filename, _nelems, _concat)
 
     return filename
+

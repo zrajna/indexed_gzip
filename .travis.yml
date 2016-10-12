@@ -8,19 +8,23 @@ python:
   - "3.5"
 
 env:
-  - TEST_SUITE=zran_test
-  - TEST_SUITE=indexed_gzip_test
-  - TEST_PATTERN="not test_readbuf_spacing_sizes and not test_seek_then_read_block"
-  - TEST_PATTERN="test_readbuf_spacing_sizes"
-  - TEST_PATTERN="test_seek_then_read_block"
-  - NITERS=1000
-  - NELEMS=16777216
-#   - NELEMS=268435456
+
+# NELEMS=16777216 works out to be 128MB uncompressed
+  - TEST_SUITE=zran_test         NITERS=1000 NELEMS=16777216 TEST_PATTERN="not test_readbuf_spacing_sizes and not test_seek_then_read_block"
+  - TEST_SUITE=zran_test         NITERS=1000 NELEMS=16777216 TEST_PATTERN="test_readbuf_spacing_sizes"
+  - TEST_SUITE=zran_test         NITERS=1000 NELEMS=16777216 TEST_PATTERN="test_seek_then_read_block"
+  - TEST_SUITE=indexed_gzip_test NITERS=1000 NELEMS=16777216 TEST_PATTERN="not test_readbuf_spacing_sizes and not test_seek_then_read_block"
+  - TEST_SUITE=indexed_gzip_test NITERS=1000 NELEMS=16777216 TEST_PATTERN="test_readbuf_spacing_sizes"
+  - TEST_SUITE=indexed_gzip_test NITERS=1000 NELEMS=16777216 TEST_PATTERN="test_seek_then_read_block"
+
 
 # TODO This is needed for testing reads greater than 4GB (i.e.
 #      reading >= 2**32 bytes in one go). They need time and
 #      > 4GB of RAM. I don't think travis-ci can handle them. 
 #  - NELEMS=536871012
+
+# I also want to test bigger files (~2GB)
+#  - NELEMS=268435456
   
 install: "pip install -r requirements.txt"
 

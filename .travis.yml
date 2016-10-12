@@ -23,12 +23,13 @@ env:
 #      > 4GB of RAM. I don't think travis-ci can handle them. 
 #  - NELEMS=536871012
 
-# I also want to test bigger files (~2GB)
+# TODO I also want to test bigger files (~2GB), but these tests
+#      are currently take a bit too long for travis-ci.
 #  - NELEMS=268435456
   
 install: "pip install -r requirements.txt"
 
 script:
   - python setup.py install
-  - travis_wait 30 python setup.py test --addopts \"-v -s -m $TEST_SUITE -k $TEST_PATTERN --nelems $NELEMS --niters $NITERS\"
-  - travis_wait 30 python setup.py test --addopts \"-v -s -m $TEST_SUITE -k $TEST_PATTERN --nelems $NELEMS --niters $NITERS --concat\"
+  - python setup.py test --addopts "-v -s -m $TEST_SUITE -k $TEST_PATTERN --nelems $NELEMS --niters $NITERS"
+  - python setup.py test --addopts "-v -s -m $TEST_SUITE -k $TEST_PATTERN --nelems $NELEMS --niters $NITERS --concat"

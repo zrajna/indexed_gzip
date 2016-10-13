@@ -9,28 +9,28 @@ python:
 
 env:
 
-  - TEST_SUITE=zran_test         NITERS=1000 NELEMS=1000000  TEST_PATTERN="not test_readbuf_spacing_sizes and not test_seek_then_read_block"
+  - TEST_SUITE=zran_test         NITERS=5000 NELEMS=1000000  TEST_PATTERN="not test_readbuf_spacing_sizes and not test_seek_then_read_block"
   - TEST_SUITE=zran_test         NITERS=1000 NELEMS=1000000  TEST_PATTERN="test_readbuf_spacing_sizes"
   - TEST_SUITE=zran_test         NITERS=1000 NELEMS=1000000  TEST_PATTERN="test_seek_then_read_block"
-  - TEST_SUITE=indexed_gzip_test NITERS=1000 NELEMS=1000000
+  - TEST_SUITE=indexed_gzip_test NITERS=5000 NELEMS=1000000
 
-  - TEST_SUITE=zran_test         NITERS=1000 NELEMS=1048576  TEST_PATTERN="not test_readbuf_spacing_sizes and not test_seek_then_read_block"
+  - TEST_SUITE=zran_test         NITERS=5000 NELEMS=1048576  TEST_PATTERN="not test_readbuf_spacing_sizes and not test_seek_then_read_block"
   - TEST_SUITE=zran_test         NITERS=1000 NELEMS=1048576  TEST_PATTERN="test_readbuf_spacing_sizes"
   - TEST_SUITE=zran_test         NITERS=1000 NELEMS=1048576  TEST_PATTERN="test_seek_then_read_block"
-  - TEST_SUITE=indexed_gzip_test NITERS=1000 NELEMS=1048576
+  - TEST_SUITE=indexed_gzip_test NITERS=5000 NELEMS=1048576
 
 # NELEMS=something arbitrary that is not divisible 
 # by any of the default buffer/spacing sizes 
-  - TEST_SUITE=zran_test         NITERS=1000 NELEMS=2000000  TEST_PATTERN="not test_readbuf_spacing_sizes and not test_seek_then_read_block"
-  - TEST_SUITE=zran_test         NITERS=1000 NELEMS=2000000  TEST_PATTERN="test_readbuf_spacing_sizes"
-  - TEST_SUITE=zran_test         NITERS=1000 NELEMS=2000000  TEST_PATTERN="test_seek_then_read_block"
-  - TEST_SUITE=indexed_gzip_test NITERS=1000 NELEMS=2000000
+  - TEST_SUITE=zran_test         NITERS=5000 NELEMS=2000000  TEST_PATTERN="not test_readbuf_spacing_sizes and not test_seek_then_read_block"
+  - TEST_SUITE=zran_test         NITERS=500  NELEMS=2000000  TEST_PATTERN="test_readbuf_spacing_sizes"
+  - TEST_SUITE=zran_test         NITERS=500  NELEMS=2000000  TEST_PATTERN="test_seek_then_read_block"
+  - TEST_SUITE=indexed_gzip_test NITERS=5000 NELEMS=2000000
   
 # NELEMS=16777216 works out to be 128MB uncompressed
-  - TEST_SUITE=zran_test         NITERS=1000 NELEMS=16777216 TEST_PATTERN="not test_readbuf_spacing_sizes and not test_seek_then_read_block"
-  - TEST_SUITE=zran_test         NITERS=1000 NELEMS=16777216 TEST_PATTERN="test_readbuf_spacing_sizes"
-  - TEST_SUITE=zran_test         NITERS=1000 NELEMS=16777216 TEST_PATTERN="test_seek_then_read_block"
-  - TEST_SUITE=indexed_gzip_test NITERS=1000 NELEMS=16777216
+  - TEST_SUITE=zran_test         NITERS=5000 NELEMS=16777216 TEST_PATTERN="not test_readbuf_spacing_sizes and not test_seek_then_read_block"
+  - TEST_SUITE=zran_test         NITERS=500  NELEMS=16777216 TEST_PATTERN="test_readbuf_spacing_sizes"
+  - TEST_SUITE=zran_test         NITERS=500  NELEMS=16777216 TEST_PATTERN="test_seek_then_read_block"
+  - TEST_SUITE=indexed_gzip_test NITERS=5000 NELEMS=16777216
 
 
 # TODO This is needed for testing reads greater than 4GB (i.e.

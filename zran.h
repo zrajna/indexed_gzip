@@ -225,6 +225,15 @@ int zran_build_index(
 );
 
 
+/* Return codes for zran_seek. */
+enum {
+    ZRAN_SEEK_FAIL        = -1,
+    ZRAN_SEEK_OK          =  0,
+    ZRAN_SEEK_NOT_COVERED =  1,
+    ZRAN_SEEK_EOF         =  2,
+};
+
+
 /*
  * Seek to the specified offset in the uncompressed data stream. 
  * If the index does not currently cover the offset, and it was 
@@ -237,12 +246,16 @@ int zran_build_index(
  * be equal to SEEK_SET or SEEK_CUR.
  *
  * Returns:
- *    - 0 for success.
+ *    - ZRAN_SEEK_OK for success.
  * 
- *    - < 0 to indicate failure.
+ *    - ZRAN_SEEK_FAIL to indicate failure of some sort.
  *   
- *    - > 0 to indicate that the index does not cover the requested 
- *        offset (will never happen if ZRAN_AUTO_BUILD is active).
+ *    - ZRAN_SEEK_NOT_COVERED to indicate that the index does not 
+ *      cover the requested offset (will never happen if 
+ *      ZRAN_AUTO_BUILD is active).
+
+ *    - ZRAN_SEEK_EOF to indicate that the requested offset
+ *      is past the end of the uncompressed stream. 
  */
 int zran_seek(
   zran_index_t  *index,   /* The index                      */
@@ -261,6 +274,12 @@ long zran_tell(
 );
 
   
+/* Return codes for zran_read. */
+enum {
+    ZRAN_READ_NOT_COVERED = -1,
+    ZRAN_READ_EOF         = -2,
+    ZRAN_READ_FAIL        = -3
+};
 
 /*
  * Read len bytes from the current location in the uncompressed 
@@ -270,10 +289,14 @@ long zran_tell(
  * Returns:
  *   - Number of bytes read for success.
  *   
- *   - -1 to indicate that the index does not cover the requested region
- *     (will never happen if ZRAN_AUTO_BUILD is active). 
+ *   - ZRAN_READ_NOT_COVERED to indicate that the index does not 
+ *     cover the requested region (will never happen if 
+ *     ZRAN_AUTO_BUILD is active). 
  *
- *   - < -1 to indicate failure.
+ *   - ZRAN_READ_EOF to indicate that the read could not be completed
+ *     because the current uncompressed seek point is at EOF.
+ *
+ *   - ZRAN_READ_FAIL to indicate that the read failed for some reason.
  */
 int64_t zran_read(
   zran_index_t  *index, /* The index                 */

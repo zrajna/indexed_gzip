@@ -17,7 +17,16 @@ cdef extern from "zran.h":
     ctypedef struct zran_point_t:
         pass
 
-    enum: ZRAN_AUTO_BUILD
+    enum:
+        ZRAN_AUTO_BUILD       =  1,
+        ZRAN_SEEK_FAIL        = -1,
+        ZRAN_SEEK_OK          =  0,
+        ZRAN_SEEK_NOT_COVERED =  1,
+        ZRAN_SEEK_EOF         =  2,
+
+        ZRAN_READ_NOT_COVERED = -1,
+        ZRAN_READ_EOF         = -2,
+        ZRAN_READ_FAIL        = -3,
 
     bint zran_init(zran_index_t *index,
                    FILE         *fd,

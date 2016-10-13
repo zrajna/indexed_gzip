@@ -67,6 +67,12 @@ static int _zran_free_unused(
 );
 
 
+/* Return codes for _zran_get_point_at */
+int ZRAN_GET_POINT_FAIL        =  -1;
+int ZRAN_GET_POINT_OK          =  0;
+int ZRAN_GET_POINT_NOT_COVERED =  1;
+int ZRAN_GET_POINT_EOF         =  2;
+
 /*
  * Searches for the zran_point which preceeds the given offset. The offset
  * may be specified as being relative to the start of the compressed data, 
@@ -74,12 +80,13 @@ static int _zran_free_unused(
  *
  * Returns:
  *
- *   - 0 on success. 
+ *   - ZRAN_GET_POINT_OK on success. 
  *
- *   - A negative number if something goes wrong.
- *
- *   - A positive number to indicate that an index covering the specified
- *     offset has not yet been created.
+ *   - ZRAN_GET_POINT_NOT_COVERED if the index does not yet cover the 
+ *     specified offset.
+
+ *   - ZRAN_GET_POINT_EOF if the specified offset is at or beyond the end of 
+ *     the file.
  */
 static int _zran_get_point_at(
     zran_index_t  *index,      /* The index */
@@ -106,8 +113,9 @@ static int _zran_get_point_at(
  * be expanded to encompass it.
  *
  * The input arguments and return values are identical to the
- * _zran_get_point_at function, however if the index has been built with the
- * ZRAN_AUTO_BUILD flag, this function will never return a positive number.
+ * _zran_get_point_at function, however if the index has been initialised 
+ * with the ZRAN_AUTO_BUILD flag, this function will never return 
+ * ZRAN_GET_POINT_NOT_COVERED.
  */
 static int _zran_get_point_with_expand(
     zran_index_t  *index,      /* The index                           */
@@ -164,6 +172,17 @@ static int _zran_init_zlib_inflate(
 /*
  * Expands the index from its current end-point until the given offset (which
  * must be specified relative to the compressed data stream).
+ *
+ * The index is expanded so that the last point comes after the given offset.
+ * If the specified offset is past the last point in the index, a call to this
+ * function is guaranteed to create at least one more index point. If there
+ * is already an index point which comes after the offset, this function does 
+ * nothing, and return a success code.
+ * 
+ * We require at least one point to be created, because we want index points
+ * to be located at compression block boundaries, but in some data there may
+ * be a long distance between block boundaries (longer than the desired index
+ * point spacing).
  *
  * Returns 0 on success, non-0 on failure.
  */
@@ -580,56 +599,43 @@ int _zran_get_point_at(
 
     *point = NULL;
 
+    /* 
+     * Bad input - past the end of the compressed or 
+     * uncompressed streams (if the latter is known).
+     */
+    if (compressed && offset >= index->compressed_size)
+        goto eof;
+    
+    if (!compressed                  &&
+        index->uncompressed_size > 0 &&
+        offset >= index->uncompressed_size)
+        goto eof;
+
     zran_log("_zran_get_point_at(%llu, c=%u)\n", offset, compressed);
 
     /*
      * Figure out how much of the compressed and 
      * uncompressed data the index currently covers.
+     *
+     * No points - no coverage.
      */
     if (index->npoints == 0) { 
         cmp_max   = 0;
         uncmp_max = 0;
     }
-    
-    /*
-     * We can't be exact with these limits, because 
-     * the index points are only approximately spaced
-     * throughout the data. So we'll err on the side 
-     * of caution, and add a bit of padding to the 
-     * limits.
-     *
-     * A bad compressed offset is easily checked 
-     * against the file size, but a bad uncompressed
-     * offset (i.e. one larger than the size of the 
-     * uncompressed data) cannot be checked, as we
-     * have no way of knowing the size of the 
-     * uncompressed data. 
-     *
-     * If a bad uncompressed offset is passed in (one 
-     * which is greater than the uncompressed data size), 
-     * this function will incorrectly report that the 
-     * index does not yet cover the offset, instead of 
-     * just failing. 
-     *
-     * There's no method of getting around this which 
-     * does not use heuristics/guesses, so I'm going to 
-     * leave this as-is.
+
+    /* 
+     * Otherwise the offsets of the 
+     * last point in the index.
      */
     else {
         last      = &(index->list[index->npoints - 1]);
-        uncmp_max = last->uncmp_offset + index->spacing * 2.0;
-        cmp_max   = last->cmp_offset   + index->spacing;
-        
-        if (cmp_max > index->compressed_size)
-          cmp_max = index->compressed_size;
+        uncmp_max = last->uncmp_offset;
+        cmp_max   = last->cmp_offset;
     }
-
-    /* 
-     * Bad input, or out of the current index range.
-     */
-    if ( compressed && offset >= index->compressed_size) goto fail;
-    if ( compressed && offset >= cmp_max)                goto not_created;
-    if (!compressed && offset >= uncmp_max)              goto not_created;
+    
+    if ( compressed && offset > cmp_max)   goto not_covered;
+    if (!compressed && offset > uncmp_max) goto not_covered;
 
     /* 
      * We should have an index point 
@@ -663,15 +669,15 @@ int _zran_get_point_at(
     }
 
     *point = prev;
-    return 0;
+    return ZRAN_GET_POINT_OK;
 
-fail:
-    *point = NULL;
-    return -1;
-    
-not_created:
+not_covered:
     *point = NULL; 
-    return 1;
+    return ZRAN_GET_POINT_NOT_COVERED;
+    
+eof:
+    *point = NULL; 
+    return ZRAN_GET_POINT_EOF; 
 }
 
 
@@ -704,29 +710,20 @@ int _zran_get_point_with_expand(zran_index_t  *index,
      * until there is.
      */
     result = _zran_get_point_at(index, offset, compressed, point);
-    while (result > 0) {
+    
+    while (result == ZRAN_GET_POINT_NOT_COVERED) {
     
         /*
-         * If result > 0, get_point says that an index 
-         * point for this offset doesn't yet exist. So 
-         * let's expand the index.
+         * If result == ZRAN_GET_POINT_NOT_COVERED, 
+         * get_point says that an index point for 
+         * this offset doesn't yet exist. So let's 
+         * expand the index.
          *
          * Guess how far we need to expand the index,
          * and expand it by that much.
          */
-        if (compressed == 0)
-            expand = _zran_estimate_offset(index, offset, 0);
-        else
-            expand = offset;
-
-        /* 
-         * There's no point trying to 
-         * expand the index beyond the 
-         * size of the compressed data
-         *
-         */
-        if (offset >= index->compressed_size)
-            expand = index->compressed_size; 
+        if (compressed == 0) expand = _zran_estimate_offset(index, offset, 0);
+        else                 expand = offset;
 
         /*
          * Expand the index
@@ -736,47 +733,30 @@ int _zran_get_point_with_expand(zran_index_t  *index,
         }
 
         /*
-         * Index has been expanded, so there 
-         * should now be a point which covers 
-         * the requested offset.
+         * Index has been expanded, so 
+         * there should now be a point 
+         * which covers the requested 
+         * offset.
          */
-        result = _zran_get_point_at(index, offset, compressed, point); 
- 
-        /*
-         * If, above, we set expand to the compressed data 
-         * size, it means that the index has been expanded 
-         * to cover the entire file. But if _zran_get_point_at 
-         * is still returning "point not created", it means 
-         * that the offset that was passed in to this function 
-         * is past the end of the file.
-         */
-        if (result > 0 && expand == index->compressed_size) {
+        result = _zran_get_point_at(index, offset, compressed, point);
 
-            result = 0;
+        /* 
+         * If we've made it to EOF, return 
+         * a ref to the eof point.
+         */
+        if (result == ZRAN_GET_POINT_EOF) {
             *point = &index->list[index->npoints - 1];
-        } 
+
+            if (offset < index->uncompressed_size) {
+                result = ZRAN_GET_POINT_OK;
+            }
+        }
     }
 
-    /* 
-     * get point failed - something has gone wrong 
-     */
-    if (result < 0) {
-        goto fail;
-    }
-
-    /* 
-     * get point returned success, 
-     * but didn't give me a point. 
-     * This should never happen.
-     */ 
-    if (result == 0 && *point == NULL) {
-        goto fail;
-    }
-
-    return 0;
+    return result;
 
 fail:
-    return -1;
+    return ZRAN_GET_POINT_FAIL;
 }
 
 
@@ -1203,14 +1183,17 @@ static int _zran_inflate(zran_index_t *index,
 
             /*
              * In order to successfully decompress 
-             * data rom the current uncompressed seek 
+             * data from the current uncompressed seek 
              * location, we need to start decompressing 
              * from the index point which preceeds it.
              */
             z_ret = _zran_get_point_at(index, offset, 1, &start);
 
-            if (z_ret < 0) return ZRAN_INFLATE_ERROR;
-            if (z_ret > 0) return ZRAN_INFLATE_NOT_COVERED;
+            if (z_ret == ZRAN_GET_POINT_NOT_COVERED)
+                return ZRAN_INFLATE_NOT_COVERED;
+
+            if (z_ret == ZRAN_GET_POINT_EOF)
+                return ZRAN_INFLATE_EOF;
         }
 
         /*
@@ -1646,29 +1629,26 @@ int _zran_expand_index(zran_index_t *index, uint64_t until)
     /* 
      * Counters to keep track of where we are 
      * in both the compressed and uncompressed 
-     * streams. last_uncmp_offset is the 
-     * uncompressed data offset of the most 
-     * recent point that was added to the index
-     * in this call to _zran_expand_index.
+     * streams. 
      */
     uint64_t cmp_offset;
     uint64_t uncmp_offset;
     uint64_t last_uncmp_offset;
  
     /* 
-     * A reference to the last point in 
-     * the index. This is where we need 
+     * start is a reference to the last 
+     * point in the index when this function
+     * is called. This is where we need 
      * to start decompressing data from 
      * before we can add more index points.
+     *
+     * last_created is a reference to the 
+     * most recent point that was added 
+     * to the index in this call to 
+     * _zran_expand_index.
      */
-    zran_point_t *start = NULL;
-
-    /*
-     * Tally of the number of points 
-     * we have expanded the index by
-     * on this call.
-     */
-    uint64_t points_created = 0;
+    zran_point_t *start        = NULL;
+    zran_point_t *last_created = NULL;
 
     /*
      * In order to create a new index 
@@ -1731,19 +1711,14 @@ int _zran_expand_index(zran_index_t *index, uint64_t until)
 
     /*
      * Don't finish until we're at the end of the 
-     * file, or we've expanded the index far enough 
-     * (and have created at least one new index 
-     * point).
-     * 
-     * We require at least one point to be created,
-     * because we want index points to be located at 
-     * compression block boundaries, but in some data 
-     * there may be a long distance between block 
-     * boundaries (longer than the desired index 
-     * point spacing).
+     * file, or we've expanded the index past
+     * the requested offset (and have created at 
+     * least one new index point - 
+     * last_created == NULL tells us whether a 
+     * point has been created).
      */
     while ((cmp_offset < index->compressed_size) &&
-           (cmp_offset < until || points_created == 0)) {
+           (last_created == NULL || last_created->cmp_offset < until)) {
 
         /* 
          * On the first call to _zran_inflate, we
@@ -1799,35 +1774,44 @@ int _zran_expand_index(zran_index_t *index, uint64_t until)
         data_offset   = (data_offset + bytes_output) % data_size;
  
         /*
-         * Has the output buffer been filled, 
-         * or eof been reached? If the output 
-         * buffer is full, we just continue - 
-         * the data_offset trickery means that
-         * we can ask the _zran_inflate 
-         * function to just keep filling the
-         * buffer until we find a block.
+         * Has the output buffer been filled?
+         * If so, we just continue - the 
+         * data_offset trickery means that we 
+         * can ask the _zran_inflate function 
+         * to just keep filling the buffer 
+         * until we find a block.
          */
-        if      (z_ret == ZRAN_INFLATE_OUTPUT_FULL) continue;
-        else if (z_ret == ZRAN_INFLATE_EOF)         break;
+        if (z_ret == ZRAN_INFLATE_OUTPUT_FULL)
+            continue;
 
         /* 
-         * If z_ret != ZRAN_INFLATE_BLOCK_BOUNDARY, 
+         * If z_ret != ZRAN_INFLATE_EOF or
+         * ZRAN_INFLATE_BLOCK_BOUNDARY, 
          * something has gone wrong.
-         */
-        else if (z_ret != ZRAN_INFLATE_BLOCK_BOUNDARY) {
+         */ 
+        else if (z_ret != ZRAN_INFLATE_EOF &&
+                 z_ret != ZRAN_INFLATE_BLOCK_BOUNDARY) {
             goto fail;
         }
 
         /* 
-         * If we're at the begininng of the file
-         * (uncmp_offset == 0), or at the end 
-         * of a compress block and index->spacing 
-         * bytes have passed since the last index 
-         * point that was created, we'll create a 
-         * new index point at this location.
+         * If we're at the beginning of the file
+         * (uncmp_offset == 0), or at the end of
+         * the file (z_ret == ZRAN_INFLATE_EOF),
+         * or at a compress block boundary, 
+         * and index->spacing bytes have passed 
+         * since the last index point that was 
+         * created, we'll create a  new index 
+         * point at this location.
          */
-        if (uncmp_offset == 0 ||
+        if (z_ret == ZRAN_INFLATE_EOF ||
+            uncmp_offset == 0         ||
             uncmp_offset - last_uncmp_offset >= index->spacing) {
+
+            // TODO If at start or EOF, you should 
+            //      pass in  NULL for the window
+            //      data. You can then clean up
+            //      _zran_add_point a little bit.
 
             if (_zran_add_point(index,
                                 strm.data_type & 7,
@@ -1839,9 +1823,13 @@ int _zran_expand_index(zran_index_t *index, uint64_t until)
                 goto fail;
             }
 
-            points_created   += 1;
+            last_created      = &index->list[index->npoints - 1];
             last_uncmp_offset = uncmp_offset;
         }
+
+        /* And if at EOF, we are done. */
+        if (z_ret == ZRAN_INFLATE_EOF)
+            break;
     }
 
     /* 
@@ -1871,6 +1859,9 @@ int _zran_expand_index(zran_index_t *index, uint64_t until)
     if (_zran_free_unused(index) != 0) {
         goto fail;
     }
+
+    zran_log("Expansion finished (cmp_offset=%llu, last_created=%llu)\n",
+             cmp_offset, last_created->cmp_offset);
 
     free(data);
     return 0;
@@ -1916,23 +1907,15 @@ int zran_seek(zran_index_t  *index,
       goto fail;
     }
 
-    /* 
-     * Requested offset is past the end of the 
-     * uncompressed data. The uncompressed_size 
-     * field is updated by _zran_inflate when 
-     * it knows what it is.
-     */
-    if (index->uncompressed_size > 0 && offset >= index->uncompressed_size)
-        offset = index->uncompressed_size - 1;
-
     /*
      * Get the index point that 
      * corresponds to this offset.
      */
     result = _zran_get_point_with_expand(index, offset, 0, &seek_point);
 
-    if      (result < 0) goto fail;
-    else if (result > 0) goto not_covered_by_index;
+    if (result == ZRAN_GET_POINT_FAIL)        goto fail;
+    if (result == ZRAN_GET_POINT_NOT_COVERED) goto not_covered;
+    if (result == ZRAN_GET_POINT_EOF)         goto eof;
     
     index->uncmp_seek_offset = offset;
     offset                   = seek_point->cmp_offset;
@@ -1953,12 +1936,16 @@ int zran_seek(zran_index_t  *index,
         *point = seek_point;
     }
 
-    return fseeko(index->fd, offset, SEEK_SET);
-    
-fail:
-    return -1;
-not_covered_by_index:
-    return 1;
+    if (fseeko(index->fd, offset, SEEK_SET) != 0)
+        goto fail;
+
+    return ZRAN_SEEK_OK;
+
+fail:        return ZRAN_SEEK_FAIL;
+not_covered: return ZRAN_SEEK_NOT_COVERED;
+eof:
+    index->uncmp_seek_offset = index->uncompressed_size;
+    return ZRAN_SEEK_EOF;
 }
 
 /* Return the current seek position in the uncompressed data stream. */
@@ -2051,8 +2038,8 @@ int64_t zran_read(zran_index_t *index,
                                       0,
                                       &start);
 
-    if (ret < 0) goto fail;
-    if (ret > 0) goto not_covered_by_index;
+    if (ret == ZRAN_GET_POINT_EOF)         goto eof;
+    if (ret == ZRAN_GET_POINT_NOT_COVERED) goto not_covered;
 
     /*
      * We have to start decompressing from 
@@ -2262,13 +2249,13 @@ int64_t zran_read(zran_index_t *index,
     
     return total_read;
 
-not_covered_by_index:
-    return -1;
+not_covered: return ZRAN_READ_NOT_COVERED;
+eof:         return ZRAN_READ_EOF;
 
 fail:
 
     if (discard != NULL)
         free(discard);
 
-    return -2;
+    return ZRAN_READ_FAIL;
 }

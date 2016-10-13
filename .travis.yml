@@ -9,6 +9,16 @@ python:
 
 env:
 
+  - TEST_SUITE=zran_test         NITERS=1000 NELEMS=1000000  TEST_PATTERN="not test_readbuf_spacing_sizes and not test_seek_then_read_block"
+  - TEST_SUITE=zran_test         NITERS=1000 NELEMS=1000000  TEST_PATTERN="test_readbuf_spacing_sizes"
+  - TEST_SUITE=zran_test         NITERS=1000 NELEMS=1000000  TEST_PATTERN="test_seek_then_read_block"
+  - TEST_SUITE=indexed_gzip_test NITERS=1000 NELEMS=1000000
+
+  - TEST_SUITE=zran_test         NITERS=1000 NELEMS=1048576  TEST_PATTERN="not test_readbuf_spacing_sizes and not test_seek_then_read_block"
+  - TEST_SUITE=zran_test         NITERS=1000 NELEMS=1048576  TEST_PATTERN="test_readbuf_spacing_sizes"
+  - TEST_SUITE=zran_test         NITERS=1000 NELEMS=1048576  TEST_PATTERN="test_seek_then_read_block"
+  - TEST_SUITE=indexed_gzip_test NITERS=1000 NELEMS=1048576
+
 # NELEMS=something arbitrary that is not divisible 
 # by any of the default buffer/spacing sizes 
   - TEST_SUITE=zran_test         NITERS=1000 NELEMS=2000000  TEST_PATTERN="not test_readbuf_spacing_sizes and not test_seek_then_read_block"

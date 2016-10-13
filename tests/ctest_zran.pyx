@@ -28,6 +28,8 @@ from cpython.mem cimport (PyMem_Malloc,
 
 cimport zran
 
+# TODO Test without ZRAN_AUTO_BUILD flag
+
 
 def gen_test_data(filename, nelems, concat):
     """Make some data to test with. """
@@ -80,24 +82,51 @@ def gen_test_data(filename, nelems, concat):
     print('Done in {:0.2f} seconds'.format(end - start))
 
 
-cdef read_element(zran.zran_index_t *index, element, seek=True):
+cdef read_element(zran.zran_index_t *index, element, nelems, seek=True):
 
     cdef void *buffer
 
     buf    = ReadBuffer(8)
     buffer = buf.buffer
 
+    if   element > nelems: expseek = zran.ZRAN_SEEK_EOF
+    else:                  expseek = zran.ZRAN_SEEK_OK
+
+    if   element > nelems: exptell = (nelems * 8)
+    else:                  exptell = element * 8
+
     if seek:
-        assert zran.zran_seek(index, element * 8, SEEK_SET, NULL) == 0
-        assert zran.zran_tell(index) == element * 8
+        assert zran.zran_seek(index, element * 8, SEEK_SET, NULL) == expseek
+        assert zran.zran_tell(index)                              == exptell
+            
 
-    assert zran.zran_read(index, buffer, 8) == 8
-    assert zran.zran_tell(index) == element * 8 + 8
+    if   element >  nelems: expread = zran.ZRAN_READ_EOF
+    else:                   expread = 8
+    
+    if   element >= nelems: exptell = (nelems * 8)
+    else:                   exptell = (element + 1) * 8
 
-    pybuf = <bytes>(<char *>buffer)[:8]
-    val   = np.ndarray(1, np.uint64, buffer=pybuf)
+    gotread = zran.zran_read(index, buffer, 8)
+    gottell = zran.zran_tell(index)
 
-    return val[0]
+    try:
+        assert gotread == expread
+        assert gottell == exptell
+    except:
+        print('nelems:  {}'.format(nelems))
+        print('element: {}'.format(element))
+        print('expread: {}'.format(expread))
+        print('exptell: {}'.format(exptell))
+        print('gotread: {}'.format(gotread))
+        print('gottell: {}'.format(gottell))
+        raise
+
+    if element <= nelems:
+        pybuf = <bytes>(<char *>buffer)[:8]
+        val   = np.ndarray(1, np.uint64, buffer=pybuf)
+        return val[0]
+    else:
+        return None
 
 
 def _check_chunk(args):
@@ -305,12 +334,30 @@ def test_seek_beyond_end(testfile, nelems):
                                   zran.ZRAN_AUTO_BUILD)
 
         for sp in seekpoints:
-            
-            assert zran.zran_seek(&index, sp, SEEK_SET, NULL) == 0
+
+            zs = zran.zran_seek(&index, sp, SEEK_SET, NULL)
+
+            if sp >= filesize: expected = zran.ZRAN_SEEK_EOF
+            else:              expected = zran.ZRAN_SEEK_OK
+ 
+            try:
+                assert zs == expected
+ 
+            except:
+                print("{} != {} [sp={}, size={}]".format(zs, expected, sp, filesize))
+                raise
         
             zt = zran.zran_tell(&index)
 
-            assert zt == min(sp, filesize - 1)
+            if sp >= filesize: expected = filesize
+            else:              expected = sp 
+
+            try:
+                assert zt == expected
+                
+            except:
+                print("{} != {}".format(zt, expected))
+                raise
 
         zran.zran_free(&index) 
 
@@ -335,13 +382,27 @@ def test_sequential_seek_to_end(testfile, nelems, niters):
                                   zran.ZRAN_AUTO_BUILD)
 
         for sp in seek_points:
-            
-            assert zran.zran_seek(&index, sp, SEEK_SET, NULL) == 0
-            
-            zt = zran.zran_tell(&index)
 
-            if sp >= filesize: assert zt == sp - 1
-            else:              assert zt == sp 
+            if sp >= filesize:
+                expseek = zran.ZRAN_SEEK_EOF
+                exptell = filesize
+            else:
+                expseek = zran.ZRAN_SEEK_OK
+                exptell = sp
+                
+            seek = zran.zran_seek(&index, sp, SEEK_SET, NULL)
+            tell = zran.zran_tell(&index)
+
+            try:
+                assert seek == expseek
+                assert tell == exptell
+            except:
+                print("expseek: {}".format(expseek))
+                print("exptell: {}".format(exptell))
+                print("seek:    {}".format(seek))
+                print("tell:    {}".format(tell))
+                raise
+ 
 
         zran.zran_free(&index) 
 
@@ -485,7 +546,7 @@ def test_random_seek_and_read(testfile, nelems, niters, seed):
 
         for se in seekelems:
 
-            val = read_element(&index, se, True)
+            val = read_element(&index, se, nelems, True)
 
             try:
                 assert val == se
@@ -519,7 +580,7 @@ def test_read_all_sequential(testfile, nelems):
 
         for se in seekelems:
 
-            val = read_element(&index, se, True)
+            val = read_element(&index, se, nelems, True)
             try:
                 assert val == se
             except:
@@ -605,8 +666,13 @@ def test_readbuf_spacing_sizes(testfile, nelems, niters, seed):
 
             for i, se in enumerate(seekelems):
 
-                val = read_element(&index, se, seek=True)
+                # print('{} / {}: {}'.format(i, len(seekelems), se))
 
-                assert val == se
+                if se > nelems: expval = None
+                else:           expval = se
+
+                val = read_element(&index, se, nelems, seek=True)
+
+                assert val == expval
 
             zran.zran_free(&index)

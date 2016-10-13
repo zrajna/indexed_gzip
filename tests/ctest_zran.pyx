@@ -19,13 +19,25 @@ import                    hashlib
 
 import numpy as np
 
-from libc.stdio cimport (SEEK_SET, FILE, fdopen)
+from posix.types cimport  off_t
+
+from libc.stdio  cimport (SEEK_SET,
+                          FILE,
+                          fdopen,
+                          fwrite)
 
 from libc.string cimport memset
 
 from cpython.mem cimport (PyMem_Malloc,
                           PyMem_Realloc,
                           PyMem_Free)
+
+from posix.mman cimport (mmap,
+                         munmap,
+                         PROT_READ,
+                         PROT_WRITE,
+                         MAP_ANON,
+                         MAP_SHARED)
 
 cimport zran
 
@@ -194,32 +206,60 @@ cdef class ReadBuffer:
     cdef void *buffer
     """A raw chunk of bytes. """
 
-    
-    def __cinit__(self, size_t size):
+    cdef bint use_mmap
+    """
+    """
+
+    cdef size_t size
+    """
+    """
+
+    def __cinit__(self, size_t size, use_mmap=False):
         """Allocate ``size`` bytes of memory. """
 
-        self.buffer = PyMem_Malloc(size);
-        memset(self.buffer, 0, size);
-        
+        self.use_mmap = use_mmap
+        self.size     = size
+        self.buffer   = NULL
+
+        if not self.use_mmap:
+            print("Allocating {:0.2f} GB".format(size / 1073741824))
+            self.buffer = PyMem_Malloc(size)
+ 
+        else:
+            print("Memory-mapping {:0.2f} GB".format(size / 1073741824))
+            self.buffer = mmap(NULL,
+                               size,
+                               PROT_READ | PROT_WRITE,
+                               MAP_ANON  | MAP_SHARED,
+                               -1,
+                               0)
 
         if not self.buffer:
-            raise MemoryError('PyMem_Malloc fail')
+            raise RuntimeError('ReadBuffer init fail')
+
+        memset(self.buffer, 0, size);
 
 
     def resize(self, size_t size):
         """Re-allocate the memory to the given ``size``. """
-        
+
+        if self.use_mmap:
+            raise NotImplementedError('Cannot resize a memmapped array!')
+
         buf = PyMem_Realloc(self.buffer, size)
 
         if not buf:
             raise MemoryError('PyMem_Realloc fail')
 
         self.buffer = buf
+        self.size   = size
 
 
     def __dealloc__(self):
         """Free the mwmory. """
-        PyMem_Free(self.buffer)
+
+        if not self.use_mmap: PyMem_Free(self.buffer)
+        else:                 munmap(    self.buffer, self.size)
 
     
 def test_init(testfile):
@@ -448,7 +488,7 @@ def test_random_seek(testfile, nelems, niters, seed):
         zran.zran_free(&index)
 
 
-def test_read_all(testfile, nelems):
+def test_read_all(testfile, nelems, use_mmap):
 
     filesize = nelems * 8
     indexSpacing = max(524288, filesize // 1000)
@@ -456,7 +496,7 @@ def test_read_all(testfile, nelems):
     cdef zran.zran_index_t index
     cdef void             *buffer
 
-    buf    = ReadBuffer(filesize) 
+    buf    = ReadBuffer(filesize, use_mmap=use_mmap) 
     buffer = buf.buffer
 
     with open(testfile, 'rb') as pyfid:
@@ -482,12 +522,12 @@ def test_read_all(testfile, nelems):
     assert check_data_valid(data, 0)
             
 
-def test_seek_then_read_block(testfile, nelems, niters, seed):
+def test_seek_then_read_block(testfile, nelems, niters, seed, use_mmap):
     
     filesize  = nelems * 8
     
     indexSpacing = max(524288, filesize // 1000)
-    buf          = ReadBuffer(filesize)
+    buf          = ReadBuffer(filesize, use_mmap=use_mmap)
     seekelems    = np.linspace(0, nelems - 1, niters, dtype=np.uint64)
     
     np.random.shuffle(seekelems)
@@ -602,12 +642,12 @@ def test_read_all_sequential(testfile, nelems):
         zran.zran_free(&index)
 
 
-def test_build_then_read(testfile, nelems, seed):
+def test_build_then_read(testfile, nelems, seed, use_mmap):
 
     filesize = nelems * 8
     
     indexSpacing = max(524288, filesize // 1000)
-    buf          = ReadBuffer(filesize)
+    buf          = ReadBuffer(filesize, use_mmap)
     seekelems    = np.linspace(0, nelems - 1, 5000, dtype=np.uint64)
     np.random.shuffle(seekelems) 
     

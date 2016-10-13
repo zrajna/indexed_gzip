@@ -24,7 +24,7 @@ drop-in replacement for the built-in Python `gzip.GzipFile` class, the
 
 
 `indexed_gzip` was written to allow fast random access of compressed 
-[NIFTI1](http://nifti.nimh.nih.gov/) image files (for which GZIP is the 
+[NIFTI](http://nifti.nimh.nih.gov/) image files (for which GZIP is the 
 de-facto compression standard), but will work with any GZIP file. 
 `indexed_gzip` is easy to use with `nibabel` 2.0.2  (http://nipy.org/nibabel/).
 
@@ -102,7 +102,7 @@ import indexed_gzip as igzip
 # handle. For the latter use, the file handle
 # must be opened in read-only binary mode.
 # Write support is currently non-existent.
-myfile = igzip.IndexedGzipFile('big_file.gz')
+myfile = igzip.IndexedGzipFile(filename='big_file.gz')
 
 some_offset_into_uncompressed_data = 234195
 

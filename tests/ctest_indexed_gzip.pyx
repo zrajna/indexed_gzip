@@ -83,7 +83,12 @@ def test_create_from_open_handle(testfile, nelems, seed):
         f.close()
 
 
-def test_read_all(testfile, nelems):
+def test_read_all(testfile, nelems, use_mmap):
+
+    if use_mmap:
+        print('WARNING: skipping test_read_all test, '
+              'as it will require to much memory')
+        return
 
     with igzip.IndexedGzipFile(filename=testfile) as f:
         data = f.read(nelems * 8)

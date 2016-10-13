@@ -25,7 +25,10 @@ def pytest_addoption(parser):
                      action='store_true',
                      help='Generate test data made of '
                           'concatenated GZIP streams')
-
+    
+    parser.addoption('--use_mmap',
+                     action='store_true',
+                     help='Use mmap for read buffer instead of main memory')
 
     parser.addoption('--seed',
                      type=int,
@@ -54,9 +57,12 @@ def niters(request):
 
 @pytest.fixture
 def concat(request):
-    """Number of test iterations."""
     return request.config.getoption('--concat')
 
+
+@pytest.fixture
+def use_mmap(request):
+    return request.config.getoption('--use_mmap')
 
 @pytest.fixture
 def seed(request):

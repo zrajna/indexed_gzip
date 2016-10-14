@@ -547,12 +547,13 @@ def test_seek_then_read_block(testfile, nelems, niters, seed, use_mmap):
 
         for i, se in enumerate(seekelems):
 
-            zran.zran_seek(&index, se * 8, SEEK_SET, NULL)
 
             if se == nelems - 1:
                 readelems = 1
             else:
                 readelems = np.random.randint(1, nelems - se)
+                
+            assert zran.zran_seek(&index, se * 8, SEEK_SET, NULL) == zran.ZRAN_SEEK_OK
                 
             nbytes = zran.zran_read(&index, buffer, readelems * 8)
 
@@ -582,7 +583,7 @@ def test_random_seek_and_read(testfile, nelems, niters, seed):
 
     filesize = nelems * 8
 
-    seekelems    = [random.randint(0, nelems) for i in range(niters)]
+    seekelems    = random.randint(0, nelems, niters)
     indexSpacing = max(524288, filesize // 1000)
 
     with open(testfile, 'rb') as pyfid:
@@ -597,12 +598,16 @@ def test_random_seek_and_read(testfile, nelems, niters, seed):
 
         for se in seekelems:
 
+            # Should never happen
+            if se >= nelems: expval = None
+            else:            expval = se
+            
             val = read_element(&index, se, nelems, True)
 
             try:
-                assert val == se
+                assert val == expval
             except:
-                print("{} != {} [{:x} != {:x}]".format(val, se, val, se))
+                print("{} != {}".format(val, se))
                 raise
 
         zran.zran_free(&index) 

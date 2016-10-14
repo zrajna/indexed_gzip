@@ -66,6 +66,16 @@ static int _zran_free_unused(
     zran_index_t *index  /* The index */
 );
 
+/*
+ * Returns the current limit of the index, i.e. how much of the file is covered
+ * by the index.
+ */
+static int _zran_index_limit(
+  zran_index_t *index,      /* The index */
+  uint8_t       compressed  /* Pass in non-0 to get the compressed stream limit, 
+                               or 0 for the uncompressed limit. */
+);
+
 
 /* Return codes for _zran_get_point_at */
 int ZRAN_GET_POINT_FAIL        =  -1;
@@ -466,6 +476,17 @@ fail:
 };
 
 
+/* Returns the compressed or uncompressed index limit. */
+int _zran_index_limit(zran_index_t *index, uint8_t compressed) {
+
+    if (index->npoints == 0)
+        return 0;
+
+    if (compressed) return index->list[index->npoints - 1].cmp_offset;
+    else            return index->list[index->npoints - 1].uncmp_offset;
+}
+
+
 /* Expands the memory used to store the index points. */
 int _zran_expand_point_list(zran_index_t *index) {
 
@@ -694,6 +715,7 @@ int _zran_get_point_with_expand(zran_index_t  *index,
     
     int      result;
     uint64_t expand;
+    uint64_t limit;
 
     zran_log("_zran_get_point_with_expand(%llu, %u, autobuild=%u)\n",
              offset,
@@ -725,6 +747,18 @@ int _zran_get_point_with_expand(zran_index_t  *index,
          */
         if (compressed == 0) expand = _zran_estimate_offset(index, offset, 0);
         else                 expand = offset;
+
+        /*
+         * If _zran_estimate_offset was unable to 
+         * estimate a sensible compressed offset
+         * (i.e. smaller or at the current index
+         * extent), we force it past the limit,
+         * so that the expand_index function will 
+         * create at least one point.
+         */
+        limit = _zran_index_limit(index, 1);
+        if (expand <= limit)
+            expand = limit + 10;
 
         /*
          * Expand the index
@@ -805,24 +839,6 @@ uint64_t _zran_estimate_offset(
         estimate = round(offset * ((float)last->cmp_offset / last->uncmp_offset));
     }
 
-    /*
-     * If we have been asked to estimate an offset 
-     * past the current extent of the index, and the 
-     * above calculation produced something which is 
-     * before or at that extent, pad it a bit.
-     */
-    if (last != NULL) {
-
-        if      (compressed                     &&
-                 offset   >  last->uncmp_offset &&
-                 estimate <= last->cmp_offset)
-            estimate = last->cmp_offset + 10;
-        
-        else if (!compressed                    &&
-                 offset   >  last->cmp_offset   &&
-                 estimate <= last->uncmp_offset)
-            estimate = last->uncmp_offset + 10;
-    }
 
     zran_log("_zran_estimate_offset(%llu, %u) = %llu\n",
              offset, compressed, estimate); 

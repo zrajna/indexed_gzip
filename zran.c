@@ -133,9 +133,10 @@ static int _zran_get_point_with_expand(
  * uncompressed data stream which approximately corresponds to the given
  * offset.
  *
- * This function is used by the zran_seek function, if the index has been
- * created with the ZRAN_AUTO_BUILD flag, to determine how far the index needs
- * to be expanded to cover a requested offset that is not yet covered.
+ * This function is used by the _zran_get_point_with_expand function, if the 
+ * index has been created with the ZRAN_AUTO_BUILD flag, to determine how far 
+ * the index needs to be expanded to cover a requested offset that is not yet 
+ * covered.
  */
 static uint64_t _zran_estimate_offset(
     zran_index_t *index,      /* The index */
@@ -802,6 +803,25 @@ uint64_t _zran_estimate_offset(
     }
     else {
         estimate = round(offset * ((float)last->cmp_offset / last->uncmp_offset));
+    }
+
+    /*
+     * If we have been asked to estimate an offset 
+     * past the current extent of the index, and the 
+     * above calculation produced something which is 
+     * before or at that extent, pad it a bit.
+     */
+    if (last != NULL) {
+
+        if      (compressed                     &&
+                 offset   >  last->uncmp_offset &&
+                 estimate <= last->cmp_offset)
+            estimate = last->cmp_offset + 10;
+        
+        else if (!compressed                    &&
+                 offset   >  last->cmp_offset   &&
+                 estimate <= last->uncmp_offset)
+            estimate = last->uncmp_offset + 10;
     }
 
     zran_log("_zran_estimate_offset(%llu, %u) = %llu\n",

@@ -26,25 +26,27 @@ env:
   - TEST_SUITE=zran_test         NITERS=500  NELEMS=2000000  TEST_PATTERN="test_seek_then_read_block"
   - TEST_SUITE=indexed_gzip_test NITERS=5000 NELEMS=2000000
   
-# NELEMS=16777216 works out to be 128MB uncompressed
+# NELEMS=16777216 ~ 128MB
   - TEST_SUITE=zran_test         NITERS=5000 NELEMS=16777216 TEST_PATTERN="not test_readbuf_spacing_sizes and not test_seek_then_read_block"
   - TEST_SUITE=zran_test         NITERS=500  NELEMS=16777216 TEST_PATTERN="test_readbuf_spacing_sizes"
   - TEST_SUITE=zran_test         NITERS=500  NELEMS=16777216 TEST_PATTERN="test_seek_then_read_block"
   - TEST_SUITE=indexed_gzip_test NITERS=5000 NELEMS=16777216
 
+# NELEMS=268435456 ~ 2GB
+  - TEST_SUITE=zran_test         NITERS=5000 NELEMS=268435456 TEST_PATTERN="not test_readbuf_spacing_sizes and not test_seek_then_read_block"
+  - TEST_SUITE=zran_test         NITERS=500  NELEMS=268435456 TEST_PATTERN="test_readbuf_spacing_sizes"
+  - TEST_SUITE=zran_test         NITERS=500  NELEMS=268435456 TEST_PATTERN="test_seek_then_read_block"
+  - TEST_SUITE=indexed_gzip_test NITERS=5000 NELEMS=268435456
 
-# TODO This is needed for testing reads greater than 4GB (i.e.
-#      reading >= 2**32 bytes in one go). They need time and
-#      > 4GB of RAM. I don't think travis-ci can handle them. 
-#  - NELEMS=536871012
+# NELEMS=805306368 ~ 6GB (for testing 64 bit support)
+  - TEST_SUITE=zran_test         NITERS=1000 NELEMS=805306368 TEST_PATTERN="not test_readbuf_spacing_sizes and not test_seek_then_read_block" EXTRA_ARGS="--use_mmap"
+  - TEST_SUITE=zran_test         NITERS=50   NELEMS=805306368 TEST_PATTERN="test_readbuf_spacing_sizes"                                       EXTRA_ARGS="--use_mmap"
+  - TEST_SUITE=zran_test         NITERS=50   NELEMS=805306368 TEST_PATTERN="test_seek_then_read_block"                                        EXTRA_ARGS="--use_mmap"
+  - TEST_SUITE=indexed_gzip_test NITERS=1000 NELEMS=805306368                                                                                 EXTRA_ARGS="--use_mmap"
 
-# TODO I also want to test bigger files (~2GB), but these tests
-#      are currently take a bit too long for travis-ci.
-#  - NELEMS=268435456
-  
 install: "pip install -r requirements.txt"
 
 script:
   - python setup.py install
-  - python setup.py test --addopts "-v -s -m \"$TEST_SUITE\" -k \"$TEST_PATTERN\" --nelems \"$NELEMS\" --niters \"$NITERS\""
-  - python setup.py test --addopts "-v -s -m \"$TEST_SUITE\" -k \"$TEST_PATTERN\" --nelems \"$NELEMS\" --niters \"$NITERS\" --concat"
+  - python setup.py test --addopts "-v -s -m \"$TEST_SUITE\" -k \"$TEST_PATTERN\" --nelems \"$NELEMS\" --niters \"$NITERS\"          $EXTRA_ARGS"
+  - python setup.py test --addopts "-v -s -m \"$TEST_SUITE\" -k \"$TEST_PATTERN\" --nelems \"$NELEMS\" --niters \"$NITERS\" --concat $EXTRA_ARGS"

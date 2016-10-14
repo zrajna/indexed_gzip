@@ -663,7 +663,7 @@ def test_random_seek_and_read(testfile, nelems, niters, seed):
 
     filesize = nelems * 8
 
-    seekelems    = random.randint(0, nelems, niters)
+    seekelems    = np.random.randint(0, nelems, niters)
     indexSpacing = max(524288, filesize // 1000)
 
     with open(testfile, 'rb') as pyfid:

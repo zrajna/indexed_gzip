@@ -16,8 +16,11 @@ import                    sys
 import                    time
 import                    random
 import                    hashlib
+import                    tempfile
 
 import numpy as np
+
+cimport numpy as np
 
 from posix.types cimport  off_t
 
@@ -39,7 +42,13 @@ from posix.mman cimport (mmap,
                          MAP_ANON,
                          MAP_SHARED)
 
+cdef extern from "sys/mman.h":
+    cdef enum:
+        MAP_FAILED
+
 cimport zran
+
+np.import_array()
 
 # TODO Test without ZRAN_AUTO_BUILD flag
 
@@ -52,45 +61,80 @@ def gen_test_data(filename, nelems, concat):
     # The file just contains a sequentially
     # increasing list of numbers
 
-    # maxBufSize is in elements, *not* in bytes
-    toWrite    = nelems
-
-    if not concat: maxBufSize = nelems
-    else:          maxBufSize = min(16777216, nelems // 50)
-    
-    index      = 0
-
-    print('Generating test data ({} bytes -> {})'.format(
-        toWrite * 8,
+    print('Generating test data ({} elems, {} bytes -> {})'.format(
+        nelems,
+        nelems * 8,
         filename))
 
-    with open(filename, 'wb') as f:
+    # Generate the data as a numpy memmap array.
+    # Allocate at most 128MB at a time
+    toWrite        = nelems
+    offset         = 0
+    writeBlockSize = min(16777216, nelems)
 
-        i = 0
+    tmpfile = '{}_temp'.format(filename)
+
+    with open(tmpfile, 'wb+') as f:
+        data = np.memmap(tmpfile, dtype=np.uint64, shape=nelems)
 
         while toWrite > 0:
+        
+            thisWrite = min(writeBlockSize, toWrite)
 
-            nvals    = min(maxBufSize, toWrite)
-            toWrite -= nvals
+            vals = np.arange(offset, offset + thisWrite, dtype=np.uint64)
+        
+            data[offset:offset + thisWrite] = vals
 
-            vals     = np.arange(index, index + nvals, dtype=np.uint64)
-            vals     = vals.tostring()
-            index   += nvals
+            toWrite  -= thisWrite
+            offset   += thisWrite
+            
 
-            print('Generated block {} ({} values, {} bytes)'.format(
-                i,
-                nvals,
-                len(vals)))
+            data.flush()
 
-            proc = sp.Popen(['gzip', '-c'], stdin=sp.PIPE, stdout=f)
-            proc.communicate(input=vals)
+    # Not using the python gzip module, 
+    # because it is super-slow.
 
-            print('Written block {} ({} bytes to go)'.format(
-                i,
-                toWrite))
-            i += 1
+    # Now write that array to a compresed file
+    # If a single stream, we just pass the array
+    # directly to gzip.
+    if not concat:
+
+        with open(tmpfile,  'rb') as inf, open(filename, 'wb') as outf:
+            sp.call(['gzip', '-c'], stdin=inf, stdout=outf)
+
+    # Otherwise, pass in chunks of data to 
+    # generate a concatenated gzip stream
+    else:
+        
+        # maxBufSize is in elements, not in bytes
+        if not concat: maxBufSize = nelems
+        else:          maxBufSize = min(16777216, nelems // 50)
+
+        toWrite = nelems
+        index   = 0
+
+        with open(filename, 'wb') as f:
+
+            i = 0
+
+            while toWrite > 0:
+
+                nvals    = min(maxBufSize, toWrite)
+                toWrite -= nvals
+
+                vals     = data[index : index + nvals]
+
+                vals     = vals.tostring()
+                index   += nvals
+
+                proc = sp.Popen(['gzip', '-c'], stdin=sp.PIPE, stdout=f)
+                proc.communicate(input=vals)
+
+                i += 1
 
     end = time.time()
+
+    os.remove(tmpfile)
 
     print('Done in {:0.2f} seconds'.format(end - start))
 
@@ -180,9 +224,9 @@ def check_data_valid(data, startval, endval=None):
     if endval is None:
         endval = len(_test_data)
 
-    pool = mp.Pool()
+    chunksize = 10000000
 
-    chunksize = 1000000
+    pool = mp.Pool()
 
     startval = int(startval)
     endval   = int(endval)
@@ -191,7 +235,7 @@ def check_data_valid(data, startval, endval=None):
 
     args   = [(startval, endval, off, chunksize) for off in offsets]
     result = all(pool.map(_check_chunk, args))
-
+    
     pool.terminate()
 
     return result
@@ -214,30 +258,51 @@ cdef class ReadBuffer:
     """
     """
 
+    cdef object mmap_fd
+    cdef object mmap_path
+    
+
     def __cinit__(self, size_t size, use_mmap=False):
         """Allocate ``size`` bytes of memory. """
 
-        self.use_mmap = use_mmap
-        self.size     = size
-        self.buffer   = NULL
+        self.use_mmap  = use_mmap
+        self.mmap_fd   = None
+        self.mmap_path = None
+        self.size      = size
+        self.buffer    = NULL
 
         if not self.use_mmap:
-            print("Allocating {:0.2f} GB".format(size / 1073741824))
             self.buffer = PyMem_Malloc(size)
+            
+            memset(self.buffer, 0, size);
  
         else:
-            print("Memory-mapping {:0.2f} GB".format(size / 1073741824))
-            self.buffer = mmap(NULL,
-                               size,
-                               PROT_READ | PROT_WRITE,
-                               MAP_ANON  | MAP_SHARED,
-                               -1,
-                               0)
+
+            fd, path = tempfile.mkstemp('readbuf_mmap_{}'.format(id(self)))
+
+            towrite = size
+
+            while towrite > 0:
+
+                zeros    = np.zeros(min(towrite, 134217728), dtype=np.uint8)
+                towrite -= len(zeros)
+
+                os.write(fd, zeros.tostring())
+
+            self.mmap_fd   = fd
+            self.mmap_path = path
+            self.buffer    = mmap(NULL,
+                                  size,
+                                  PROT_READ | PROT_WRITE,
+                                  MAP_SHARED,
+                                  fd,
+                                  0)
+
+            if self.buffer == <void*>MAP_FAILED:
+                raise RuntimeError('mmap fail')
 
         if not self.buffer:
             raise RuntimeError('ReadBuffer init fail')
-
-        memset(self.buffer, 0, size);
 
 
     def resize(self, size_t size):
@@ -258,8 +323,12 @@ cdef class ReadBuffer:
     def __dealloc__(self):
         """Free the mwmory. """
 
-        if not self.use_mmap: PyMem_Free(self.buffer)
-        else:                 munmap(    self.buffer, self.size)
+        if not self.use_mmap:
+            PyMem_Free(self.buffer)
+        else:
+            munmap(self.buffer, self.size)
+            os.close( self.mmap_fd)
+            os.remove(self.mmap_path)
 
     
 def test_init(testfile):
@@ -495,6 +564,7 @@ def test_read_all(testfile, nelems, use_mmap):
     
     cdef zran.zran_index_t index
     cdef void             *buffer
+    cdef np.npy_intp       nelemsp
 
     buf    = ReadBuffer(filesize, use_mmap=use_mmap) 
     buffer = buf.buffer
@@ -510,14 +580,14 @@ def test_read_all(testfile, nelems, use_mmap):
                                   zran.ZRAN_AUTO_BUILD)
 
         nbytes = zran.zran_read(&index, buffer, filesize)
-
+        
         assert nbytes                 == filesize
         assert zran.zran_tell(&index) == nbytes
         
         zran.zran_free(&index)
 
-    pybuf = <bytes>(<char *>buffer)[:nbytes]
-    data  = np.ndarray(nelems, np.uint64, pybuf)
+    nelemsp = nbytes / 8.
+    data    = np.PyArray_SimpleNewFromData(1, &nelemsp,  np.NPY_UINT64, buffer)
 
     assert check_data_valid(data, 0)
             
@@ -534,6 +604,7 @@ def test_seek_then_read_block(testfile, nelems, niters, seed, use_mmap):
     
     cdef zran.zran_index_t index
     cdef void             *buffer = buf.buffer
+    cdef np.npy_intp       nelemsp
 
     with open(testfile, 'rb') as pyfid:
         cfid = fdopen(pyfid.fileno(), 'rb')
@@ -552,6 +623,11 @@ def test_seek_then_read_block(testfile, nelems, niters, seed, use_mmap):
                 readelems = 1
             else:
                 readelems = np.random.randint(1, nelems - se)
+
+            start = time.time()
+
+            print("{} / {}: reading {} bytes from {} ... ".format(
+                i, len(seekelems), readelems, se), end='')
                 
             assert zran.zran_seek(&index, se * 8, SEEK_SET, NULL) == zran.ZRAN_SEEK_OK
                 
@@ -569,10 +645,14 @@ def test_seek_then_read_block(testfile, nelems, niters, seed, use_mmap):
                 print('  should be: {}'.format((se + readelems) * 8))
                 raise
 
-            pybuf = <bytes>(<char *>buffer)[:nbytes]
-            data  = np.ndarray(nbytes // 8, np.uint64, pybuf)
+            nelemsp = nbytes / 8.
+            data    = np.PyArray_SimpleNewFromData(1, &nelemsp,  np.NPY_UINT64, buffer)
 
             assert check_data_valid(data, se, se + readelems)
+
+            end = time.time()
+
+            print("{:0.2f} seconds".format(end - start))
                     
         zran.zran_free(&index)
 
@@ -707,9 +787,14 @@ def test_readbuf_spacing_sizes(testfile, nelems, niters, seed):
     seekelems = np.random.randint(0, nelems, niters // 2)
     seekelems = np.concatenate((spacings, bufsizes, seekelems))
 
-    for spacing, bufsize in it.product(spacings, bufsizes):
+    for sbi, (spacing, bufsize) in enumerate(it.product(spacings, bufsizes)):
 
         with open(testfile, 'rb') as pyfid:
+
+            print('{} / {}: spacing={}, bufsize={} ... '.format(
+                sbi,
+                len(spacings) * len(bufsizes),
+                spacing, bufsize), end='')
 
             cfid = fdopen(pyfid.fileno(), 'rb')
 
@@ -735,4 +820,5 @@ def test_readbuf_spacing_sizes(testfile, nelems, niters, seed):
                     print('{} != {}'.format(val, expval))
                     raise
 
+            print()
             zran.zran_free(&index)

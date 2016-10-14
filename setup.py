@@ -4,6 +4,8 @@ from setuptools    import setup
 from setuptools    import Extension
 from Cython.Build  import cythonize
 
+import numpy as np
+
 
 setup(
     name='indexed_gzip',
@@ -34,7 +36,7 @@ setup(
         Extension('tests.ctest_zran',
                   ['tests/ctest_zran.pyx', 'zran.c'],
                   libraries=['z'],
-                  include_dirs=['.'],
+                  include_dirs=['.', np.get_include()],
                   extra_compile_args=['-Wno-unused-function']),
 
         Extension('tests.ctest_indexed_gzip',

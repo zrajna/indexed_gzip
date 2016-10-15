@@ -1328,24 +1328,48 @@ static int _zran_inflate(zran_index_t *index,
      */
     while (strm->avail_out > 0) {
 
-        /* We need to read in more data */
-        if (strm->avail_in == 0) {
+        /* 
+         * We need to read in more data. We read in more 
+         * data when strm->avail_in < 2, because a GZIP 
+         * header is 2 bytes long, and when searching for 
+         * the next stream in a sequence of concatenated
+         * streams, the _zran_find_next_stream function 
+         * might leave a byte in the input without 
+         * finding a new stream.
+         */
+        if (strm->avail_in < 2) {
 
             if (feof(index->fd)) {
                 return_val = ZRAN_INFLATE_EOF;
                 break;
             }
 
+            /*
+             * If there are any unprocessed bytes 
+             * left over, put them at the beginning
+             * of the read buffer
+             */
+            if (strm->avail_in > 0) {
+                memcpy(index->readbuf, strm->next_in, strm->avail_in);
+            }
+
             zran_log("Reading from file %llu [ == %llu?]\n",
                      ftello(index->fd), cmp_offset);
             
-            /* Read a block of compressed data */
-            f_ret = fread(index->readbuf, 1, index->readbuf_size, index->fd);
+            /* 
+             * Read a block of compressed data 
+             * (offsetting past any left over 
+             * bytes that we may have copied to 
+             * the beginning of the read buffer
+             * above).
+             */
+            f_ret = fread(index->readbuf + strm->avail_in,
+                          1,
+                          index->readbuf_size - strm->avail_in,
+                          index->fd);
 
             if (ferror(index->fd)) goto fail;
             if (f_ret == 0)        goto fail;
-
-            index->readbuf_end = f_ret;
 
             zran_log("Read %lu bytes from file [c=%llu, u=%llu]\n",
                      f_ret, cmp_offset, uncmp_offset);
@@ -1355,8 +1379,9 @@ static int _zran_inflate(zran_index_t *index,
              * of compressed data that we
              * just read in.
              */
-            strm->avail_in = f_ret;
-            strm->next_in  = index->readbuf;
+            index->readbuf_end = f_ret + strm->avail_in;
+            strm->avail_in    += f_ret;
+            strm->next_in      = index->readbuf;
         }
 
         /*

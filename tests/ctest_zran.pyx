@@ -280,6 +280,8 @@ cdef class ReadBuffer:
 
             fd, path = tempfile.mkstemp('readbuf_mmap_{}'.format(id(self)))
 
+            print('Memory-mapping {:0.2f} GB ({})'.format(size / 1073741824., path))
+
             towrite = size
 
             while towrite > 0:
@@ -626,7 +628,7 @@ def test_seek_then_read_block(testfile, nelems, niters, seed, use_mmap):
 
             start = time.time()
 
-            print("{} / {}: reading {} bytes from {} ... ".format(
+            print("{} / {}: reading {} elements from {} ... ".format(
                 i, len(seekelems), readelems, se), end='')
                 
             assert zran.zran_seek(&index, se * 8, SEEK_SET, NULL) == zran.ZRAN_SEEK_OK

@@ -50,8 +50,6 @@ cimport zran
 
 np.import_array()
 
-# TODO Test without ZRAN_AUTO_BUILD flag
-
 
 def gen_test_data(filename, nelems, concat):
     """Make some data to test with. """
@@ -401,6 +399,60 @@ def test_init_file_modes(testfile):
 
         if filename == 'dummy.gz' and op.exists(filename):
             os.remove(filename)
+
+
+def test_no_auto_build(testfile, nelems):
+
+    cdef zran.zran_index_t index
+    cdef void             *buffer
+
+    filesize     = nelems * 8
+    indexSpacing = max(1048576, filesize // 1500)
+    bufSize      = 1048576
+    buf          = ReadBuffer(bufSize)
+    buffer       = buf.buffer 
+    
+    with open(testfile, 'rb') as pyfid:
+        cfid = fdopen(pyfid.fileno(), 'rb')
+
+        assert not zran.zran_init(&index,
+                                  cfid,
+                                  indexSpacing,
+                                  32768,
+                                  131072,
+                                  0)
+
+        assert zran.zran_seek(&index, 0, SEEK_SET, NULL) == zran.ZRAN_SEEK_OK
+        assert zran.zran_tell(&index) == 0
+        assert zran.zran_seek(&index, 1, SEEK_SET, NULL) == zran.ZRAN_SEEK_NOT_COVERED
+        assert zran.zran_tell(&index) == 0
+
+        gotread = zran.zran_read(&index, buffer, bufSize)
+        gottell = zran.zran_tell(&index)
+
+        if bufSize > filesize: expread = filesize
+        else:                  expread = bufSize
+
+        if bufSize > filesize: exptell = filesize
+        else:                  exptell = bufSize
+
+        try:
+            assert gotread == expread
+            assert gottell == exptell
+        except:
+            print("expread: {}".format(expread))
+            print("gotread: {}".format(gotread))
+            print("exptell: {}".format(exptell))
+            print("gottell: {}".format(gottell))
+            raise
+
+        pybuf = <bytes>(<char *>buffer)[:gotread]
+        data  = np.ndarray(gotread // 8, np.uint64, pybuf) 
+        
+        assert check_data_valid(data, 0)
+
+        if bufSize < filesize:
+            assert zran.zran_read(&index, buffer, bufSize) == zran.ZRAN_READ_NOT_COVERED
 
 
 def test_seek_to_end(testfile, nelems):

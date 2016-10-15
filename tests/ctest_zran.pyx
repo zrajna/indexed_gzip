@@ -75,8 +75,13 @@ def gen_test_data(filename, nelems, concat):
     with open(tmpfile, 'wb+') as f:
         data = np.memmap(tmpfile, dtype=np.uint64, shape=nelems)
 
+        idx = 0
+
         while toWrite > 0:
-        
+
+            if idx % 10 == 0:
+                print('Generated to {}...'.format(offset))
+
             thisWrite = min(writeBlockSize, toWrite)
 
             vals = np.arange(offset, offset + thisWrite, dtype=np.uint64)
@@ -85,8 +90,7 @@ def gen_test_data(filename, nelems, concat):
 
             toWrite  -= thisWrite
             offset   += thisWrite
-            
-
+            idx      += 1
             data.flush()
 
     # Not using the python gzip module, 
@@ -96,6 +100,8 @@ def gen_test_data(filename, nelems, concat):
     # If a single stream, we just pass the array
     # directly to gzip.
     if not concat:
+
+        print('Compressing all data with a single gzip call ...')
 
         with open(tmpfile,  'rb') as inf, open(filename, 'wb') as outf:
             sp.call(['gzip', '-c'], stdin=inf, stdout=outf)
@@ -113,9 +119,12 @@ def gen_test_data(filename, nelems, concat):
 
         with open(filename, 'wb') as f:
 
-            i = 0
+            idx = 0
 
             while toWrite > 0:
+
+                if idx % 10 == 0:
+                    print('Compressed to {}...'.format(index))
 
                 nvals    = min(maxBufSize, toWrite)
                 toWrite -= nvals
@@ -128,7 +137,7 @@ def gen_test_data(filename, nelems, concat):
                 proc = sp.Popen(['gzip', '-c'], stdin=sp.PIPE, stdout=f)
                 proc.communicate(input=vals)
 
-                i += 1
+                idx += 1
 
     end = time.time()
 

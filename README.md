@@ -71,22 +71,24 @@ sizes, with 1000 seeks:
 ## Installation
 
 
-1. Make sure you have [cython](http://cython.org/) installed.
+`indexed_gzip` is available on [PyPi](https://pypi.python.org/pypi) - to
+install, simply type:
+    ```sh
+    pip install indexed_gzip
+    ```
 
-
-2. Install into your Python environment:
-   ```sh
-   pip install git+https://github.com/pauldmccarthy/indexed_gzip.git
-   ```
-
-
-3. Or, if you don't want to install, compile the python extension:
+To compile `indexed_gzip`, make sure you have [cython](http://cython.org/)
+installed, and then run:
     ```sh
     python setup.py build_ext --inplace
     ```
-    
-   And put the `indexed_gzip` directory on your `$PYTHONPATH`.
 
+
+To run the tests, type the following; you will need `numpy` and `pytest`
+installed:
+    ```sh
+    python setup.py test
+    ```
 
 ## Usage
 

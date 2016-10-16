@@ -114,7 +114,7 @@ struct _zran_index {
      */
 
     /*
-     * Refernece to a file input 
+     * Reference to a file input 
      * buffer of size readbuf_size.
      */
     uint8_t      *readbuf;

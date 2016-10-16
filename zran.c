@@ -274,8 +274,8 @@ uint32_t ZRAN_INFLATE_FREE_Z_STREAM         = 2;
 uint32_t ZRAN_INFLATE_INIT_READBUF          = 4;
 uint32_t ZRAN_INFLATE_FREE_READBUF          = 8;
 uint32_t ZRAN_INFLATE_USE_OFFSET            = 16;
-uint32_t ZRAN_INFLATE_STOP_AT_BLOCK         = 32;
-uint32_t ZRAN_INFLATE_CLEAR_READBUF_OFFSETS = 64;
+uint32_t ZRAN_INFLATE_CLEAR_READBUF_OFFSETS = 32;
+uint32_t ZRAN_INFLATE_STOP_AT_BLOCK         = 64;
 
 
 /* Macros used by _zran_inflate for testing flags. */
@@ -299,6 +299,11 @@ uint32_t ZRAN_INFLATE_CLEAR_READBUF_OFFSETS = 64;
  * offset, inflates (a.k.a. decompresses) it, and copies the decompressed
  * data to the provided output buffer.
  *
+ * This function may be used in a re-entrant or non-re-entrant manner,
+ * depending on the flags which are used. In the latter (more likely) case,
+ * various pieces of information representing the current inflation state are
+ * stored in fields of the zran_index_t struct.
+ *
  * Specifically, this function does the following:
  *
  *   1. Figures out the starting offsets into the compressed/uncompressed
@@ -307,59 +312,97 @@ uint32_t ZRAN_INFLATE_CLEAR_READBUF_OFFSETS = 64;
  *      If there is no such point, ZRAN_INFLATE_NOT_COVERED is returned.  If
  *      ZRAN_INFLATE_USE_OFFSET is not active, index->inflate_cmp_offset and
  *      index->inflate_uncmp_offset are used as the starting point.
- *   
  * 
- *   2. Initialise the z_stream struct (if 
- *      ZRAN_INFLATE_INIT_Z_STREAM is active)
+ *   2. Initialises the z_stream struct, if 
+ *      ZRAN_INFLATE_INIT_Z_STREAM is active. Otherwise, the function assumes
+ *      that the z_stream struct is already initialised and ready to be used.
  *
- *   3. Create a read buffer (if 
- *      ZRAN_INFLATE_INIT_READBUF is active)
+ *   3. Create a read buffer, if ZRAN_INFLATE_INIT_READBUF is active. A
+ *      reference to the read buffer is stored at index->readbuf.  If
+ *      ZRAN_INFLATE_INIT_READBUF is not set, the function assumes that the
+ *      read buffer already exists.
  *
- *   4. Read some compressed data from the 
- *      file into the read buffer (if needed)
+ *   4. If the ZRAN_INFLATE_CLEAR_READBUF_OFFSETS flag is active, the read 
+ *      buffer offset (index->readbuf_offset) and length (index->readbuf_end) 
+ *      fields are both set to 0. Otherwise, the function assumes that the 
+ *      current offset/length values are valid.
  *
- *   5. Pass that data to the zlib inflate 
- *      function.
+ *   5. Read some compressed data from the file into the read buffer as needed.
  *
- *   6. Repeat steps 4 and 5 until:
+ *   6. Pass that data to the zlib inflate function, and store the resulting 
+ *      uncompressed data in the provided data buffer.
  *
- *       - The requested number of bytes have 
- *         been read, 
+ *   7. Repeat steps 4 and 5 until one of the following is true:
+ *
+ *       - The requested number of bytes have been read
  *
  *       - The output buffer is full
  * 
  *       - End of file is reached
  *
- *       - ZRAN_INFLATE_STOP_AT_BLOCK is active,
- *         and a block is reached
+ *       - ZRAN_INFLATE_STOP_AT_BLOCK is active, and a block is reached
  *
+ *   8. If ZRAN_INFLATE_FREE_READBUF is active, the file read buffer is 
+ *      de-allocated.
+ *
+ *   9. If ZRAN_INFLATE_FREE_Z_STREAM is active, the memory used by the 
+ *      z_stream struct is de-allocated (via the zlib inflateEnd function).
+ *
+ * The control flags can be a combination (bitwise OR) of the following:
+ *
+ *   - ZRAN_INFLATE_INIT_Z_STREAM:         Initialise the z_stream struct
+ *                                         before inflation.
+ *
+ *   - ZRAN_INFLATE_FREE_Z_STREAM:         Clean up the z_stream struct
+ *                                         after inflation.
+ *
+ *   - ZRAN_INFLATE_INIT_READBUF:          Allocate a read buffer before 
+ *                                         inflation.
+ *
+ *   - ZRAN_INFLATE_FREE_READBUF:          Free the read buffer after
+ *                                         inflation.
+ *
+ *   - ZRAN_INFLATE_USE_OFFSET:            If set, use the provided offset 
+ *                                         parameter; otherwise, use the 
+ *                                         offsets stored in the index 
+ *                                         struct.
  * 
+ *   - ZRAN_INFLATE_CLEAR_READBUF_OFFSETS: If set, clear the read buffer
+ *                                         offset/length stored in the index
+ *                                         struct, otherwise assume that they
+ *                                         are valid.
  *
- * Flags can be a combination of ZRAN_INFLATE_MANAGE_Z_STREAM and
- * ZRAN_INFLATE_STOP_AT_BLOCK
+ *   - ZRAN_INFLATE_STOP_AT_BLOCK:         If set, stop inflation when a 
+ *                                         deflate block boundary is reached
+ *                                         (the Z_BLOCK flag is passed to the 
+ *                                         zlib inflate function). Otherwise,
+ *                                         inflation will continue until one 
+ *                                         of the conditions in step 7, above,
+ *                                         are met.
  *
- * Returns 0 on success - this indicates that either the output buffer has
- * been filled, or EOF has been reached.
+ * This function returns one of the following codes. Furthermore, if an error
+ * did not occur (i.e. anything but ZRAN_INFLATE_ERROR or
+ * ZRAN_INFLATE_NOT_COVERED was returned), the total_consumed and total_output
+ * parameters are respectively updated to contain the total number of
+ * compressed bytes that were read from the file, and total number of
+ * decompressed bytes that were copied to the data buffer.
+
+ *   - ZRAN_INFLATE_OK:             Inflation was successful and the requested 
+ *                                  number of bytes were copied to the provided 
+ *                                  data buffer.
+ *
+ *   - ZRAN_INFLATE_NOT_COVERED:    The requested compressed data offset is not 
+ *                                  covered by the index.
  * 
- * Otherwise returns one of the error/status codes. If total_output is not 
- * NULL, it is updated with the total number of bytes that were decompressed 
- * (and copied into data).
+ *   - ZRAN_INFLATE_OUTPUT_FULL:    The provided data buffer has been filled.
+ * 
+ *   - ZRAN_INFLATE_BLOCK_BOUNDARY: A deflate block boundary was encountered.
+ *                                  This will only be returned if the 
+ *                                  ZRAN_INFLATE_STOP_AT_BLOCK flag is active.
  *
- * Flags:
- *   - ZRAN_INFLATE_INIT_Z_STREAM
- *   - ZRAN_INFLATE_FREE_Z_STREAM
- *   - ZRAN_INFLATE_INIT_READBUF
- *   - ZRAN_INFLATE_FREE_READBUF
- *   - ZRAN_INFLATE_USE_OFFSET
- *   - ZRAN_INFLATE_STOP_AT_BLOCK
- *   - ZRAN_INFLATE_CLEAR_READBUF_OFFSETS
- *
- * Return codes:
- *   - ZRAN_INFLATE_NOT_COVERED
- *   - ZRAN_INFLATE_OUTPUT_FULL
- *   - ZRAN_INFLATE_BLOCK_BOUNDARY
- *   - ZRAN_INFLATE_EOF
- *   - ZRAN_INFLATE_ERROR
+ *   - ZRAN_INFLATE_EOF:            The end of file has been reached.
+ * 
+ *   - ZRAN_INFLATE_ERROR:          A critical error has occurred.
  */
 static int _zran_inflate(
     zran_index_t *index,          /* Pointer to the index. */

@@ -8,9 +8,9 @@
 
 
  * [Overview](#overview)
- * [Performance](#performance)
  * [Installation](#installation)
  * [Usage](#usage)
+ * [Performance](#performance)
  * [Acknowledgements](#acknowledgements)
  * [License](#license)
 
@@ -45,50 +45,27 @@ only have to decompress (on average) 512KB of data to read from any location
 in the file.
 
 
-## Performance
-
-
-A small [test script](benchmark_indexed_gzip.py) is included with `indexed_gzip`;
-this script compares the performance of the `IndexedGzipFile` class with the
-`gzip.GzipFile` class. This script does the following:
-
-
-  1. Generates a specified number of seek locations, uniformly spaced
-     throughout the input file.
-  
-  2. Randomly shuffles these locations
-
-  3. Seeks to each location, and reads a chunk of data from the file.
-
-
-This plot shows the results of this test for a few compresed files of varying
-sizes, with 1000 seeks:
-
-
-![Indexed gzip performance](./performance.png)
-
-
 ## Installation
 
 
 `indexed_gzip` is available on [PyPi](https://pypi.python.org/pypi) - to
 install, simply type:
-    ```sh
-    pip install indexed_gzip
-    ```
+```sh
+pip install indexed_gzip
+```
 
 To compile `indexed_gzip`, make sure you have [cython](http://cython.org/)
 installed, and then run:
-    ```sh
-    python setup.py build_ext --inplace
-    ```
+```sh
+python setup.py build_ext --inplace
+```
 
 
 To run the tests, type the following; you will need `numpy` and `pytest`
 installed:
-    ```sh
-    python setup.py test
-    ```
+```sh
+python setup.py test
+```
 
 ## Usage
 
@@ -168,6 +145,30 @@ fmap = nib.Nifti1Image.make_file_map()
 fmap['image'].fileobj = fobj
 image = nib.Nifti1Image.from_file_map(fmap)
 ```
+
+
+## Performance
+
+
+A small [test script](benchmark_indexed_gzip.py) is included with `indexed_gzip`;
+this script compares the performance of the `IndexedGzipFile` class with the
+`gzip.GzipFile` class. This script does the following:
+
+
+  1. Generates a specified number of seek locations, uniformly spaced
+     throughout the input file.
+  
+  2. Randomly shuffles these locations
+
+  3. Seeks to each location, and reads a chunk of data from the file.
+
+
+This plot shows the results of this test for a few compresed files of varying
+sizes, with 1000 seeks:
+
+
+![Indexed gzip performance](./performance.png)
+
 
 ## Acknowledgements
 

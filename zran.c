@@ -70,7 +70,7 @@ static int _zran_free_unused(
  * Returns the current limit of the index, i.e. how much of the file is covered
  * by the index.
  */
-static int _zran_index_limit(
+static uint64_t _zran_index_limit(
   zran_index_t *index,      /* The index */
   uint8_t       compressed  /* Pass in non-0 to get the compressed stream limit, 
                                or 0 for the uncompressed limit. */
@@ -520,7 +520,7 @@ fail:
 
 
 /* Returns the compressed or uncompressed index limit. */
-int _zran_index_limit(zran_index_t *index, uint8_t compressed) {
+uint64_t _zran_index_limit(zran_index_t *index, uint8_t compressed) {
 
     if (index->npoints == 0)
         return 0;

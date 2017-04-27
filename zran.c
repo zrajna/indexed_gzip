@@ -36,7 +36,7 @@
 
 /*
  * Discards all points in the index which come after the specfiied
- * compresesd offset.
+ * compressed offset.
  *
  * Returns 0 on success, non-0 on failure.
  */
@@ -332,7 +332,7 @@ uint32_t ZRAN_INFLATE_STOP_AT_BLOCK         = 64;
  *   6. Pass that data to the zlib inflate function, and store the resulting 
  *      uncompressed data in the provided data buffer.
  *
- *   7. Repeat steps 4 and 5 until one of the following is true:
+ *   7. Repeat steps 5 and 6 until one of the following is true:
  *
  *       - The requested number of bytes have been read
  *
@@ -513,8 +513,7 @@ int zran_init(zran_index_t *index,
     return 0;
 
 fail:
-    if (point_list == NULL)
-        free(point_list);
+    free(point_list);
     return -1;
 };
 
@@ -541,6 +540,7 @@ int _zran_expand_point_list(zran_index_t *index) {
                                      sizeof(zran_point_t) * new_size);
 
     if (new_list == NULL) {
+        /* old list is still valid */
         return -1;
     }
     
@@ -582,14 +582,10 @@ void zran_free(zran_index_t *index) {
     for (i = 0; i < index->npoints; i++) {
         pt = &(index->list[i]);
 
-        if (pt->data != NULL) {
-            free(pt->data);
-        }
+        free(pt->data);
     }
     
-    if (index->list != NULL) {
-        free(index->list);
-    }
+    free(index->list);
     
     index->fd                = NULL;
     index->spacing           = 0;
@@ -998,8 +994,7 @@ int _zran_add_point(zran_index_t  *index,
     return 0;
 
 fail:
-    if (point_data != NULL) 
-        free(point_data);
+    free(point_data);
     
     return -1;
 };
@@ -1108,7 +1103,7 @@ fail:
 
 
 /* 
- * Identify the location of the next compresesd stream (if the file 
+ * Identify the location of the next compressed stream (if the file 
  * contains concatenated streams).
  */
 int _zran_find_next_stream(zran_index_t *index, z_stream *stream) {
@@ -1556,7 +1551,7 @@ static int _zran_inflate(zran_index_t *index,
 
             /*
              * We've run out of space to 
-             * store decompresesd data
+             * store decompressed data
              */
             if (strm->avail_out == 0) {
 
@@ -1971,8 +1966,7 @@ int _zran_expand_index(zran_index_t *index, uint64_t until)
     return 0;
 
 fail:
-    if (data != NULL)
-        free(data);
+    free(data);
     
     return -1;
 };

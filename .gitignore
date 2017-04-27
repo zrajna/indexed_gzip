@@ -1,8 +1,0 @@
-.eggs/
-build/
-*.c
-*.so
-*_False.gz
-indexed_gzip.egg-info/
-*.pyc
-*__pycache__/

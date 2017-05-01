@@ -13,10 +13,10 @@ from setuptools import Command
 class Clean(Command):
 
     user_options = []
-    
+
     def initialize_options(self): pass
-    def finalize_options(  self): pass 
-    
+    def finalize_options(  self): pass
+
     def run(self):
 
         shutil.rmtree('build',                 ignore_errors=True)
@@ -64,11 +64,11 @@ if have_numpy:
     include_dirs.append(np.get_include())
 
 
-# Compile from cython files if 
+# Compile from cython files if
 # possible, or compile from c.
 if have_cython: pyx_extension = 'pyx'
 else:           pyx_extension = 'c'
-    
+
 
 # The indexed_gzip module
 igzip_ext = Extension(
@@ -105,7 +105,7 @@ if have_cython:
 
 setup(
     name='indexed_gzip',
-    version='0.3.1',
+    version='0.3.2',
     author='Paul McCarthy',
     author_email='pauldmccarthy@gmail.com',
     description='Fast random access of gzip files in Python',
@@ -124,7 +124,7 @@ setup(
     ],
 
     cmdclass={'clean' : Clean},
-    
+
     ext_modules=extensions,
 
     setup_requires=['pytest-runner'],

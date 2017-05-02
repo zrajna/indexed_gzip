@@ -12,7 +12,8 @@ random access to gzip files.
 
 from libc.stdio  cimport (SEEK_SET,
                           FILE,
-                          fdopen)
+                          fdopen,
+                          fclose)
 
 from libc.stdint cimport int64_t
 
@@ -147,7 +148,14 @@ cdef class IndexedGzipFile:
             readbuf_size))
 
 
-    def close(self):
+    def __init__(self, *args, **kwargs):
+        """This method does nothing. It is here to make sub-classing
+        ``IndexedGzipFile`` easier.
+        """
+        pass
+
+
+    cpdef close(self):
         """Closes this ``IndexedGzipFile``. """
 
         if self.closed():
@@ -163,8 +171,8 @@ cdef class IndexedGzipFile:
 
         log.debug('{}.close()'.format(type(self).__name__))
 
-        
-    def closed(self):
+
+    cpdef closed(self):
         """Returns ``True`` if this ``IndexedGzipFile`` is closed, ``False``
         otherwise.
         """
@@ -288,6 +296,14 @@ cdef class IndexedGzipFile:
         return pybuf
 
 
+    def pread(self, nbytes, offset):
+        """Seeks to the specified ``offset``, then reads and returns
+        ``nbytes``. See :meth:`seek` and :meth:`read`.
+        """
+        IndexedGzipFile.seek(self, offset)
+        return IndexedGzipFile.read(self, nbytes)
+
+
     def write(self, *args, **kwargs):
         """Currently raises a :exc:`NotImplementedError`."""
         raise NotImplementedError('IndexedGzipFile does not support writing')
@@ -363,23 +379,29 @@ class SafeIndexedGzipFile(IndexedGzipFile):
 
 
     def __init__(self, *args, **kwargs):
-        """See :meth:`IndexedGzipFile.__cinit__`. """
-        IndexedGzipFile.__init__(self, *args, **kwargs) 
+        """Creates a ``Lock`` for protecting access to the file methods. """
+        IndexedGzipFile.__init__(self, *args, **kwargs)
         self.__fileLock = threading.Lock()
 
 
     @__mutex
     def seek(self, *args, **kwargs):
         """See :meth:`IndexedGzipFile.seek`. """
-        return IndexedGzipFile.seek(self, *args, **kwargs) 
+        return IndexedGzipFile.seek(self, *args, **kwargs)
 
-    
+
     @__mutex
     def read(self, *args, **kwargs):
         """See :meth:`IndexedGzipFile.read`. """
-        return IndexedGzipFile.read(self, *args, **kwargs) 
+        return IndexedGzipFile.read(self, *args, **kwargs)
 
-    
+
+    @__mutex
+    def pread(self, *args, **kwargs):
+        """See :meth:`IndexedGzipFile.pread`. """
+        return IndexedGzipFile.pread(self, *args, **kwargs)
+
+
     @__mutex
     def write(self, *args, **kwargs):
         """See :meth:`IndexedGzipFile.write`. """

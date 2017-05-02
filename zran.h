@@ -4,7 +4,7 @@
 /*
  * The zran module is an adaptation of the zran example, written by Mark
  * Alder, which ships with the zlib source code. It allows the creation
- * of an index into a compressed file, which is used to improve the speed 
+ * of an index into a compressed file, which is used to improve the speed
  * of random seek/read access to the uncompressed data.
  *
  * Author: Paul McCarthy <pauldmccarthy@gmail.com>
@@ -21,18 +21,18 @@ struct _zran_point;
 typedef struct _zran_index zran_index_t;
 typedef struct _zran_point zran_point_t;
 
-/* 
+/*
  * These values may be passed in as flags to the zran_init function.
- * They are specified as bit-masks, rather than bit locations. 
+ * They are specified as bit-masks, rather than bit locations.
  */
 enum {
   ZRAN_AUTO_BUILD = 1,
 
 };
-  
 
-/* 
- * Struct representing the index. None of the fields in this struct 
+
+/*
+ * Struct representing the index. None of the fields in this struct
  * should ever need to be accessed or modified directly.
  */
 struct _zran_index {
@@ -43,7 +43,7 @@ struct _zran_index {
     FILE         *fd;
 
     /*
-     * Size of the compressed file. This 
+     * Size of the compressed file. This
      * is calculated in zran_init.
      */
     size_t        compressed_size;
@@ -53,10 +53,10 @@ struct _zran_index {
      * only updated when it becomes known.
      */
     size_t        uncompressed_size;
-    
-    /* 
-     * Spacing size in bytes, relative to the compressed 
-     * data stream, between adjacent index points 
+
+    /*
+     * Spacing size in bytes, relative to the compressed
+     * data stream, between adjacent index points
      */
     uint32_t      spacing;
 
@@ -67,19 +67,19 @@ struct _zran_index {
      */
     uint32_t      window_size;
 
-    /* 
-     * Base2 logarithm of the window size - it 
+    /*
+     * Base2 logarithm of the window size - it
      * is needed to initialise zlib inflation.
-     */ 
+     */
     uint32_t      log_window_size;
 
     /*
-     * Size, in bytes, of buffer used to store 
+     * Size, in bytes, of buffer used to store
      * compressed data read from disk.
-     */ 
+     */
     uint32_t      readbuf_size;
 
-    /* 
+    /*
      * Number of index points that have been created.
      */
     uint32_t      npoints;
@@ -95,26 +95,26 @@ struct _zran_index {
     zran_point_t *list;
 
     /*
-     * Most recently requested seek/read 
-     * location into the uncompressed data 
-     * stream - this is used to keep track 
-     * of where the calling code thinks it 
+     * Most recently requested seek/read
+     * location into the uncompressed data
+     * stream - this is used to keep track
+     * of where the calling code thinks it
      * is in the (uncompressed) file.
      */
     uint64_t      uncmp_seek_offset;
 
-    /* 
+    /*
      * Flags passed to zran_init
      */
     uint16_t      flags;
 
-    /* 
-     * All of the fields after this point are used 
+    /*
+     * All of the fields after this point are used
      * by the internal _zran_inflate function.
      */
 
     /*
-     * Reference to a file input 
+     * Reference to a file input
      * buffer of size readbuf_size.
      */
     uint8_t      *readbuf;
@@ -129,8 +129,8 @@ struct _zran_index {
      */
     uint32_t      readbuf_end;
 
-    /* 
-     * Current offsets into the uncompressed and 
+    /*
+     * Current offsets into the uncompressed and
      * compressed data streams.
      */
     uint64_t      inflate_cmp_offset;
@@ -138,28 +138,28 @@ struct _zran_index {
 };
 
 
-/* 
+/*
  * Struct representing a single seek point in the index.
  */
 struct _zran_point {
 
 
-    /* 
-     * Location of this point in the compressed data 
-     * stream. This is the location of the first full 
-     * byte of compressed data - if  the compressed 
-     * and uncompressed locations are not byte-aligned, 
+    /*
+     * Location of this point in the compressed data
+     * stream. This is the location of the first full
+     * byte of compressed data - if  the compressed
+     * and uncompressed locations are not byte-aligned,
      * the bits field below specifies the bit offset.
      */
     uint64_t  cmp_offset;
- 
-    /* 
-     * Corresponding location of this point 
+
+    /*
+     * Corresponding location of this point
      * in the uncompressed data stream.
      */
     uint64_t  uncmp_offset;
 
-    /* 
+    /*
      * If this point is not byte-aligned, this specifies
      * the number of bits, in the compressed stream,
      * back from cmp_offset, that the uncompressed data
@@ -167,7 +167,7 @@ struct _zran_point {
      */
     uint8_t   bits;
 
-    /* 
+    /*
      * Chunk of uncompressed data preceeding this point.
      * This is required to initialise decompression from
      * this point onwards.
@@ -177,7 +177,7 @@ struct _zran_point {
 
 
 /*
- * Initialise a zran_index_t struct for use with the given file. 
+ * Initialise a zran_index_t struct for use with the given file.
  *
  * Passing in 0 for the spacing, window_size and readbuf_size arguments
  * will result in the follwoing values being used:
@@ -193,16 +193,16 @@ struct _zran_point {
 int  zran_init(
   zran_index_t *index,        /* The index                          */
   FILE         *fd,           /* Open handle to the compressed file */
-  uint32_t      spacing,      /* Distance in bytes between 
+  uint32_t      spacing,      /* Distance in bytes between
                                  index seek points                  */
-  uint32_t      window_size,  /* Number of uncompressed bytes 
+  uint32_t      window_size,  /* Number of uncompressed bytes
                                  to store with each point           */
   uint32_t      readbuf_size, /* Number of bytes to read at a time  */
   uint16_t      flags         /* Flags controlling index behaviour  */
 );
 
 
-/* 
+/*
  * Frees the memory use by the given index. The zran_index_t struct
  * itself is not freed.
  */
@@ -212,10 +212,10 @@ void zran_free(
 
 
 /*
- * (Re-)Builds the index to cover the given range, which must be 
+ * (Re-)Builds the index to cover the given range, which must be
  * specified relative to the compressed data stream. Pass in 0
  * for both offsets to re-build the full index.
- * 
+ *
  * Returns 0 on success, non-0 on failure.
  */
 int zran_build_index(
@@ -235,33 +235,33 @@ enum {
 
 
 /*
- * Seek to the specified offset in the uncompressed data stream. 
- * If the index does not currently cover the offset, and it was 
+ * Seek to the specified offset in the uncompressed data stream.
+ * If the index does not currently cover the offset, and it was
  * created with the ZRAN_AUTO_BUILD flag, the index is expanded
  * to cover the offset.
  *
  * Seeking from the end of the uncompressed stream is not supported
- * - you may only seek from the beginning of the file, or from the 
- * current seek location. In other words, the whence argument must 
+ * - you may only seek from the beginning of the file, or from the
+ * current seek location. In other words, the whence argument must
  * be equal to SEEK_SET or SEEK_CUR.
  *
  * Returns:
  *    - ZRAN_SEEK_OK for success.
- * 
+ *
  *    - ZRAN_SEEK_FAIL to indicate failure of some sort.
- *   
- *    - ZRAN_SEEK_NOT_COVERED to indicate that the index does not 
- *      cover the requested offset (will never happen if 
+ *
+ *    - ZRAN_SEEK_NOT_COVERED to indicate that the index does not
+ *      cover the requested offset (will never happen if
  *      ZRAN_AUTO_BUILD is active).
 
  *    - ZRAN_SEEK_EOF to indicate that the requested offset
- *      is past the end of the uncompressed stream. 
+ *      is past the end of the uncompressed stream.
  */
 int zran_seek(
   zran_index_t  *index,   /* The index                      */
   off_t          offset,  /* Uncompressed offset to seek to */
   int            whence,  /* Must be SEEK_SET or SEEK_CUR   */
-  zran_point_t **point    /* Optional place to store 
+  zran_point_t **point    /* Optional place to store
                              corresponding zran_point_t     */
 );
 
@@ -273,7 +273,7 @@ long zran_tell(
   zran_index_t *index /* The index */
 );
 
-  
+
 /* Return codes for zran_read. */
 enum {
     ZRAN_READ_NOT_COVERED = -1,
@@ -282,16 +282,16 @@ enum {
 };
 
 /*
- * Read len bytes from the current location in the uncompressed 
- * data stream, storing them in buf. If the index was created with 
+ * Read len bytes from the current location in the uncompressed
+ * data stream, storing them in buf. If the index was created with
  * the ZRAN_AUTO_BUILD flag, it is expanded as needed.
  *
  * Returns:
  *   - Number of bytes read for success.
- *   
- *   - ZRAN_READ_NOT_COVERED to indicate that the index does not 
- *     cover the requested region (will never happen if 
- *     ZRAN_AUTO_BUILD is active). 
+ *
+ *   - ZRAN_READ_NOT_COVERED to indicate that the index does not
+ *     cover the requested region (will never happen if
+ *     ZRAN_AUTO_BUILD is active).
  *
  *   - ZRAN_READ_EOF to indicate that the read could not be completed
  *     because the current uncompressed seek point is at EOF.

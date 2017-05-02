@@ -13,7 +13,7 @@ cdef extern from "zran.h":
 
     ctypedef struct zran_index_t:
         pass
-    
+
     ctypedef struct zran_point_t:
         pass
 
@@ -34,7 +34,7 @@ cdef extern from "zran.h":
                    uint32_t      window_size,
                    uint32_t      readbuf_size,
                    uint16_t      flags)
-                  
+
     void zran_free(zran_index_t *index)
 
     bint zran_build_index(zran_index_t *index,

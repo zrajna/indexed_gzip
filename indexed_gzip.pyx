@@ -59,31 +59,31 @@ cdef class IndexedGzipFile:
               thread-safety.
     """
 
-    
+
     cdef zran.zran_index_t index
     """A reference to the ``zran_index`` struct. """
 
-    
+
     cdef bint auto_build
     """Flag which is set to ``True`` if the file index is built automatically
     on seeks/reads.
     """
 
-    
+
     cdef bint own_file
     """Flag which is set to ``True`` if the user specified a file name instead
     of an open file handle. In this case, the IndexedGzipFile is responsible
     for closing the file handle when it is destroyed.
     """
 
-    
+
     cdef FILE *cfid
     """A reference to the C file handle. """
 
-    
+
     cdef object pyfid
     """A reference to the python file handle. """
-    
+
 
     def __cinit__(self,
                   fid=None,
@@ -97,17 +97,17 @@ cdef class IndexedGzipFile:
         must have been opened in ``'rb'`` mode.
 
         :arg fid:          Open file handle.
-        
+
         :arg filename:     File name.
-        
-        :arg auto_build:   If ``True`` (the default), the index is 
+
+        :arg auto_build:   If ``True`` (the default), the index is
                            automatically built on seeks/reads.
-        
+
         :arg spacing:      Number of bytes between index seek points.
-        
+
         :arg window_size:  Number of bytes of uncompressed data stored with
                            each seek point.
-        
+
         :arg readbuf_size: Size of buffer in bytes for storing compressed data
                            read in from the file.
         """
@@ -121,7 +121,7 @@ cdef class IndexedGzipFile:
 
         self.own_file   = fid is None
         self.auto_build = auto_build
-        
+
         if self.own_file: self.pyfid = open(filename, 'rb')
         else:             self.pyfid = fid
 
@@ -129,7 +129,7 @@ cdef class IndexedGzipFile:
 
         if self.auto_build: flags = zran.ZRAN_AUTO_BUILD
         else:               flags = 0
-        
+
         if zran.zran_init(index=&self.index,
                           fd=self.cfid,
                           spacing=spacing,
@@ -139,7 +139,7 @@ cdef class IndexedGzipFile:
             raise ZranError('zran_init returned error')
 
         log.debug('{}.__init__({}, {}, {}, {}, {}, {})'.format(
-            type(self).__name__, 
+            type(self).__name__,
             fid,
             filename,
             auto_build,
@@ -165,7 +165,7 @@ cdef class IndexedGzipFile:
 
         if self.own_file:
             self.pyfid.close()
-        
+
         self.cfid  = NULL
         self.pyfid = None
 
@@ -185,27 +185,27 @@ cdef class IndexedGzipFile:
         """
         return not self.closed()
 
-    
+
     def writable(self):
         """Currently always returns ``False`` - the ``IndexedGzipFile`` does
         not support writing yet.
         """
         return False
 
-    
+
     def seekable(self):
         """Returns ``True`` if this ``IndexedGzipFile`` supports seeking,
         ``False`` otherwise.
         """
         return not self.closed()
 
-    
+
     def tell(self):
         """Returns the current seek offset into the uncompressed data stream.
         """
         return zran.zran_tell(&self.index)
 
-    
+
     def __enter__(self):
         """Returns this ``IndexedGzipFile``. """
         return self
@@ -216,7 +216,7 @@ cdef class IndexedGzipFile:
         if not self.closed():
             self.close()
 
-    
+
     def __dealloc__(self):
         """Frees the memory used by this ``IndexedGzipFile``. If a file name
         was passed to :meth:`__cinit__`, the file handle is closed.
@@ -227,7 +227,7 @@ cdef class IndexedGzipFile:
 
     def build_full_index(self):
         """Re-builds the full file index. """
-        
+
         if zran.zran_build_index(&self.index, 0, 0) != 0:
             raise ZranError('zran_build_index returned error')
 
@@ -248,25 +248,25 @@ cdef class IndexedGzipFile:
         cdef int                ret
         cdef off_t              off   = offset
         cdef zran.zran_index_t *index = &self.index
-        
+
         with nogil:
             ret = zran.zran_seek(index, off, SEEK_SET, NULL)
 
         if ret < 0:
             raise ZranError('zran_seek returned error')
-        
+
         elif ret > 0:
             raise NotCoveredError('Index does not cover '
                                   'offset {}'.format(offset))
 
-        log.debug('{}.seek({})'.format(type(self).__name__, offset)) 
-        
+        log.debug('{}.seek({})'.format(type(self).__name__, offset))
+
 
     def read(self, nbytes):
         """Reads up to ``nbytes`` bytes from the uncompressed data stream.
 
         .. note:: This method releases the GIL while ``zran_read`` is
-                  running. 
+                  running.
         """
 
         buf = ReadBuffer(nbytes)
@@ -281,7 +281,7 @@ cdef class IndexedGzipFile:
 
         if ret < -1:
             raise ZranError('zran_read returned error ({})'.format(ret))
-        
+
         elif ret == -1:
             raise NotCoveredError('Index does not cover current offset')
 
@@ -291,7 +291,7 @@ cdef class IndexedGzipFile:
         buf.resize(ret)
         pybuf = <bytes>(<char *>buf.buffer)[:ret]
 
-        log.debug('{}.read({})'.format(type(self).__name__, len(pybuf))) 
+        log.debug('{}.read({})'.format(type(self).__name__, len(pybuf)))
 
         return pybuf
 
@@ -311,14 +311,14 @@ cdef class IndexedGzipFile:
 
 cdef class ReadBuffer:
     """Wrapper around a chunk of memory.
- 
+
     .. see:: http://docs.cython.org/src/tutorial/memory_allocation.html
     """
 
     cdef void *buffer
     """A raw chunk of bytes. """
 
-    
+
     def __cinit__(self, size_t size):
         """Allocate ``size`` bytes of memory. """
 
@@ -332,7 +332,7 @@ cdef class ReadBuffer:
 
     def resize(self, size_t size):
         """Re-allocate the memory to the given ``size``. """
-        
+
         buf = PyMem_Realloc(self.buffer, size)
 
         if not buf:
@@ -368,10 +368,10 @@ class SafeIndexedGzipFile(IndexedGzipFile):
         def decorator(self, *args, **kwargs):
 
             self.__fileLock.acquire()
-            
+
             try:
                 return func(self, *args, **kwargs)
-            
+
             finally:
                 self.__fileLock.release()
 

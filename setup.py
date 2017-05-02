@@ -75,7 +75,7 @@ igzip_ext = Extension(
     'indexed_gzip',
     ['indexed_gzip.{}'.format(pyx_extension), 'zran.c'],
     libraries=['z'],
-    extra_compile_args=['-Wno-unused-function'])
+    extra_compile_args=['-Wall', '-pedantic', '-Wno-unused-function'])
 
 # Optional test modules
 test_exts = [

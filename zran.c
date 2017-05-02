@@ -515,7 +515,7 @@ int zran_init(zran_index_t *index,
 fail:
     free(point_list);
     return -1;
-};
+}
 
 
 /* Returns the compressed or uncompressed index limit. */
@@ -548,7 +548,7 @@ int _zran_expand_point_list(zran_index_t *index) {
     index->size = new_size;
     
     return 0;
-};
+}
 
 
 /* Frees any unused memory allocated for index storage. */
@@ -568,7 +568,7 @@ int _zran_free_unused(zran_index_t *index) {
     index->size = index->npoints;
 
     return 0;
-};
+}
 
 
 /* Deallocate memory used by a zran_index_t struct. */
@@ -595,7 +595,7 @@ void zran_free(zran_index_t *index) {
     index->size              = 0;
     index->list              = NULL;
     index->uncmp_seek_offset = 0;
-};
+}
 
 
 /* Discard all points in the index after the specified compressed offset. */
@@ -997,7 +997,7 @@ fail:
     free(point_data);
     
     return -1;
-};
+}
 
 
 /* Initialise the given z_stream struct for decompression/inflation. */
@@ -1969,7 +1969,7 @@ fail:
     free(data);
     
     return -1;
-};
+}
 
 
 /*
@@ -2084,8 +2084,8 @@ int64_t zran_read(zran_index_t *index,
      * uncompressed streams, and the total 
      * number of bytes read.
      */
-    off_t    uncmp_offset;
-    off_t    cmp_offset;
+    uint64_t uncmp_offset;
+    uint64_t cmp_offset;
     uint64_t total_read;
 
     /* 
@@ -2286,7 +2286,7 @@ int64_t zran_read(zran_index_t *index,
                             &bytes_consumed,
                             &bytes_output,
                             bytes_to_read,
-                            buf + total_read);
+                            (uint8_t *)(buf) + total_read);
 
         cmp_offset   += bytes_consumed;
         uncmp_offset += bytes_output;

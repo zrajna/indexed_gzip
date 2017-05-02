@@ -8,15 +8,19 @@
 from __future__ import print_function
 from __future__ import division
 
-import time
 import threading
 
 import numpy as np
+
+import pytest
 
 import indexed_gzip as igzip
 
 from . import test_indexed_gzip as test_igzip
 from . import ctest_zran
+
+
+pytestmark = pytest.mark.indexed_gzip_test
 
 
 def test_SafeIndexedGzipFile_open_close(testfile):

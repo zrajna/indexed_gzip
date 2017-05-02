@@ -33,7 +33,7 @@ def read_element(gzf, element, seek=True):
     val   = np.ndarray(1, np.uint64, buffer=bytes)
 
     return val[0]
-    
+
 
 
 def test_open_close(testfile, nelems, seed):
@@ -101,12 +101,12 @@ def test_read_all(testfile, nelems, use_mmap):
 
 def test_seek_and_read(testfile, nelems, niters, seed):
 
-    with igzip.IndexedGzipFile(filename=testfile) as f: 
-        
+    with igzip.IndexedGzipFile(filename=testfile) as f:
+
         # Pick some random elements and make
         # sure their values are all right
         seekelems = np.random.randint(0, nelems, niters)
-        
+
         for i, testval in enumerate(seekelems):
 
             readval = read_element(f, testval)

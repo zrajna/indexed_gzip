@@ -105,7 +105,7 @@ if have_cython:
 
 setup(
     name='indexed_gzip',
-    version='0.3.2',
+    version='0.3.3',
     author='Paul McCarthy',
     author_email='pauldmccarthy@gmail.com',
     description='Fast random access of gzip files in Python',

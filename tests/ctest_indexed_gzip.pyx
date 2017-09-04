@@ -21,8 +21,8 @@ import numpy as np
 import indexed_gzip as igzip
 
 
-from . import ctest_zran
-
+from . import gen_test_data
+from . import check_data_valid
 from . import testdir
 
 
@@ -98,7 +98,7 @@ def test_read_all(testfile, nelems, use_mmap):
     data = np.ndarray(shape=nelems, dtype=np.uint64, buffer=data)
 
     # Check that every value is valid
-    assert ctest_zran.check_data_valid(data, 0)
+    assert check_data_valid(data, 0)
 
 
 def test_read_beyond_end(concat):
@@ -106,13 +106,13 @@ def test_read_beyond_end(concat):
         nelems   = 65536
         testfile = op.join(tdir, 'test.gz')
 
-        ctest_zran.gen_test_data(testfile, nelems, concat)
+        gen_test_data(testfile, nelems, concat)
 
         with igzip.IndexedGzipFile(filename=testfile) as f:
             data = f.read(nelems * 8 + 10)
 
         data = np.ndarray(shape=nelems, dtype=np.uint64, buffer=data)
-        assert ctest_zran.check_data_valid(data, 0)
+        assert check_data_valid(data, 0)
 
 
 def test_seek_and_read(testfile, nelems, niters, seed):

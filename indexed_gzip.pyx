@@ -11,6 +11,7 @@ random access to gzip files.
 
 
 from libc.stdio  cimport (SEEK_SET,
+                          SEEK_CUR,
                           FILE,
                           fdopen,
                           fclose)
@@ -30,6 +31,7 @@ import logging
 
 
 log = logging.getLogger(__name__)
+log.setLevel(logging.WARNING)
 
 
 class NotCoveredError(Exception):
@@ -86,8 +88,8 @@ cdef class IndexedGzipFile:
 
 
     def __cinit__(self,
-                  fid=None,
                   filename=None,
+                  fid=None,
                   auto_build=True,
                   spacing=1048576,
                   window_size=32768,
@@ -96,9 +98,9 @@ cdef class IndexedGzipFile:
         with an open file handle, or with a filename. If the former, the file
         must have been opened in ``'rb'`` mode.
 
-        :arg fid:          Open file handle.
-
         :arg filename:     File name.
+
+        :arg fid:          Open file handle.
 
         :arg auto_build:   If ``True`` (the default), the index is
                            automatically built on seeks/reads.
@@ -234,23 +236,30 @@ cdef class IndexedGzipFile:
         log.debug('{}.build_fuill_index()'.format(type(self).__name__))
 
 
-    def seek(self, offset):
+    def seek(self, offset, whence=SEEK_SET):
         """Seeks to the specified position in the uncompressed data stream.
 
         If this ``IndexedGzipFile`` was created with ``auto_build=False``,
         and the requested offset is not covered by the index, a
         :exc:`NotCoveredError` is raised.
 
+        If ``whence`` is not one of ``SEEK_SET`` or ``SEEK_CUR``, a
+        :exc:`ValueError` is raised.
+
         .. note:: This method releases the GIL while ``zran_seek`` is
                   running.
         """
 
         cdef int                ret
-        cdef off_t              off   = offset
-        cdef zran.zran_index_t *index = &self.index
+        cdef off_t              off      = offset
+        cdef int                c_whence = whence
+        cdef zran.zran_index_t *index    = &self.index
+
+        if whence not in (SEEK_SET, SEEK_CUR):
+            raise ValueError('Seek from end not supported')
 
         with nogil:
-            ret = zran.zran_seek(index, off, SEEK_SET, NULL)
+            ret = zran.zran_seek(index, off, c_whence, NULL)
 
         if ret < 0:
             raise ZranError('zran_seek returned error')

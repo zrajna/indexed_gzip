@@ -16,7 +16,8 @@ from libc.stdio  cimport (SEEK_SET,
                           fdopen,
                           fclose)
 
-from libc.stdint cimport int64_t
+from libc.stdint cimport (uint64_t,
+                          int64_t)
 
 from posix.types cimport  off_t
 
@@ -71,6 +72,9 @@ cdef class IndexedGzipFile:
     on seeks/reads.
     """
 
+    cdef unsigned int readall_buf_size
+    """Used by meth:`read` as the read buffer size."""
+
 
     cdef bint own_file
     """Flag which is set to ``True`` if the user specified a file name instead
@@ -91,27 +95,32 @@ cdef class IndexedGzipFile:
                   filename=None,
                   fid=None,
                   auto_build=True,
-                  spacing=1048576,
+                  spacing=4194304,
                   window_size=32768,
-                  readbuf_size=16384):
+                  readbuf_size=1048576,
+                  readall_buf_size=16777216):
         """Create an ``IndexedGzipFile``. The file may be specified either
         with an open file handle, or with a filename. If the former, the file
         must have been opened in ``'rb'`` mode.
 
-        :arg filename:     File name.
+        :arg filename:         File name.
 
-        :arg fid:          Open file handle.
+        :arg fid:              Open file handle.
 
-        :arg auto_build:   If ``True`` (the default), the index is
-                           automatically built on seeks/reads.
+        :arg auto_build:       If ``True`` (the default), the index is
+                               automatically built on seeks/reads.
 
-        :arg spacing:      Number of bytes between index seek points.
+        :arg spacing:          Number of bytes between index seek points.
 
-        :arg window_size:  Number of bytes of uncompressed data stored with
-                           each seek point.
+        :arg window_size:      Number of bytes of uncompressed data stored with
+                               each seek point.
 
-        :arg readbuf_size: Size of buffer in bytes for storing compressed data
-                           read in from the file.
+        :arg readbuf_size:     Size of buffer in bytes for storing compressed
+                               data read in from the file.
+
+
+        :arg readall_buf_size: Size of buffer in bytes used by :meth:`read`
+                               when reading until EOF.
         """
 
         if fid is None and filename is None:
@@ -121,8 +130,9 @@ cdef class IndexedGzipFile:
             raise ValueError('The gzip file must be opened in '
                              'read-only binary ("rb") mode')
 
-        self.own_file   = fid is None
-        self.auto_build = auto_build
+        self.own_file         = fid is None
+        self.auto_build       = auto_build
+        self.readall_buf_size = readall_buf_size
 
         if self.own_file: self.pyfid = open(filename, 'rb')
         else:             self.pyfid = fid
@@ -272,34 +282,71 @@ cdef class IndexedGzipFile:
         log.debug('{}.seek({})'.format(type(self).__name__, offset))
 
 
-    def read(self, nbytes):
+    def read(self, nbytes=-1):
         """Reads up to ``nbytes`` bytes from the uncompressed data stream.
+        If ``nbytes < 0`` the stream is read until EOF.
 
         .. note:: This method releases the GIL while ``zran_read`` is
                   running.
         """
 
-        buf = ReadBuffer(nbytes)
+        if   nbytes == 0: return bytes()
+        elif nbytes <  0: buf = ReadBuffer(self.readall_buf_size)
+        else:             buf = ReadBuffer(nbytes)
 
         cdef zran.zran_index_t *index  = &self.index
-        cdef size_t             sz     = nbytes
-        cdef void              *buffer = buf.buffer
+        cdef size_t             nread  = 0
+        cdef uint64_t           bufsz  = buf.size
+        cdef size_t             offset = 0
+        cdef void              *buffer
         cdef int64_t            ret
 
-        with nogil:
-            ret = zran.zran_read(index, buffer, sz)
+        # Read until EOF or enough
+        # bytes have been read
+        while True:
 
-        if ret < -1:
-            raise ZranError('zran_read returned error ({})'.format(ret))
+            buffer = buf.buffer + offset
 
-        elif ret == -1:
-            raise NotCoveredError('Index does not cover current offset')
+            # read some bytes
+            with nogil:
+                ret = zran.zran_read(index, buffer, bufsz)
 
-        if ret == 0:
-            return bytes()
+            # see how the read went
+            if ret == zran.ZRAN_READ_FAIL:
+                raise ZranError('zran_read returned error ({})'.format(ret))
 
-        buf.resize(ret)
-        pybuf = <bytes>(<char *>buf.buffer)[:ret]
+            # This will happen if the current
+            # seek point is not covered by the
+            # index, and auto-build is disabled
+            elif ret == zran.ZRAN_READ_NOT_COVERED:
+                raise NotCoveredError('Index does not cover current offset')
+
+            # No bytes were read, and there are
+            # no more bytes to read. This will
+            # happen when the seek point was at
+            # or beyond EOF when zran_read was
+            # called
+            elif ret == zran.ZRAN_READ_EOF:
+                break
+
+            nread  += ret
+            offset += ret
+
+            # If we requested a specific number of
+            # bytes, zran_read will have returned
+            # them all (or all until EOF), so we're
+            # finished
+            if nbytes > 0:
+                break
+
+            # Otherwise if reading until EOF, check
+            # and increase the buffer size if necessary
+            if (nread + self.readall_buf_size) > buf.size:
+                buf.resize(buf.size + self.readall_buf_size)
+                offset = nread
+
+        buf.resize(nread)
+        pybuf = <bytes>(<char *>buf.buffer)[:nread]
 
         log.debug('{}.read({})'.format(type(self).__name__, len(pybuf)))
 
@@ -329,10 +376,15 @@ cdef class ReadBuffer:
     """A raw chunk of bytes. """
 
 
+    cdef size_t size;
+    """Size of the buffer. """
+
+
     def __cinit__(self, size_t size):
         """Allocate ``size`` bytes of memory. """
 
-        self.buffer = PyMem_Malloc(size);
+        self.size   = size
+        self.buffer = PyMem_Malloc(size)
 
         if not self.buffer:
             raise MemoryError('PyMem_Malloc fail')
@@ -343,6 +395,9 @@ cdef class ReadBuffer:
     def resize(self, size_t size):
         """Re-allocate the memory to the given ``size``. """
 
+        if size == self.size:
+            return
+
         buf = PyMem_Realloc(self.buffer, size)
 
         if not buf:
@@ -350,6 +405,7 @@ cdef class ReadBuffer:
 
         log.debug('ReadBuffer.resize({})'.format(size))
 
+        self.size   = size
         self.buffer = buf
 
 

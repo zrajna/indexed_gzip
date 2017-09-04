@@ -49,7 +49,7 @@ def test_open_close(testfile, nelems, seed):
     finally:
         f.close()
 
-    assert f.closed()
+    assert f.closed
 
 
 def test_open_close_ctxmanager(testfile, nelems, seed):
@@ -60,7 +60,7 @@ def test_open_close_ctxmanager(testfile, nelems, seed):
         readval = read_element(f, element)
 
     assert readval == element
-    assert f.closed()
+    assert f.closed
 
 
 def test_create_from_open_handle(testfile, nelems, seed):
@@ -76,7 +76,7 @@ def test_create_from_open_handle(testfile, nelems, seed):
     try:
 
         assert readval == element
-        assert gzf.closed()
+        assert gzf.closed
         assert not f.closed
 
     finally:

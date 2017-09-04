@@ -24,6 +24,7 @@ cimport numpy as np
 from posix.types cimport  off_t
 
 from libc.stdio  cimport (SEEK_SET,
+                          SEEK_CUR,
                           FILE,
                           fdopen,
                           fwrite)
@@ -351,6 +352,47 @@ def test_seek_to_end(testfile, nelems):
         zt = zran.zran_tell(&index)
 
         assert zt == seek_point
+
+        zran.zran_free(&index)
+
+
+def test_seek_cur(testfile, nelems):
+
+    cdef zran.zran_index_t index
+
+    filesize     = nelems * 8
+    indexSpacing = max(524288, filesize // 1500)
+    seekstep     = (nelems - 1) // 500
+    curelem      = 0;
+
+    with open(testfile, 'rb') as pyfid:
+        cfid = fdopen(pyfid.fileno(), 'rb')
+
+        assert not zran.zran_init(&index,
+                                  cfid,
+                                  indexSpacing,
+                                  32768,
+                                  131072,
+                                  zran.ZRAN_AUTO_BUILD)
+
+        while curelem < nelems:
+
+            if (curelem + seekstep) * 8 < filesize: exp = zran.ZRAN_SEEK_OK
+            else:                                   exp = zran.ZRAN_SEEK_EOF
+
+            assert zran.zran_seek(&index, seekstep * 8, SEEK_CUR, NULL) == exp
+
+            if exp == zran.ZRAN_SEEK_EOF:
+                break
+
+            curelem += seekstep
+            zt = zran.zran_tell(&index)
+            val = read_element(&index, curelem, nelems, False)
+
+            assert zt  == curelem * 8
+            assert val == curelem
+
+            assert zran.zran_seek(&index, -8, SEEK_CUR, NULL) == zran.ZRAN_SEEK_OK
 
         zran.zran_free(&index)
 

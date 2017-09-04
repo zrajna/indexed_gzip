@@ -21,6 +21,7 @@ def test_init(                  testfile):                                 ctest
 def test_init_file_modes(       testfile):                                 ctest_zran.test_init_file_modes(       testfile)
 def test_no_auto_build(         testfile, nelems):                         ctest_zran.test_no_auto_build(         testfile, nelems)
 def test_seek_to_end(           testfile, nelems):                         ctest_zran.test_seek_to_end(           testfile, nelems)
+def test_seek_cur(              testfile, nelems):                         ctest_zran.test_seek_cur(              testfile, nelems)
 def test_seek_beyond_end(       testfile, nelems):                         ctest_zran.test_seek_beyond_end(       testfile, nelems)
 def test_sequential_seek_to_end(testfile, nelems, niters):                 ctest_zran.test_sequential_seek_to_end(testfile, nelems, niters)
 def test_random_seek(           testfile, nelems, niters, seed):           ctest_zran.test_random_seek(           testfile, nelems, niters, seed)

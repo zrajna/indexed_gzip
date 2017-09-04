@@ -23,10 +23,10 @@ drop-in replacement for the built-in Python `gzip.GzipFile` class, the
 `IndexedGzipFile`.
 
 
-`indexed_gzip` was written to allow fast random access of compressed 
-[NIFTI](http://nifti.nimh.nih.gov/) image files (for which GZIP is the 
-de-facto compression standard), but will work with any GZIP file. 
-`indexed_gzip` is easy to use with `nibabel` 2.0.2  (http://nipy.org/nibabel/).
+`indexed_gzip` was written to allow fast random access of compressed
+[NIFTI](http://nifti.nimh.nih.gov/) image files (for which GZIP is the
+de-facto compression standard), but will work with any GZIP file.
+`indexed_gzip` is easy to use with `nibabel` (http://nipy.org/nibabel/).
 
 
 The standard `gzip.GzipFile` class exposes a random access-like interface (via
@@ -108,37 +108,37 @@ fobj = igzip.IndexedGzipFile(
     spacing=4194304,
     readbuf_size=131072)
 
-# Create a nibabel image using 
+# Create a nibabel image using
 # the existing file handle.
 fmap = nib.Nifti1Image.make_file_map()
 fmap['image'].fileobj = fobj
 image = nib.Nifti1Image.from_file_map(fmap)
-    
-# Use the image ArrayProxy to access the 
+
+# Use the image ArrayProxy to access the
 # data - the index will automatically be
 # built as data is accessed.
 vol3 = image.dataobj[:, :, :, 3]
 ```
 
-    
-`indexed_gzip` does not currently have any support for writing. Currently if you 
-wish to write to a file, you will need to save the file by alternate means (e.g. 
-via `gzip` or `nibabel`), and then re-create a new `IndexedGzipFile` instance. 
+
+`indexed_gzip` does not currently have any support for writing. Currently if you
+wish to write to a file, you will need to save the file by alternate means (e.g.
+via `gzip` or `nibabel`), and then re-create a new `IndexedGzipFile` instance.
 Building on the `nibabel` example above:
 
 
 ```python
-    
+
 # Load the entire image into memory
 data = image.get_data()
-    
+
 # Make changes to the data
 data[:, :, :, 5] *= 100
-    
+
 # Save the image using nibabel
 nib.save(data, 'big_image.nii.gz')
-    
-# Re-create an IndexedGzipFile and 
+
+# Re-create an IndexedGzipFile and
 # Nifti1Image instance as above
 fobj = igzip.IndexedGzipFile(...)
 fmap = nib.Nifti1Image.make_file_map()
@@ -157,7 +157,7 @@ this script compares the performance of the `IndexedGzipFile` class with the
 
   1. Generates a specified number of seek locations, uniformly spaced
      throughout the input file.
-  
+
   2. Randomly shuffles these locations
 
   3. Seeks to each location, and reads a chunk of data from the file.
@@ -189,8 +189,8 @@ Alder) which ships with the [zlib](http://www.zlib.net/) source code.
 
 Initial work on `indexed_gzip` took place at
 [Brainhack](http://www.brainhack.org/) Paris, at the Institut Pasteur,
-24th-26th February 2016, with the support of the 
-[FMRIB Centre](https://www.ndcn.ox.ac.uk/divisions/fmrib/), at the 
+24th-26th February 2016, with the support of the
+[FMRIB Centre](https://www.ndcn.ox.ac.uk/divisions/fmrib/), at the
 University of Oxford, UK.
 
 
@@ -199,4 +199,3 @@ University of Oxford, UK.
 
 `indexed_gzip` inherits the [zlib](http://www.zlib.net) license, available for
 perusal in the [LICENSE](LICENSE) file.
-

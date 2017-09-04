@@ -157,10 +157,10 @@ cdef class IndexedGzipFile:
         pass
 
 
-    cpdef close(self):
+    def close(self):
         """Closes this ``IndexedGzipFile``. """
 
-        if self.closed():
+        if self.closed:
             raise IOError('IndexedGzipFile is already closed')
 
         zran.zran_free(&self.index)
@@ -174,7 +174,8 @@ cdef class IndexedGzipFile:
         log.debug('{}.close()'.format(type(self).__name__))
 
 
-    cpdef closed(self):
+    @property
+    def closed(self):
         """Returns ``True`` if this ``IndexedGzipFile`` is closed, ``False``
         otherwise.
         """
@@ -185,7 +186,7 @@ cdef class IndexedGzipFile:
         """Returns ``True`` if this ``IndexedGzipFile`` is readable, ``False``
         otherwise.
         """
-        return not self.closed()
+        return not self.closed
 
 
     def writable(self):
@@ -199,7 +200,7 @@ cdef class IndexedGzipFile:
         """Returns ``True`` if this ``IndexedGzipFile`` supports seeking,
         ``False`` otherwise.
         """
-        return not self.closed()
+        return not self.closed
 
 
     def tell(self):
@@ -215,7 +216,7 @@ cdef class IndexedGzipFile:
 
     def __exit__(self, *args):
         """Calls close on this ``IndexedGzipFile``. """
-        if not self.closed():
+        if not self.closed:
             self.close()
 
 
@@ -223,7 +224,7 @@ cdef class IndexedGzipFile:
         """Frees the memory used by this ``IndexedGzipFile``. If a file name
         was passed to :meth:`__cinit__`, the file handle is closed.
         """
-        if not self.closed():
+        if not self.closed:
             self.close()
 
 

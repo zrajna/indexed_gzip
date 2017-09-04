@@ -108,11 +108,18 @@ def test_read_beyond_end(concat):
 
         gen_test_data(testfile, nelems, concat)
 
-        with igzip.IndexedGzipFile(filename=testfile) as f:
-            data = f.read(nelems * 8 + 10)
+        with igzip.IndexedGzipFile(filename=testfile, readall_buf_size=1024) as f:
+            # Try with a specific number of bytes
+            data1 = f.read(nelems * 8 + 10)
 
-        data = np.ndarray(shape=nelems, dtype=np.uint64, buffer=data)
-        assert check_data_valid(data, 0)
+            # And also with unspecified numbytes
+            f.seek(0)
+            data2 = f.read()
+
+        data1 = np.ndarray(shape=nelems, dtype=np.uint64, buffer=data1)
+        data2 = np.ndarray(shape=nelems, dtype=np.uint64, buffer=data2)
+        assert check_data_valid(data1, 0)
+        assert check_data_valid(data2, 0)
 
 
 def test_seek_and_read(testfile, nelems, niters, seed):

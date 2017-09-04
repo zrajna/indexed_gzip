@@ -8,8 +8,6 @@
 
 import pytest
 
-import numpy as np
-
 from . import ctest_indexed_gzip
 
 
@@ -20,4 +18,5 @@ def test_open_close(             testfile, nelems, seed):         ctest_indexed_
 def test_open_close_ctxmanager(  testfile, nelems, seed):         ctest_indexed_gzip.test_open_close_ctxmanager(  testfile, nelems, seed)
 def test_create_from_open_handle(testfile, nelems, seed):         ctest_indexed_gzip.test_create_from_open_handle(testfile, nelems, seed)
 def test_read_all(               testfile, nelems, use_mmap):     ctest_indexed_gzip.test_read_all(               testfile, nelems, use_mmap)
+def test_read_beyond_end(        concat):                         ctest_indexed_gzip.test_read_beyond_end(        concat)
 def test_seek_and_read(          testfile, nelems, niters, seed): ctest_indexed_gzip.test_seek_and_read(          testfile, nelems, niters, seed)

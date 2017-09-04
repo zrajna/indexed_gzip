@@ -23,6 +23,8 @@ import indexed_gzip as igzip
 
 from . import ctest_zran
 
+from . import testdir
+
 
 def read_element(gzf, element, seek=True):
 
@@ -87,7 +89,7 @@ def test_read_all(testfile, nelems, use_mmap):
 
     if use_mmap:
         print('WARNING: skipping test_read_all test, '
-              'as it will require to much memory')
+              'as it will require too much memory')
         return
 
     with igzip.IndexedGzipFile(filename=testfile) as f:
@@ -97,6 +99,20 @@ def test_read_all(testfile, nelems, use_mmap):
 
     # Check that every value is valid
     assert ctest_zran.check_data_valid(data, 0)
+
+
+def test_read_beyond_end(concat):
+    with testdir() as tdir:
+        nelems   = 65536
+        testfile = op.join(tdir, 'test.gz')
+
+        ctest_zran.gen_test_data(testfile, nelems, concat)
+
+        with igzip.IndexedGzipFile(filename=testfile) as f:
+            data = f.read(nelems * 8 + 10)
+
+        data = np.ndarray(shape=nelems, dtype=np.uint64, buffer=data)
+        assert ctest_zran.check_data_valid(data, 0)
 
 
 def test_seek_and_read(testfile, nelems, niters, seed):

@@ -167,6 +167,11 @@ cdef class IndexedGzipFile:
         pass
 
 
+    def fileno(self):
+        """Calls ``fileno`` on the underlying file object. """
+        return self.pyfid.fileno()
+
+
     def close(self):
         """Closes this ``IndexedGzipFile``. """
 

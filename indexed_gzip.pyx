@@ -302,6 +302,8 @@ cdef class IndexedGzipFile:
         """Reads up to ``nbytes`` bytes from the uncompressed data stream.
         If ``nbytes < 0`` the stream is read until EOF.
 
+        If the stream is already at EOF, ``b''`` is returned.
+
         .. note:: This method releases the GIL while ``zran_read`` is
                   running.
         """
@@ -375,6 +377,100 @@ cdef class IndexedGzipFile:
         """
         IndexedGzipFile.seek(self, offset)
         return IndexedGzipFile.read(self, nbytes)
+
+
+    def readline(self, size=-1):
+        """Read and return up to the next ``'\n'`` character (up to at most
+        ``size`` bytes, if ``size >= 0``) from the uncompressed data stream.
+
+        If the end of the stream has been reached, ``b''`` is returned.
+        """
+
+        if size == 0:
+            return bytes()
+
+        linebuf  = b''
+        startpos = self.tell()
+        bufsz    = 1024
+
+        # Read in chunks of [bufsz] bytes at a time
+        while True:
+
+            buf = self.read(bufsz)
+
+            lineidx  = buf.find(b'\n')
+            haveline = lineidx  >= 0
+            eof      = len(buf) == 0
+
+            # Are we at EOF? Nothing more to do
+            if eof:
+                break
+
+            # Have we found a line? Discard
+            # everything that comes after it
+            if haveline:
+                linebuf = linebuf + buf[:lineidx + 1]
+
+            # If we've found a line, and are
+            # not size-limiting, we're done
+            if haveline and size < 0:
+                break
+
+            # If we're size limiting, and have
+            # read in enough bytes, we're done
+            if size >= 0 and len(linebuf) > size:
+                linebuf = linebuf[:size]
+                break
+
+        # Rewind the seek location
+        # to the finishing point
+        self.seek(startpos + len(linebuf))
+
+        return linebuf
+
+
+    def readlines(self, hint=-1):
+        """Reads and returns a list of lines from the uncompressed data.
+        If ``hint`` is provided, lines will be read until the total size
+        of all lines exceeds ``hint`` in bytes.
+        """
+
+        totalsize = 0
+        lines     = []
+
+        while True:
+
+            line = self.readline()
+            if line == b'':
+                break
+
+            lines.append(line)
+
+            totalsize += len(line)
+
+            if hint >= 0 and totalsize > hint:
+                break
+
+        return lines
+
+
+    def __iter__(self):
+        """Returns this ``IndexedGzipFile`` which can be iterated over to
+        return lines (separated by ``'\n'``) in the uncompressed stream.
+        """
+        return self
+
+
+    def __next__(self):
+        """Returns the next line from the uncompressed stream. Raises
+        :exc:`StopIteration` when there are no lines left.
+        """
+        line = self.readline()
+
+        if line == b'':
+            raise StopIteration()
+        else:
+            return line
 
 
     def write(self, *args, **kwargs):
@@ -470,6 +566,12 @@ class SafeIndexedGzipFile(IndexedGzipFile):
     def seek(self, *args, **kwargs):
         """See :meth:`IndexedGzipFile.seek`. """
         return IndexedGzipFile.seek(self, *args, **kwargs)
+
+
+    @__mutex
+    def tell(self, *args, **kwargs):
+        """See :meth:`IndexedGzipFile.tell`. """
+        return IndexedGzipFile.tell(self, *args, **kwargs)
 
 
     @__mutex

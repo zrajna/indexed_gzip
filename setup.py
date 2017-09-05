@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import os
+import glob
 import os.path as op
 import shutil
 
@@ -19,24 +20,34 @@ class Clean(Command):
 
     def run(self):
 
-        shutil.rmtree('build',                 ignore_errors=True)
-        shutil.rmtree('dist',                  ignore_errors=True)
-        shutil.rmtree('indexed_gzip.egg-info', ignore_errors=True)
-        shutil.rmtree('.eggs',                 ignore_errors=True)
+        base = op.dirname(__file__)
+
+        shutil.rmtree(op.join(base, 'build'),
+                      ignore_errors=True)
+        shutil.rmtree(op.join(base, 'dist'),
+                      ignore_errors=True)
+        shutil.rmtree(op.join(base, 'indexed_gzip.egg-info'),
+                      ignore_errors=True)
+        shutil.rmtree(op.join(base, '.eggs'),
+                      ignore_errors=True)
+        shutil.rmtree(op.join(base, '__pycache__'),
+                      ignore_errors=True)
+        shutil.rmtree(op.join(base, 'tests', '__pycache__'),
+                      ignore_errors=True)
 
         files = [
             'indexed_gzip.c',
-            'setup.pyc',
+            '*.pyc',
+            '*.so',
+            op.join('tests', '*.so'),
+            op.join('tests', '*.pyc'),
             op.join('tests', 'ctest_zran.c'),
-            op.join('tests', 'ctest_indexed_gzip.c'),
-            op.join('tests', '__init__.pyc'),
-            op.join('tests', 'conftest.pyc'),
-            op.join('tests', 'test_zran.pyc'),
-            op.join('tests', 'test_indexed_gzip.pyc')]
+            op.join('tests', 'ctest_indexed_gzip.c')]
 
         for f in files:
-            try:            os.remove(f)
-            except OSError: pass
+            for g in glob.glob(f):
+                try:            os.remove(g)
+                except OSError: pass
 
 
 # If cython is present, we'll compile

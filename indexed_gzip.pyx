@@ -94,6 +94,7 @@ cdef class IndexedGzipFile:
     def __cinit__(self,
                   filename=None,
                   fid=None,
+                  mode=None,
                   auto_build=True,
                   spacing=4194304,
                   window_size=32768,
@@ -104,6 +105,8 @@ cdef class IndexedGzipFile:
         must have been opened in ``'rb'`` mode.
 
         :arg filename:         File name.
+
+        :arg mode:             Opening mode. Must be either ``'r'`` or ``'rb``.
 
         :arg fid:              Open file handle.
 
@@ -129,6 +132,11 @@ cdef class IndexedGzipFile:
         if fid is not None and fid.mode != 'rb':
             raise ValueError('The gzip file must be opened in '
                              'read-only binary ("rb") mode')
+
+        if (fid is None) and (mode not in (None, 'r', 'rb')):
+            raise ValueError('Invalid mode ({}), must be '
+                             '\'r\' or \'rb\''.format(mode))
+        mode = 'rb'
 
         self.own_file         = fid is None
         self.auto_build       = auto_build
@@ -170,6 +178,11 @@ cdef class IndexedGzipFile:
     def fileno(self):
         """Calls ``fileno`` on the underlying file object. """
         return self.pyfid.fileno()
+
+
+    def fileobj(self):
+        """Returns a reference to the python file object. """
+        return self.pyfid
 
 
     def close(self):
@@ -540,7 +553,7 @@ class SafeIndexedGzipFile(IndexedGzipFile):
 
     def __mutex(func):
         """Decorator which marks a method as being mutually exclusive. Access
-        to the method is protected by a ``threading.Lock`` object.
+        to the method is protected by a ``threading.RLock`` object.
         """
 
         def decorator(self, *args, **kwargs):
@@ -557,9 +570,11 @@ class SafeIndexedGzipFile(IndexedGzipFile):
 
 
     def __init__(self, *args, **kwargs):
-        """Creates a ``Lock`` for protecting access to the file methods. """
+        """Creates a ``RLock`` for protecting access to the file methods. """
         IndexedGzipFile.__init__(self, *args, **kwargs)
-        self.__fileLock = threading.Lock()
+
+        # We use an RLock because seek() calls tell()
+        self.__fileLock = threading.RLock()
 
 
     @__mutex

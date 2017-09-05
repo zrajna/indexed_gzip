@@ -259,8 +259,12 @@ cdef class IndexedGzipFile:
         and the requested offset is not covered by the index, a
         :exc:`NotCoveredError` is raised.
 
-        If ``whence`` is not one of ``SEEK_SET`` or ``SEEK_CUR``, a
-        :exc:`ValueError` is raised.
+        :arg offset: Desired seek offset into the uncompressed data
+
+        :arg whence: Either  ``SEEK_SET`` or ``SEEK_CUR``. If not one of these,
+                     a :exc:`ValueError` is raised.
+
+        :returns:    The final seek location into the uncompressed stream.
 
         .. note:: This method releases the GIL while ``zran_seek`` is
                   running.
@@ -278,13 +282,20 @@ cdef class IndexedGzipFile:
             ret = zran.zran_seek(index, off, c_whence, NULL)
 
         if ret < 0:
-            raise ZranError('zran_seek returned error')
+            raise ZranError('zran_seek returned error: {}'.format(ret))
 
-        elif ret > 0:
+        elif ret == zran.ZRAN_SEEK_NOT_COVERED:
             raise NotCoveredError('Index does not cover '
                                   'offset {}'.format(offset))
 
+        elif ret not in (zran.ZRAN_SEEK_OK, zran.ZRAN_SEEK_EOF):
+            raise ZranError('zran_seek returned unknown code: {}'.format(ret))
+
+        offset = self.tell()
+
         log.debug('{}.seek({})'.format(type(self).__name__, offset))
+
+        return offset
 
 
     def read(self, nbytes=-1):

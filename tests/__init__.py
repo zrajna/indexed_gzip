@@ -86,7 +86,19 @@ def gen_test_data(filename, nelems, concat):
         print('Compressing all data with a single gzip call ...')
 
         with open(tmpfile,  'rb') as inf, open(filename, 'wb') as outf:
-            sp.call(['gzip', '-c'], stdin=inf, stdout=outf)
+            proc = sp.Popen(['gzip', '-c'],
+                            stdin=inf,
+                            stdout=outf)
+
+            start = time.time()
+            while proc.poll() is None:
+                time.sleep(0.5)
+                cur = time.time()
+                elapsed = cur - start
+                if int(elapsed) % 60 == 0:
+                    print('Waiting for gzip ({:0.2f} minutes)'
+                          .format(elapsed / 60.0))
+
 
     # Otherwise, pass in chunks of data to
     # generate a concatenated gzip stream

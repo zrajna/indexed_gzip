@@ -5,6 +5,7 @@
 # Author: Paul McCarthy <pauldmccarthy@gmail.com>
 #
 
+import            os
 import os.path as op
 import numpy   as np
 
@@ -86,7 +87,8 @@ def testfile(request):
     _concat  = concat(request)
 
     if filename is None:
-        filename = 'ctest_zran_{}_{}.gz'.format(_nelems, _concat)
+        filename = op.join(os.getcwd(),
+                           'ctest_zran_{}_{}.gz'.format(_nelems, _concat))
 
     if not op.exists(filename):
         gen_test_data(filename, _nelems, _concat)

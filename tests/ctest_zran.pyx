@@ -362,7 +362,7 @@ def test_seek_cur(testfile, nelems):
 
     filesize     = nelems * 8
     indexSpacing = max(524288, filesize // 1500)
-    seekstep     = (nelems - 1) // 500
+    seekstep     = max(1, (nelems - 1) // 500)
     curelem      = 0;
 
     with open(testfile, 'rb') as pyfid:

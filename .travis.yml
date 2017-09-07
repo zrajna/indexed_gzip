@@ -86,9 +86,8 @@ env:
   - TEST_SUITE=indexed_gzip_test EXTRA_ARGS="--use_mmap"          NITERS=1000 NELEMS=805306368
   - TEST_SUITE=indexed_gzip_test EXTRA_ARGS="--use_mmap --concat" NITERS=1000 NELEMS=805306368
 
-
-install: "pip install -r requirements.txt"
+install: "pip install cython numpy pytest"
 
 script:
-  - python setup.py install
+  - python setup.py develop
   - python setup.py test --addopts "-v -s -m \"$TEST_SUITE\" -k \"$TEST_PATTERN\" --nelems \"$NELEMS\" --niters \"$NITERS\" $EXTRA_ARGS"

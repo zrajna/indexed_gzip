@@ -36,13 +36,14 @@ class Clean(Command):
                       ignore_errors=True)
 
         files = [
-            'indexed_gzip.c',
-            '*.pyc',
             '*.so',
-            op.join('tests', '*.so'),
-            op.join('tests', '*.pyc'),
-            op.join('tests', 'ctest_zran.c'),
-            op.join('tests', 'ctest_indexed_gzip.c')]
+            op.join('indexed_gzip', 'indexed_gzip.c'),
+            op.join('indexed_gzip', '*.pyc'),
+            op.join('indexed_gzip', '*.so'),
+            op.join('indexed_gzip', 'tests', '*.so'),
+            op.join('indexed_gzip', 'tests', '*.pyc'),
+            op.join('indexed_gzip', 'tests', 'ctest_zran.c'),
+            op.join('indexed_gzip', 'tests', 'ctest_indexed_gzip.c')]
 
         for f in files:
             for g in glob.glob(f):
@@ -77,28 +78,31 @@ if have_numpy:
 
 # Compile from cython files if
 # possible, or compile from c.
-if have_cython: pyx_extension = 'pyx'
-else:           pyx_extension = 'c'
+if have_cython: pyx_ext = 'pyx'
+else:           pyx_ext = 'c'
 
 
 # The indexed_gzip module
 igzip_ext = Extension(
-    'indexed_gzip',
-    ['indexed_gzip.{}'.format(pyx_extension), 'zran.c'],
+    'indexed_gzip.indexed_gzip',
+    [op.join('indexed_gzip', 'indexed_gzip.{}'.format(pyx_ext)),
+     op.join('indexed_gzip', 'zran.c')],
     libraries=['z'],
     extra_compile_args=['-Wall', '-pedantic', '-Wno-unused-function'])
 
 # Optional test modules
 test_exts = [
     Extension(
-        'tests.ctest_zran',
-        ['tests/ctest_zran.{}'.format(pyx_extension), 'zran.c'],
+        'indexed_gzip.tests.ctest_zran',
+        [op.join('indexed_gzip', 'tests', 'ctest_zran.{}'.format(pyx_ext)),
+         op.join('indexed_gzip', 'zran.c')],
         libraries=['z'],
         include_dirs=include_dirs,
         extra_compile_args=['-Wno-unused-function']),
     Extension(
-        'tests.ctest_indexed_gzip',
-        ['tests/ctest_indexed_gzip.{}'.format(pyx_extension)],
+        'indexed_gzip.tests.ctest_indexed_gzip',
+        [op.join('indexed_gzip', 'tests',
+                 'ctest_indexed_gzip.{}'.format(pyx_ext))],
         libraries=['z'],
         include_dirs=include_dirs,
         extra_compile_args=['-Wno-unused-function'])]
@@ -116,6 +120,7 @@ if have_cython:
 
 setup(
     name='indexed_gzip',
+    packages=['indexed_gzip', 'indexed_gzip.tests'],
     version='0.4.1',
     author='Paul McCarthy',
     author_email='pauldmccarthy@gmail.com',

@@ -11,7 +11,7 @@ import numpy   as np
 
 import pytest
 
-from . import gen_test_data
+from indexed_gzip.tests import gen_test_data
 
 
 def pytest_addoption(parser):

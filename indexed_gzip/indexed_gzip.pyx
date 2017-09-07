@@ -25,7 +25,7 @@ from cpython.mem cimport (PyMem_Malloc,
                           PyMem_Realloc,
                           PyMem_Free)
 
-cimport zran
+cimport indexed_gzip.zran as zran
 
 import threading
 import logging

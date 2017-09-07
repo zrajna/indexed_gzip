@@ -50,7 +50,7 @@ cdef extern from "sys/mman.h":
     cdef enum:
         MAP_FAILED
 
-cimport zran
+cimport indexed_gzip.zran as zran
 
 np.import_array()
 

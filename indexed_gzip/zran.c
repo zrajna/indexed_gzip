@@ -1006,9 +1006,9 @@ int _zran_init_zlib_inflate(zran_index_t *index,
                             zran_point_t *point)
 {
 
-    int   ret;
-    int   windowBits;
-    off_t seek_loc;
+    int     ret;
+    int     windowBits;
+    int64_t seek_loc;
 
     windowBits        = index->log_window_size;
     stream->zalloc    = Z_NULL;
@@ -1978,8 +1978,8 @@ fail:
  * SEEK_SET or SEEK_CUR.
  */
 int zran_seek(zran_index_t  *index,
-              off_t          offset,
-              int            whence,
+              int64_t        offset,
+              uint8_t        whence,
               zran_point_t **point)
 {
 

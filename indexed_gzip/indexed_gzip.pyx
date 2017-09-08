@@ -16,10 +16,9 @@ from libc.stdio  cimport (SEEK_SET,
                           fdopen,
                           fclose)
 
-from libc.stdint cimport (uint64_t,
+from libc.stdint cimport (uint8_t,
+                          uint64_t,
                           int64_t)
-
-from posix.types cimport  off_t
 
 from cpython.mem cimport (PyMem_Malloc,
                           PyMem_Realloc,
@@ -284,8 +283,8 @@ cdef class IndexedGzipFile:
         """
 
         cdef int                ret
-        cdef off_t              off      = offset
-        cdef int                c_whence = whence
+        cdef uint64_t           off      = offset
+        cdef uint8_t            c_whence = whence
         cdef zran.zran_index_t *index    = &self.index
 
         if whence not in (SEEK_SET, SEEK_CUR):

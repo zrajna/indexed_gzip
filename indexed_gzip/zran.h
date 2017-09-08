@@ -259,8 +259,8 @@ enum {
  */
 int zran_seek(
   zran_index_t  *index,   /* The index                      */
-  off_t          offset,  /* Uncompressed offset to seek to */
-  int            whence,  /* Must be SEEK_SET or SEEK_CUR   */
+  int64_t        offset,  /* Uncompressed offset to seek to */
+  uint8_t        whence,  /* Must be SEEK_SET or SEEK_CUR   */
   zran_point_t **point    /* Optional place to store
                              corresponding zran_point_t     */
 );

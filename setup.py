@@ -20,7 +20,8 @@ class Clean(Command):
 
     def run(self):
 
-        base = op.dirname(__file__)
+        base    = op.dirname(__file__)
+        igzbase = op.join(base, 'indexed_gzip')
 
         shutil.rmtree(op.join(base, 'build'),
                       ignore_errors=True)
@@ -32,18 +33,20 @@ class Clean(Command):
                       ignore_errors=True)
         shutil.rmtree(op.join(base, '__pycache__'),
                       ignore_errors=True)
-        shutil.rmtree(op.join(base, 'tests', '__pycache__'),
+        shutil.rmtree(op.join(igzbase, '__pycache__'),
+                      ignore_errors=True)
+        shutil.rmtree(op.join(igzbase, 'tests', '__pycache__'),
                       ignore_errors=True)
 
         files = [
             '*.so',
-            op.join('indexed_gzip', 'indexed_gzip.c'),
-            op.join('indexed_gzip', '*.pyc'),
-            op.join('indexed_gzip', '*.so'),
-            op.join('indexed_gzip', 'tests', '*.so'),
-            op.join('indexed_gzip', 'tests', '*.pyc'),
-            op.join('indexed_gzip', 'tests', 'ctest_zran.c'),
-            op.join('indexed_gzip', 'tests', 'ctest_indexed_gzip.c')]
+            op.join(igzbase, 'indexed_gzip.c'),
+            op.join(igzbase, '*.pyc'),
+            op.join(igzbase, '*.so'),
+            op.join(igzbase, 'tests', '*.so'),
+            op.join(igzbase, 'tests', '*.pyc'),
+            op.join(igzbase, 'tests', 'ctest_zran.c'),
+            op.join(igzbase, 'tests', 'ctest_indexed_gzip.c')]
 
         for f in files:
             for g in glob.glob(f):

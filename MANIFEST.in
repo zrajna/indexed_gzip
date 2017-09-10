@@ -1,9 +1,6 @@
-include                 *.c
-include                 *.h
-include                 *.pyx
-include                 *.pxd
-recursive-include tests *.py
-recursive-include tests *.pyx
-recursive-include tests *.c
-exclude                 bench_plot.py
-exclude                 benchmark_indexed_gzip.py
+recursive-include indexed_gzip *.py
+recursive-include indexed_gzip *.pyx
+recursive-include indexed_gzip *.pxd
+recursive-include indexed_gzip *.c
+exclude                        bench_plot.py
+exclude                        benchmark_indexed_gzip.py

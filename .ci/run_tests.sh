@@ -9,14 +9,13 @@ script_dir=`dirname $0`
 pushd $script_dir > /dev/null
 script_dir=`pwd`
 pushd .. > /dev/null
-igzipdir=`pwd`
+igzip_dir=`pwd`
 popd     > /dev/null
 popd     > /dev/null
 
 # 32 bit platform test has to be run in a docker container
 if [ "$TEST_SUITE" == "32bittest" ]; then
     docker run --rm \
-           -e INDEXED_GZIP_DIR="$igzip_dir" \
            -v $igzip_dir:/indexed_gzip \
            32bit/ubuntu:16.04 \
            /indexed_gzip/.ci/run_32bit_test.sh

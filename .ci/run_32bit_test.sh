@@ -20,7 +20,7 @@ export PATH=/python35/bin:$PATH
 
 pip install numpy pytest cython
 
-cd $INDEXED_GZIP_DIR
+cd /indexed_gzip
 python setup.py develop
 python setup.py test --addopts "-v -s --niters 500";
 python setup.py test --addopts "-v -s --niters 500 --concat";

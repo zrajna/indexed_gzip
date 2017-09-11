@@ -121,10 +121,22 @@ if have_cython:
     extensions = cythonize(extensions)
 
 
+# find the version number
+def readVersion():
+    version  = {}
+    initfile = op.join(op.dirname(__file__), 'indexed_gzip', '__init__.py')
+    with open(initfile, 'rt') as f:
+        for line in f:
+            if line.startswith('__version__'):
+                exec(line, version)
+                break
+    return version.get('__version__')
+
+
 setup(
     name='indexed_gzip',
     packages=['indexed_gzip', 'indexed_gzip.tests'],
-    version='0.5.0',
+    version=readVersion(),
     author='Paul McCarthy',
     author_email='pauldmccarthy@gmail.com',
     description='Fast random access of gzip files in Python',

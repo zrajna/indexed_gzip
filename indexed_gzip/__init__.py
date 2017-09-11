@@ -11,3 +11,6 @@ from .indexed_gzip import (IndexedGzipFile,
                            SafeIndexedGzipFile,
                            NotCoveredError,
                            ZranError)
+
+
+__version__ = '0.5.1'

@@ -15,7 +15,12 @@ popd     > /dev/null
 
 # 32 bit platform test has to be run in a docker container
 if [ "$TEST_SUITE" == "32bittest" ]; then
+
+    PYTHON_VERSION=`python --version`
+    PYTHON_VERSION=${PYTHON_VERSION#* }
+
     docker run --rm \
+           -e PYTHON_VERSION="$PYTHON_VERSION" \
            -v $igzip_dir:/indexed_gzip \
            32bit/ubuntu:16.04 \
            /indexed_gzip/.ci/run_32bit_test.sh

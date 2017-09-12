@@ -456,7 +456,8 @@ def test_sequential_seek_to_end(testfile, nelems, niters):
 
     filesize   = nelems * 8
 
-    seek_points = np.linspace(0, filesize, niters, dtype=np.uint64)
+    seek_points = np.random.randint(0, filesize, niters, dtype=np.uint64)
+    seek_points = np.sort(seek_points)
     indexSpacing = max(524288, filesize // 2000)
 
     with open(testfile, 'rb') as pyfid:
@@ -566,9 +567,7 @@ def test_seek_then_read_block(testfile, nelems, niters, seed, use_mmap):
 
     indexSpacing = max(524288, filesize // 1000)
     buf          = ReadBuffer(filesize, use_mmap=use_mmap)
-    seekelems    = np.linspace(0, nelems - 1, niters, dtype=np.uint64)
-
-    np.random.shuffle(seekelems)
+    seekelems    = np.random.randint(0, nelems - 1, niters, dtype=np.uint64)
 
     cdef zran.zran_index_t index
     cdef void             *buffer = buf.buffer
@@ -670,7 +669,8 @@ def test_read_all_sequential(testfile, nelems):
     indexSpacing = max(524288, filesize // 1000)
 
     # Takes too long to read all elements
-    seekelems = np.linspace(0, nelems - 1, 10000, dtype=np.uint64)
+    seekelems = np.random.randint(0, nelems - 1, 10000, dtype=np.uint64)
+    seekelems = np.sort(seekelems)
 
     with open(testfile, 'rb') as pyfid:
         cfid = fdopen(pyfid.fileno(), 'rb')
@@ -701,8 +701,7 @@ def test_build_then_read(testfile, nelems, seed, use_mmap):
 
     indexSpacing = max(524288, filesize // 1000)
     buf          = ReadBuffer(filesize, use_mmap)
-    seekelems    = np.linspace(0, nelems - 1, 5000, dtype=np.uint64)
-    np.random.shuffle(seekelems)
+    seekelems    = np.random.randint(0, nelems - 1, 5000, dtype=np.uint64)
 
     cdef zran.zran_index_t index
     cdef void             *buffer = buf.buffer

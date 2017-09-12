@@ -76,20 +76,20 @@ env:
   - TEST_SUITE=zran_test         EXTRA_ARGS="--use_mmap --concat" NITERS=5000 NELEMS=268435456 TEST_PATTERN="not test_readbuf_spacing_sizes and not test_seek_then_read_block"
   - TEST_SUITE=zran_test         EXTRA_ARGS="--use_mmap"          NITERS=500  NELEMS=268435456 TEST_PATTERN="test_readbuf_spacing_sizes"
   - TEST_SUITE=zran_test         EXTRA_ARGS="--use_mmap --concat" NITERS=500  NELEMS=268435456 TEST_PATTERN="test_readbuf_spacing_sizes"
-  - TEST_SUITE=zran_test         EXTRA_ARGS="--use_mmap"          NITERS=500  NELEMS=268435456 TEST_PATTERN="test_seek_then_read_block"
-  - TEST_SUITE=zran_test         EXTRA_ARGS="--use_mmap --concat" NITERS=500  NELEMS=268435456 TEST_PATTERN="test_seek_then_read_block"
+  - TEST_SUITE=zran_test         EXTRA_ARGS="--use_mmap"          NITERS=400  NELEMS=268435456 TEST_PATTERN="test_seek_then_read_block"
+  - TEST_SUITE=zran_test         EXTRA_ARGS="--use_mmap --concat" NITERS=400  NELEMS=268435456 TEST_PATTERN="test_seek_then_read_block"
   - TEST_SUITE=indexed_gzip_test EXTRA_ARGS="--use_mmap"          NITERS=5000 NELEMS=268435456
   - TEST_SUITE=indexed_gzip_test EXTRA_ARGS="--use_mmap --concat" NITERS=5000 NELEMS=268435456
 
 # NELEMS=805306368 ~ 6GB (for testing 64 bit support)
-  - TEST_SUITE=zran_test         EXTRA_ARGS="--use_mmap"          NITERS=1000 NELEMS=805306368 TEST_PATTERN="not test_readbuf_spacing_sizes and not test_seek_then_read_block"
-  - TEST_SUITE=zran_test         EXTRA_ARGS="--use_mmap --concat" NITERS=1000 NELEMS=805306368 TEST_PATTERN="not test_readbuf_spacing_sizes and not test_seek_then_read_block"
-  - TEST_SUITE=zran_test         EXTRA_ARGS="--use_mmap"          NITERS=50   NELEMS=805306368 TEST_PATTERN="test_readbuf_spacing_sizes"
-  - TEST_SUITE=zran_test         EXTRA_ARGS="--use_mmap --concat" NITERS=50   NELEMS=805306368 TEST_PATTERN="test_readbuf_spacing_sizes"
-  - TEST_SUITE=zran_test         EXTRA_ARGS="--use_mmap"          NITERS=50   NELEMS=805306368 TEST_PATTERN="test_seek_then_read_block"
-  - TEST_SUITE=zran_test         EXTRA_ARGS="--use_mmap --concat" NITERS=50   NELEMS=805306368 TEST_PATTERN="test_seek_then_read_block"
-  - TEST_SUITE=indexed_gzip_test EXTRA_ARGS="--use_mmap"          NITERS=1000 NELEMS=805306368
-  - TEST_SUITE=indexed_gzip_test EXTRA_ARGS="--use_mmap --concat" NITERS=1000 NELEMS=805306368
+  - TEST_SUITE=zran_test         EXTRA_ARGS="--use_mmap"           NITERS=1000 NELEMS=805306368 TEST_PATTERN="not test_readbuf_spacing_sizes and not test_seek_then_read_block"
+  - TEST_SUITE=zran_test         EXTRA_ARGS="--use_mmap --concat"  NITERS=1000 NELEMS=805306368 TEST_PATTERN="not test_readbuf_spacing_sizes and not test_seek_then_read_block"
+  - TEST_SUITE=zran_test         EXTRA_ARGS="--use_mmap"           NITERS=50   NELEMS=805306368 TEST_PATTERN="test_readbuf_spacing_sizes"
+  - TEST_SUITE=zran_test         EXTRA_ARGS="--use_mmap --concat"  NITERS=50   NELEMS=805306368 TEST_PATTERN="test_readbuf_spacing_sizes"
+  - TEST_SUITE=zran_test         EXTRA_ARGS="--use_mmap"           NITERS=40   NELEMS=805306368 TEST_PATTERN="test_seek_then_read_block"
+  - TEST_SUITE=zran_test         EXTRA_ARGS="--use_mmap --concat"  NITERS=40   NELEMS=805306368 TEST_PATTERN="test_seek_then_read_block"
+  - TEST_SUITE=indexed_gzip_test EXTRA_ARGS="--use_mmap"           NITERS=1000 NELEMS=805306368
+  - TEST_SUITE=indexed_gzip_test EXTRA_ARGS="--use_mmap --concat"  NITERS=1000 NELEMS=805306368
   - TEST_SUITE=32bittest
 
 install: "pip install cython numpy pytest"

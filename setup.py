@@ -74,7 +74,7 @@ except: have_numpy = False
 
 # If numpy is present, we need
 # to include the headers
-include_dirs = ['.']
+include_dirs = ['indexed_gzip']
 if have_numpy:
     include_dirs.append(np.get_include())
 

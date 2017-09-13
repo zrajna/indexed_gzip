@@ -16,7 +16,7 @@ popd     > /dev/null
 # 32 bit platform test has to be run in a docker container
 if [ "$TEST_SUITE" == "32bittest" ]; then
 
-    PYTHON_VERSION=`python --version`
+    PYTHON_VERSION=$(python --version 2>&1)
     PYTHON_VERSION=${PYTHON_VERSION#* }
 
     docker run --rm \

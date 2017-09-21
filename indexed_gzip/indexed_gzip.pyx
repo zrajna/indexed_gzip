@@ -335,7 +335,7 @@ cdef class IndexedGzipFile:
         # bytes have been read
         while True:
 
-            buffer = buf.buffer + offset
+            buffer = <char *>buf.buffer + offset
 
             # read some bytes
             with nogil:

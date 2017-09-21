@@ -54,24 +54,21 @@ class Clean(Command):
                 try:            os.remove(g)
                 except OSError: pass
 
+# Platform information
+python2 = (sys.version_info[0] == 2)
+windows = sys.platform.startswith("win")
 
 # If cython is present, we'll compile
 # the pyx files from scratch. Otherwise,
 # we'll compile the pre-generated c
 # files (which are assumed to be present).
-
-# We only need numpy to
-# compile the test modules
 have_cython = True
 build_tests  = True
-
-# Platform information
-python2 = (sys.version_info[0] == 2)
-windows = sys.platform.startswith("win")
 
 try:    from Cython.Build import cythonize
 except: have_cython = False
 
+# We need numpy to compile the test modules
 try:    import numpy as np
 except: build_tests = False
 
@@ -125,7 +122,6 @@ test_exts = [
         library_dirs=lib_dirs,
         include_dirs=include_dirs,
         extra_compile_args=extra_compile_args),
-#        extra_compile_args=['-Wno-unused-function']),
     Extension(
         'indexed_gzip.tests.ctest_indexed_gzip',
         [op.join('indexed_gzip', 'tests',
@@ -134,8 +130,6 @@ test_exts = [
         library_dirs=lib_dirs,
         include_dirs=include_dirs,
         extra_compile_args=extra_compile_args)]
-#        extra_compile_args=['-Wno-unused-function'])]
-
 
 # If we have numpy, we can compile the tests
 if build_tests: extensions = [igzip_ext] + test_exts

@@ -13,11 +13,51 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
-#include <fcntl.h>
 #include "zlib.h"
+
+#ifdef _WIN32
+#define FSEEK _fseeki64
+#define FTELL _ftelli64
+#include "windows.h"
+#include "io.h"
+static int is_readonly(FILE *fd)
+{
+    /* This seems to be wrong - it is checking whether the underlying
+       file itself has readonly permissions, not whether it was opened
+       read-only. Can't find good equivalent on Windows so just 
+       assume it was */
+    return 1;
+    /*
+    BY_HANDLE_FILE_INFORMATION info;
+    char buf[256];
+    if (GetFileInformationByHandle(_get_osfhandle(_fileno(fd)), &info)) {
+        return (info.dwFileAttributes != INVALID_FILE_ATTRIBUTES) &&
+               (info.dwFileAttributes & FILE_ATTRIBUTE_READONLY);
+    }
+    else {
+        return 0;
+    }
+    */
+}
+#else
+#include <fcntl.h>
+#define FSEEK fseeko
+#define FTELL ftello
+/* Check if file is read-only */
+static int is_readonly(FILE *fd)
+{
+    return (fcntl(fileno(fd), F_GETFL) & O_ACCMODE) != O_RDONLY;
+}
+#endif
 
 #include "zran.h"
 
+#ifdef NO_C99
+static double round(double val)
+{    
+    return floor(val + 0.5);
+}
+#endif
 
 /*
  * Turn this on to make noise.
@@ -465,21 +505,21 @@ int zran_init(zran_index_t *index,
       goto fail;
 
     /* The file must be opened in read-only mode */
-    if ((fcntl(fileno(fd), F_GETFL) & O_ACCMODE) != O_RDONLY)
-      goto fail;
+    if (!is_readonly(fd))
+        goto fail;
 
     /*
      * Calculate the size of the compressed file
      */
-    if (fseeko(fd, 0, SEEK_END) != 0)
+    if (FSEEK(fd, 0, SEEK_END) != 0)
         goto fail;
 
-    compressed_size = ftello(fd);
+    compressed_size = ftell(fd);
 
     if (compressed_size < 0)
         goto fail;
 
-    if (fseeko(fd, 0, SEEK_SET) != 0)
+    if (FSEEK(fd, 0, SEEK_SET) != 0)
         goto fail;
 
     /*
@@ -531,13 +571,12 @@ uint64_t _zran_index_limit(zran_index_t *index, uint8_t compressed) {
 
 /* Expands the memory used to store the index points. */
 int _zran_expand_point_list(zran_index_t *index) {
-
+    zran_point_t *new_list;
     uint32_t new_size = index->size * 2;
 
     zran_log("_zran_expand_point_list(%i -> %i)\n", index->size, new_size);
 
-    zran_point_t *new_list = realloc(index->list,
-                                     sizeof(zran_point_t) * new_size);
+    new_list = realloc(index->list, sizeof(zran_point_t) * new_size);
 
     if (new_list == NULL) {
         /* old list is still valid */
@@ -553,10 +592,10 @@ int _zran_expand_point_list(zran_index_t *index) {
 
 /* Frees any unused memory allocated for index storage. */
 int _zran_free_unused(zran_index_t *index) {
+    zran_point_t *new_list;
 
     zran_log("_zran_free_unused\n");
 
-    zran_point_t *new_list;
 
     new_list = realloc(index->list, sizeof(zran_point_t) * index->npoints);
 
@@ -896,6 +935,10 @@ int _zran_add_point(zran_index_t  *index,
                     uint32_t       data_size,
                     uint8_t       *data) {
 
+    uint8_t      *point_data = NULL;
+    zran_point_t *next       = NULL;
+    int doff;
+
     zran_log("_zran_add_point(%i, c=%lld + %i, u=%lld, data=%u / %u)\n",
              index->npoints,
              cmp_offset,
@@ -905,7 +948,6 @@ int _zran_add_point(zran_index_t  *index,
              data_size);
 
     #ifdef ZRAN_VERBOSE
-    int doff;
     if (data_offset >= index->window_size) doff = data_offset - index->window_size;
     else                                   doff = data_size = (index->window_size - data_offset);
 
@@ -916,9 +958,6 @@ int _zran_add_point(zran_index_t  *index,
                  data[(data_offset - index->window_size + 2) % data_size],
                  data[(data_offset - index->window_size + 3) % data_size]);
     #endif
-
-    uint8_t      *point_data = NULL;
-    zran_point_t *next       = NULL;
 
     /* if list is full, make it bigger */
     if (index->npoints == index->size) {
@@ -1032,7 +1071,7 @@ int _zran_init_zlib_inflate(zran_index_t *index,
     if (point == NULL) seek_loc = 0;
     else               seek_loc = point->cmp_offset - (point->bits > 0);
 
-    if (fseek(index->fd, seek_loc, SEEK_SET) != 0)
+    if (FSEEK(index->fd, seek_loc, SEEK_SET) != 0)
         goto fail;
 
     /*
@@ -1392,7 +1431,7 @@ static int _zran_inflate(zran_index_t *index,
             }
 
             zran_log("Reading from file %llu [ == %llu?]\n",
-                     ftello(index->fd), cmp_offset);
+                     FTELL(index->fd), cmp_offset);
 
             /*
              * Read a block of compressed data
@@ -2034,7 +2073,7 @@ int zran_seek(zran_index_t  *index,
         *point = seek_point;
     }
 
-    if (fseeko(index->fd, offset, SEEK_SET) != 0)
+    if (FSEEK(index->fd, offset, SEEK_SET) != 0)
         goto fail;
 
     return ZRAN_SEEK_OK;
@@ -2341,7 +2380,7 @@ int64_t zran_read(zran_index_t *index,
 
     zran_log("Read succeeded - %llu bytes read [compressed offset: %ld]\n",
              total_read,
-             ftell(index->fd));
+             FTELL(index->fd));
 
     free(discard);
 

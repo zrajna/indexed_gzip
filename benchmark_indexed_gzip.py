@@ -22,7 +22,7 @@ def create_gz(fid):
 
 
 def create_igz(fid):
-    return igzip.IndexedGzipFile(fid)
+    return igzip.IndexedGzipFile(fid=fid)
 
 
 def md5(data):
@@ -165,3 +165,4 @@ with open(infile, 'rb') as fid:
             numseeks,
             op.basename(infile),
             seed))
+        raise

@@ -63,14 +63,14 @@ windows = sys.platform.startswith("win")
 # we'll compile the pre-generated c
 # files (which are assumed to be present).
 have_cython = True
-build_tests  = True
+have_numpy  = True
 
 try:    from Cython.Build import cythonize
 except: have_cython = False
 
 # We need numpy to compile the test modules
 try:    import numpy as np
-except: build_tests = False
+except: have_numpy = False
 
 include_dirs = ['indexed_gzip']
 lib_dirs = []
@@ -79,12 +79,11 @@ extra_compile_args = []
 
 # If numpy is present, we need
 # to include the headers
-if build_tests:
+if have_numpy:
     include_dirs.append(np.get_include())
 
 if windows:
-    build_tests = False
-    ZLIB_HOME = os.environ.get("FSLDIR", "c:/Program Files (x86)/GnuWin32")
+    ZLIB_HOME = os.environ.get("ZLIB_HOME", "c:/Program Files (x86)/GnuWin32")
     include_dirs.append(os.path.join(ZLIB_HOME, "include"))
     libs.append('zlib')
     lib_dirs.append(os.path.join(ZLIB_HOME, "lib"))
@@ -115,24 +114,28 @@ igzip_ext = Extension(
 # Optional test modules
 test_exts = [
     Extension(
-        'indexed_gzip.tests.ctest_zran',
-        [op.join('indexed_gzip', 'tests', 'ctest_zran.{}'.format(pyx_ext)),
-         op.join('indexed_gzip', 'zran.c')],
-        libraries=libs,
-        library_dirs=lib_dirs,
-        include_dirs=include_dirs,
-        extra_compile_args=extra_compile_args),
-    Extension(
         'indexed_gzip.tests.ctest_indexed_gzip',
         [op.join('indexed_gzip', 'tests',
                  'ctest_indexed_gzip.{}'.format(pyx_ext))],
         libraries=libs,
         library_dirs=lib_dirs,
         include_dirs=include_dirs,
-        extra_compile_args=extra_compile_args)]
+        extra_compile_args=extra_compile_args)
+]
+
+if not windows:
+    # Uses POSIX memmap API so won't work on Windows
+    test_exts.append(Extension(
+        'indexed_gzip.tests.ctest_zran',
+        [op.join('indexed_gzip', 'tests', 'ctest_zran.{}'.format(pyx_ext)),
+         op.join('indexed_gzip', 'zran.c')],
+        libraries=libs,
+        library_dirs=lib_dirs,
+        include_dirs=include_dirs,
+        extra_compile_args=extra_compile_args))
 
 # If we have numpy, we can compile the tests
-if build_tests: extensions = [igzip_ext] + test_exts
+if have_numpy: extensions = [igzip_ext] + test_exts
 else:          extensions = [igzip_ext]
 
 

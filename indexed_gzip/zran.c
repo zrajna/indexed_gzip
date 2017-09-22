@@ -502,7 +502,7 @@ int zran_init(zran_index_t *index,
     if (FSEEK(fd, 0, SEEK_END) != 0)
         goto fail;
 
-    compressed_size = ftell(fd);
+    compressed_size = FTELL(fd);
 
     if (compressed_size < 0)
         goto fail;

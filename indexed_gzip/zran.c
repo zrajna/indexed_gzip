@@ -22,22 +22,10 @@
 #include "io.h"
 static int is_readonly(FILE *fd)
 {
-    /* This seems to be wrong - it is checking whether the underlying
-       file itself has readonly permissions, not whether it was opened
-       read-only. Can't find good equivalent on Windows so just 
-       assume it was */
+    /* Can't find a way to do this correctly under Windows and 
+       the check is not required anyway since the underlying 
+       Python module checks it already */
     return 1;
-    /*
-    BY_HANDLE_FILE_INFORMATION info;
-    char buf[256];
-    if (GetFileInformationByHandle(_get_osfhandle(_fileno(fd)), &info)) {
-        return (info.dwFileAttributes != INVALID_FILE_ATTRIBUTES) &&
-               (info.dwFileAttributes & FILE_ATTRIBUTE_READONLY);
-    }
-    else {
-        return 0;
-    }
-    */
 }
 #else
 #include <fcntl.h>
@@ -46,7 +34,7 @@ static int is_readonly(FILE *fd)
 /* Check if file is read-only */
 static int is_readonly(FILE *fd)
 {
-    return (fcntl(fileno(fd), F_GETFL) & O_ACCMODE) != O_RDONLY;
+    return (fcntl(fileno(fd), F_GETFL) & O_ACCMODE) == O_RDONLY;
 }
 #endif
 

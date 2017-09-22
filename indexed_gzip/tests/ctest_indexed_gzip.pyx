@@ -92,14 +92,16 @@ def test_init_failure_cases(concat):
             gf = igzip.IndexedGzipFile(filename=testfile, mode='wb')
 
         # No writing
+        f  = open(testfile, mode='wb')
         with pytest.raises(ValueError):
-            f  = open(testfile, mode='wb')
             gf = igzip.IndexedGzipFile(fid=f)
+        f.close()
 
         # No writing
+        f  = open(testfile, mode='w')
         with pytest.raises(ValueError):
-            f  = open(testfile, mode='w')
             gf = igzip.IndexedGzipFile(fid=f)
+        f.close()
 
         # Need a filename or fid
         with pytest.raises(ValueError):
@@ -114,7 +116,9 @@ def test_init_success_cases(concat):
         gf1 = igzip.IndexedGzipFile(filename=testfile)
         gf2 = igzip.IndexedGzipFile(filename=testfile, mode='r')
         gf3 = igzip.IndexedGzipFile(filename=testfile, mode='rb')
-
+        gf1.close()
+        gf2.close()
+        gf3.close()
 
 def test_create_from_open_handle(testfile, nelems, seed):
 
@@ -149,7 +153,6 @@ def test_read_all(testfile, nelems, use_mmap):
 
     # Check that every value is valid
     assert check_data_valid(data, 0)
-
 
 def test_read_beyond_end(concat):
     with testdir() as tdir:

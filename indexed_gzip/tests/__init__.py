@@ -6,6 +6,7 @@
 #
 
 import                    os
+import                    sys
 import                    time
 import                    shutil
 import                    tempfile
@@ -54,51 +55,56 @@ def gen_test_data(filename, nelems, concat):
 
     tmpfile = '{}_temp'.format(filename)
 
-    with open(tmpfile, 'wb+') as f:
-        data = np.memmap(tmpfile, dtype=np.uint64, shape=nelems)
+    open(tmpfile, 'wb+').close()
+    data = np.memmap(tmpfile, dtype=np.uint64, shape=nelems)
+    idx = 0
+    while toWrite > 0:
 
-        idx = 0
+        if idx % 10 == 0:
+            print('Generated to {}...'.format(offset))
 
-        while toWrite > 0:
+        thisWrite = min(writeBlockSize, toWrite)
 
-            if idx % 10 == 0:
-                print('Generated to {}...'.format(offset))
+        vals = np.arange(offset, offset + thisWrite, dtype=np.uint64)
 
-            thisWrite = min(writeBlockSize, toWrite)
+        data[offset:offset + thisWrite] = vals
 
-            vals = np.arange(offset, offset + thisWrite, dtype=np.uint64)
-
-            data[offset:offset + thisWrite] = vals
-
-            toWrite  -= thisWrite
-            offset   += thisWrite
-            idx      += 1
-            data.flush()
-
-    # Not using the python gzip module,
-    # because it is super-slow.
+        toWrite  -= thisWrite
+        offset   += thisWrite
+        idx      += 1
+        data.flush()
+    del data
 
     # Now write that array to a compresed file
     # If a single stream, we just pass the array
     # directly to gzip.
     if not concat:
+        if sys.platform.startswith("win"):
+            # Use python gzip module on windows, can't assume gzip exists
+            import gzip
+            with open(tmpfile, 'rb') as f_in, gzip.open(filename, 'wb') as f_out:
+                shutil.copyfileobj(f_in, f_out)
+        else:
+            # Not using the python gzip module otherwise
+            # because it is super-slow.
+            print('Compressing all data with a single gzip call ...', filename)
 
-        print('Compressing all data with a single gzip call ...')
+            os.system("gzip -c <%s >%s" % (tempfile, filename))
+            with open(tmpfile,  'rb') as inf, open(filename, 'wb') as outf:
+                proc = sp.Popen(['gzip', '-c'],
+                                stdin=inf,
+                                stdout=outf)
 
-        with open(tmpfile,  'rb') as inf, open(filename, 'wb') as outf:
-            proc = sp.Popen(['gzip', '-c'],
-                            stdin=inf,
-                            stdout=outf)
-
-            start = time.time()
-            while proc.poll() is None:
-                time.sleep(0.5)
-                cur = time.time()
-                elapsed = cur - start
-                if int(elapsed) % 60 == 0:
-                    print('Waiting for gzip ({:0.2f} minutes)'
-                          .format(elapsed / 60.0))
-
+                start = time.time()
+                while proc.poll() is None:
+                    time.sleep(0.5)
+                    cur = time.time()
+                    elapsed = cur - start
+                    if int(elapsed) % 60 == 0:
+                        print('Waiting for gzip ({:0.2f} minutes)'
+                            .format(elapsed / 60.0))
+                inf.close()
+                outf.close()
 
     # Otherwise, pass in chunks of data to
     # generate a concatenated gzip stream
@@ -134,52 +140,36 @@ def gen_test_data(filename, nelems, concat):
                 idx += 1
 
     end = time.time()
-
     os.remove(tmpfile)
 
     print('Done in {:0.2f} seconds'.format(end - start))
 
-
 def _check_chunk(args):
-
-    startval, endval, offset, chunksize = args
-
-    s      = startval + offset
-    e      = min(s + chunksize, endval)
-    nelems = e - s
-
+    s, e, test_data = args
     valid  = np.arange(s, e, dtype=np.uint64)
-
-    val = np.all(_test_data[offset:offset + nelems] == valid)
-
-    return val
-
-
-_test_data = None
-
+    return np.all(test_data == valid)
 
 def check_data_valid(data, startval, endval=None):
-
-    global _test_data
-
-    _test_data = data
-    data       = None
-
     if endval is None:
-        endval = len(_test_data)
+        endval = len(data)
 
     chunksize = 10000000
-
-    pool = mp.Pool()
 
     startval = int(startval)
     endval   = int(endval)
 
-    offsets = np.arange(0, len(_test_data), chunksize)
-
-    args   = [(startval, endval, off, chunksize) for off in offsets]
+    offsets = np.arange(0, len(data), chunksize)
+    args = []
+    result = True
+    for offset in offsets:
+        s      = startval + offset
+        e      = min(s + chunksize, endval)
+        nelems = e - s
+        test_chunk = data[offset:offset + nelems]
+        args.append((s, e, test_chunk))
+    
+    pool = mp.Pool()
     result = all(pool.map(_check_chunk, args))
-
     pool.terminate()
 
     return result

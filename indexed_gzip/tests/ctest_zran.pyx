@@ -16,6 +16,7 @@ import                    time
 import                    random
 import                    hashlib
 import                    tempfile
+import                    threading
 
 import numpy as np
 
@@ -43,7 +44,7 @@ from posix.mman cimport (mmap,
                          MAP_SHARED)
 
 
-from . import check_data_valid
+from . import poll, check_data_valid
 
 
 cdef extern from "sys/mman.h":
@@ -153,14 +154,20 @@ cdef class ReadBuffer:
 
             print('Memory-mapping {:0.2f} GB ({})'.format(size / 1073741824., path))
 
-            towrite = size
+            def initmem():
 
-            while towrite > 0:
+                towrite = size
 
-                zeros    = np.zeros(min(towrite, 134217728), dtype=np.uint8)
-                towrite -= len(zeros)
+                while towrite > 0:
 
-                os.write(fd, zeros.tostring())
+                    zeros    = np.zeros(min(towrite, 134217728), dtype=np.uint8)
+                    towrite -= len(zeros)
+
+                    os.write(fd, zeros.tostring())
+
+            th = threading.Thread(target=initmem)
+            th.start()
+            poll(lambda : not th.is_alive())
 
             self.mmap_fd   = fd
             self.mmap_path = path

@@ -36,23 +36,28 @@ def testdir():
     return ctx()
 
 
+
+def poll(until):
+    """Waits until ``until`` returns ``True``, printing out a message every
+    minute.
+    """
+
+    start = time.time()
+
+    while not until():
+        time.sleep(0.5)
+        cur = time.time()
+        elapsed = cur - start
+        if int(elapsed) % 60 == 0:
+            print('Waiting ({:0.2f} minutes)'.format(elapsed / 60.0))
+
+
 def compress(infile, outfile, buflen=-1):
     """Use gzip to compress the data in infile, saving it to outfile.
 
     If buflen == -1, we compress all of the data at once. Otherwise we
     compress chunks, creating a concatenated gzip stream.
     """
-
-    def poll(until):
-
-        start = time.time()
-
-        while not until():
-            time.sleep(0.5)
-            cur = time.time()
-            elapsed = cur - start
-            if int(elapsed) % 2 == 0:
-                print('Waiting ({:0.2f} minutes)'.format(elapsed / 60.0))
 
     def compress_with_gzip_module():
 

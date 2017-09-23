@@ -177,7 +177,8 @@ The `indexed_gzip` project is based upon the `zran.c` example (written by Mark
 Alder) which ships with the [zlib](http://www.zlib.net/) source code.
 
 
-`indexed_gzip` was originally inspired by:
+`indexed_gzip` was originally inspired by Zalan Rajna's (@zrajna)
+[zindex](https://github.com/zrajna/zindex) project:
 
     Z. Rajna, A. Keskinarkaus, V. Kiviniemi and T. Seppanen
     "Speeding up the file access of large compressed NIfTI neuroimaging data"
@@ -192,6 +193,10 @@ Initial work on `indexed_gzip` took place at
 24th-26th February 2016, with the support of the
 [FMRIB Centre](https://www.ndcn.ox.ac.uk/divisions/fmrib/), at the
 University of Oxford, UK.
+
+
+Many thanks to Martin Craig (@mcraig-ibme) for help in porting `indexed_gzip`
+to Windows.
 
 
 ## License

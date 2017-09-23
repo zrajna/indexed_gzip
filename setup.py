@@ -54,9 +54,12 @@ class Clean(Command):
                 try:            os.remove(g)
                 except OSError: pass
 
+
 # Platform information
-python2 = (sys.version_info[0] == 2)
+python2 = sys.version_info[0] == 2
+noc99   = python2 or (sys.version_info[0] == 3 and sys.version_info[1] <= 4)
 windows = sys.platform.startswith("win")
+
 
 # If cython is present, we'll compile
 # the pyx files from scratch. Otherwise,
@@ -87,10 +90,15 @@ if windows:
     include_dirs.append(os.path.join(ZLIB_HOME, "include"))
     libs.append('zlib')
     lib_dirs.append(os.path.join(ZLIB_HOME, "lib"))
+
+    # For stdint.h which is not included in the old Visual C
+    # compiler used for Python 2
     if python2:
-        # For stdint.h which is not included in the old Visual C 
-        # compiler used for Python 2
         include_dirs.append('compat')
+
+    # Some C functions might not be present when compiling against
+    # older versions of python
+    if noc99:
         extra_compile_args += ['-DNO_C99']
 else:
     libs.append('z')

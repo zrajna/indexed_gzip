@@ -171,6 +171,7 @@ def gen_test_data(filename, nelems, concat):
     compress(datafile, filename, maxBufSize)
 
     end = time.time()
+    del data
     os.remove(datafile)
 
     print('Done in {:0.2f} seconds'.format(end - start))

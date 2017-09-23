@@ -8,10 +8,14 @@
 import                    os
 import                    sys
 import                    time
+import                    gzip
 import                    shutil
 import                    tempfile
+import                    threading
 import subprocess      as sp
 import multiprocessing as mp
+
+from six import BytesIO
 
 import numpy as np
 
@@ -34,6 +38,83 @@ def testdir():
     return ctx()
 
 
+def compress(infile, outfile, buflen=-1):
+    """Use gzip to compress the data in infile, saving it to outfile.
+
+    If buflen == -1, we compress all of the data at once. Otherwise we
+    compress chunks, creating a concatenated gzip stream.
+    """
+
+    def poll(until):
+
+        start = time.time()
+
+        while not until():
+            time.sleep(1)
+            cur = time.time()
+            elapsed = cur - start
+            if int(elapsed) % 60 == 0:
+                print('Waiting ({:0.2f} minutes)'.format(elapsed / 60.0))
+
+    def compress_with_gzip():
+
+        print('Compressing data using python gzip module ...', outfile)
+
+        with open(infile, 'rb') as inf:
+            while True:
+                with gzip.open(outfile, 'wb+') as outf:
+                    data = inf.read(buflen)
+
+                    if data == '':
+                        break
+
+                    outf.write(data)
+
+    # Use python gzip module on windows, can't assume gzip exists
+    if sys.platform.startswith("win"):
+
+        cmpThread = threading.Thread(target=compress_with_gzip)
+        cmpThread.start()
+        poll(lambda : not cmpThread.is_alive())
+
+    # If not windows, assume that gzip command
+    # exists, and use it, because the python
+    # gzip module is super-slow.
+    else:
+        with open(infile, 'rb') as inf, open(outfile, 'wb') as outf:
+
+            # If buflen == -1, do a single call
+            if buflen == -1:
+
+                print('Compressing data with a single '
+                      'call to gzip ...', outfile)
+
+                proc    = sp.Popen(['gzip', '-c'], stdin=inf, stdout=outf)
+
+                poll(lambda : proc.poll() is not None)
+
+            # Otherwise chunk the call
+            else:
+
+                print('Compressing data with multiple '
+                      'calls to gzip ...', outfile)
+
+                nbytes = 0
+                chunk  = inf.read(buflen)
+
+                while len(chunk) != 0:
+
+                    proc = sp.Popen(['gzip', '-c'], stdin=sp.PIPE, stdout=outf)
+                    proc.communicate(chunk)
+
+                    nbytes += len(chunk)
+
+                    if (nbytes / buflen) % 10 == 0:
+                        print('Compressed to {}...'.format(nbytes))
+
+                    chunk = inf.read(buflen)
+
+
 def gen_test_data(filename, nelems, concat):
     """Make some data to test with. """
 
@@ -53,11 +134,12 @@ def gen_test_data(filename, nelems, concat):
     offset         = 0
     writeBlockSize = min(16777216, nelems)
 
-    tmpfile = '{}_temp'.format(filename)
+    datafile = '{}_temp'.format(filename)
 
-    open(tmpfile, 'wb+').close()
-    data = np.memmap(tmpfile, dtype=np.uint64, shape=nelems)
+    open(datafile, 'wb+').close()
+    data = np.memmap(datafile, dtype=np.uint64, shape=nelems)
     idx = 0
+
     while toWrite > 0:
 
         if idx % 10 == 0:
@@ -73,81 +155,23 @@ def gen_test_data(filename, nelems, concat):
         offset   += thisWrite
         idx      += 1
         data.flush()
-    del data
 
-    # Now write that array to a compresed file
-    # If a single stream, we just pass the array
-    # directly to gzip.
-    if not concat:
-        if sys.platform.startswith("win"):
-            # Use python gzip module on windows, can't assume gzip exists
-            import gzip
-            with open(tmpfile, 'rb') as f_in, gzip.open(filename, 'wb') as f_out:
-                shutil.copyfileobj(f_in, f_out)
-        else:
-            # Not using the python gzip module otherwise
-            # because it is super-slow.
-            print('Compressing all data with a single gzip call ...', filename)
+    if not concat: maxBufSize = -1
+    else:          maxBufSize = 8 * min(16777216, nelems // 50)
 
-            os.system("gzip -c <%s >%s" % (tempfile, filename))
-            with open(tmpfile,  'rb') as inf, open(filename, 'wb') as outf:
-                proc = sp.Popen(['gzip', '-c'],
-                                stdin=inf,
-                                stdout=outf)
-
-                start = time.time()
-                while proc.poll() is None:
-                    time.sleep(0.5)
-                    cur = time.time()
-                    elapsed = cur - start
-                    if int(elapsed) % 60 == 0:
-                        print('Waiting for gzip ({:0.2f} minutes)'
-                            .format(elapsed / 60.0))
-                inf.close()
-                outf.close()
-
-    # Otherwise, pass in chunks of data to
-    # generate a concatenated gzip stream
-    else:
-
-        # maxBufSize is in elements, not in bytes
-        if not concat: maxBufSize = nelems
-        else:          maxBufSize = min(16777216, nelems // 50)
-
-        toWrite = nelems
-        index   = 0
-
-        with open(filename, 'wb') as f:
-
-            idx = 0
-
-            while toWrite > 0:
-
-                if idx % 10 == 0:
-                    print('Compressed to {}...'.format(index))
-
-                nvals    = min(maxBufSize, toWrite)
-                toWrite -= nvals
-
-                vals     = data[index : index + nvals]
-
-                vals     = vals.tostring()
-                index   += nvals
-
-                proc = sp.Popen(['gzip', '-c'], stdin=sp.PIPE, stdout=f)
-                proc.communicate(input=vals)
-
-                idx += 1
+    compress(datafile, filename, maxBufSize)
 
     end = time.time()
-    os.remove(tmpfile)
+    os.remove(datafile)
 
     print('Done in {:0.2f} seconds'.format(end - start))
+
 
 def _check_chunk(args):
     s, e, test_data = args
     valid  = np.arange(s, e, dtype=np.uint64)
     return np.all(test_data == valid)
+
 
 def check_data_valid(data, startval, endval=None):
     if endval is None:
@@ -167,7 +191,7 @@ def check_data_valid(data, startval, endval=None):
         nelems = e - s
         test_chunk = data[offset:offset + nelems]
         args.append((s, e, test_chunk))
-    
+
     pool = mp.Pool()
     result = all(pool.map(_check_chunk, args))
     pool.terminate()

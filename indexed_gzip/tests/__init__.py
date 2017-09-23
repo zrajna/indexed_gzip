@@ -15,8 +15,6 @@ import                    threading
 import subprocess      as sp
 import multiprocessing as mp
 
-from six import BytesIO
-
 import numpy as np
 
 
@@ -50,37 +48,28 @@ def compress(infile, outfile, buflen=-1):
         start = time.time()
 
         while not until():
-            time.sleep(1)
+            time.sleep(0.5)
             cur = time.time()
             elapsed = cur - start
-            if int(elapsed) % 60 == 0:
+            if int(elapsed) % 2 == 0:
                 print('Waiting ({:0.2f} minutes)'.format(elapsed / 60.0))
 
-    def compress_with_gzip():
+    def compress_with_gzip_module():
 
         print('Compressing data using python gzip module ...', outfile)
 
         with open(infile, 'rb') as inf:
             while True:
-                with gzip.open(outfile, 'wb+') as outf:
+                with gzip.open(outfile, 'a') as outf:
                     data = inf.read(buflen)
 
-                    if data == '':
+                    if len(data) == 0:
                         break
 
                     outf.write(data)
 
-    # Use python gzip module on windows, can't assume gzip exists
-    if sys.platform.startswith("win"):
+    def compress_with_gzip_command():
 
-        cmpThread = threading.Thread(target=compress_with_gzip)
-        cmpThread.start()
-        poll(lambda : not cmpThread.is_alive())
-
-    # If not windows, assume that gzip command
-    # exists, and use it, because the python
-    # gzip module is super-slow.
-    else:
         with open(infile, 'rb') as inf, open(outfile, 'wb') as outf:
 
             # If buflen == -1, do a single call
@@ -89,9 +78,7 @@ def compress(infile, outfile, buflen=-1):
                 print('Compressing data with a single '
                       'call to gzip ...', outfile)
 
-                proc    = sp.Popen(['gzip', '-c'], stdin=inf, stdout=outf)
-
-                poll(lambda : proc.poll() is not None)
+                sp.Popen(['gzip', '-c'], stdin=inf, stdout=outf).wait()
 
             # Otherwise chunk the call
             else:
@@ -113,6 +100,23 @@ def compress(infile, outfile, buflen=-1):
                         print('Compressed to {}...'.format(nbytes))
 
                     chunk = inf.read(buflen)
+
+    # Use python gzip module on windows,
+    # can't assume gzip exists
+    if sys.platform.startswith("win"):
+        target = compress_with_gzip_module
+
+    # If not windows, assume that gzip command
+    # exists, and use it, because the python
+    # gzip module is super-slow.
+    else:
+        target = compress_with_gzip_command
+
+    cmpThread = threading.Thread(target=target)
+    cmpThread.start()
+    poll(lambda : not cmpThread.is_alive())
+
+
 
 
 def gen_test_data(filename, nelems, concat):

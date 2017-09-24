@@ -184,6 +184,14 @@ cdef class IndexedGzipFile:
         return self.pyfid
 
 
+    @property
+    def mode(self):
+        """Returns the mode that this file was opened in. Currently always
+        returns ``'rb'``.
+        """
+        return 'rb'
+
+
     def close(self):
         """Closes this ``IndexedGzipFile``. """
 

@@ -70,13 +70,17 @@ def test_open_close_ctxmanager(testfile, nelems, seed):
 
 def test_atts(testfile):
 
-    with igzip.IndexedGzipFile(filename=testfile) as f:
-        assert not f.closed
-        assert     f.readable()
-        assert     f.seekable()
-        assert not f.writable()
-        assert f.tell()   == 0
-        assert f.fileno() == f.fileobj().fileno()
+    modes = [None, 'rb', 'r']
+
+    for m in modes:
+        with igzip.IndexedGzipFile(filename=testfile, mode=m) as f:
+            assert not f.closed
+            assert     f.readable()
+            assert     f.seekable()
+            assert not f.writable()
+            assert f.mode     == 'rb'
+            assert f.tell()   == 0
+            assert f.fileno() == f.fileobj().fileno()
 
 
 def test_init_failure_cases(concat):

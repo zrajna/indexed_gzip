@@ -292,13 +292,12 @@ def test_readinto():
             buf = bytearray(len(lines[-1]) + 10)
             f.seek(offset)
             assert f.readinto(buf) == len(lines[-1]) + 1
-            print(buf.decode())
             assert buf.decode() == lines[-1] + '\n' + (b'\0' * 9).decode()
 
             # start at EOF, and try to read something
             filelen = sum([len(l) for l in lines]) + len(lines)
             f.seek(filelen)
-            buf = bytearray([chr(99) for i in range(len(buf))])
+            buf = bytearray([99 for i in range(len(buf))])
             assert f.readinto(buf) == 0
             assert all([b == chr(99) for b in buf.decode()])
 

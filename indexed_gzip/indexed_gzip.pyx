@@ -10,19 +10,24 @@ random access to gzip files.
 """
 
 
-from libc.stdio  cimport (SEEK_SET,
-                          SEEK_CUR,
-                          FILE,
-                          fdopen,
-                          fclose)
+from libc.stdio     cimport (SEEK_SET,
+                             SEEK_CUR,
+                             FILE,
+                             fdopen,
+                             fclose)
 
-from libc.stdint cimport (uint8_t,
-                          uint64_t,
-                          int64_t)
+from libc.stdint    cimport (uint8_t,
+                             uint64_t,
+                             int64_t)
 
-from cpython.mem cimport (PyMem_Malloc,
-                          PyMem_Realloc,
-                          PyMem_Free)
+from cpython.mem    cimport (PyMem_Malloc,
+                             PyMem_Realloc,
+                             PyMem_Free)
+
+from cpython.buffer cimport (PyObject_GetBuffer,
+                             PyBuffer_Release,
+                             PyBUF_ANY_CONTIGUOUS,
+                             PyBUF_SIMPLE)
 
 cimport indexed_gzip.zran as zran
 
@@ -391,6 +396,58 @@ cdef class IndexedGzipFile:
         return pybuf
 
 
+    def readinto(self, buf):
+        """Reads up to ``len(buf)`` bytes directly into ``buf``, which is
+        assumed to be a mutable ``bytes``-like object (e.g. a ``memoryview``
+        or ``bytearray``.
+        """
+
+        cdef zran.zran_index_t *index  = &self.index
+        cdef uint64_t           bufsz  = len(buf)
+        cdef Py_buffer          pbuf
+        cdef void              *vbuf
+        cdef int64_t            ret
+
+        # Create a Py_Buffer which allows
+        # us to access the memory managed
+        # by the provided buf
+        PyObject_GetBuffer(buf, &pbuf, PyBUF_SIMPLE | PyBUF_ANY_CONTIGUOUS)
+
+        # read soem bytes
+        try:
+
+            vbuf = <void *>pbuf.buf
+            with nogil:
+                ret = zran.zran_read(index, vbuf, bufsz)
+
+        # release the py_buffer
+        finally:
+            PyBuffer_Release(&pbuf)
+
+        # see how the read went
+        if ret == zran.ZRAN_READ_FAIL:
+            raise ZranError('zran_read returned error ({})'.format(ret))
+
+        # This will happen if the current
+        # seek point is not covered by the
+        # index, and auto-build is disabled
+        elif ret == zran.ZRAN_READ_NOT_COVERED:
+            raise NotCoveredError('Index does not cover current offset')
+
+        # No bytes were read, and there are
+        # no more bytes to read. This will
+        # happen when the seek point was at
+        # or beyond EOF when zran_read was
+        # called
+        elif ret == zran.ZRAN_READ_EOF:
+            return 0
+
+        # Return the number of bytes that
+        # were read
+        else:
+            return ret
+
+
     def pread(self, nbytes, offset):
         """Seeks to the specified ``offset``, then reads and returns
         ``nbytes``. See :meth:`seek` and :meth:`read`.
@@ -498,6 +555,11 @@ cdef class IndexedGzipFile:
         raise NotImplementedError('IndexedGzipFile does not support writing')
 
 
+    def flush(self):
+        """Currently does nothing. """
+        pass
+
+
 cdef class ReadBuffer:
     """Wrapper around a chunk of memory.
 
@@ -603,6 +665,12 @@ class SafeIndexedGzipFile(IndexedGzipFile):
 
 
     @__mutex
+    def readinto(self, *args, **kwargs):
+        """See :meth:`IndexedGzipFile.readinto`. """
+        return IndexedGzipFile.readinto(self, *args, **kwargs)
+
+
+    @__mutex
     def pread(self, *args, **kwargs):
         """See :meth:`IndexedGzipFile.pread`. """
         return IndexedGzipFile.pread(self, *args, **kwargs)
@@ -612,3 +680,9 @@ class SafeIndexedGzipFile(IndexedGzipFile):
     def write(self, *args, **kwargs):
         """See :meth:`IndexedGzipFile.write`. """
         return IndexedGzipFile.write(self, *args, **kwargs)
+
+
+    @__mutex
+    def flush(self, *args, **kwargs):
+        """See :meth:`IndexedGzipFile.flush`. """
+        return IndexedGzipFile.flush(self, *args, **kwargs)

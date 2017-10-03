@@ -2,5 +2,6 @@ recursive-include indexed_gzip *.py
 recursive-include indexed_gzip *.pyx
 recursive-include indexed_gzip *.pxd
 recursive-include indexed_gzip *.c
+recursive-include indexed_gzip *.h
 exclude                        bench_plot.py
 exclude                        benchmark_indexed_gzip.py

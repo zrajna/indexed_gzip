@@ -45,7 +45,7 @@ def test_SafeIndexedGzipFile_pread_threaded(testfile, nelems):
         allreads  = []
 
         def do_pread(nbytes, offset):
-            data = f.pread(nbytes, offset * 8)
+            data = f.pread(nbytes, int(offset * 8))
             allreads.append((offset, data))
 
         offsets = np.linspace(0, nelems - readelems, nthreads,

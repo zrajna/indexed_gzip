@@ -31,6 +31,7 @@ from cpython.buffer cimport (PyObject_GetBuffer,
 
 cimport indexed_gzip.zran as zran
 
+import io
 import threading
 import logging
 
@@ -610,79 +611,39 @@ cdef class ReadBuffer:
         log.debug('ReadBuffer.__dealloc__()')
 
 
+class SafeIndexedGzipFile(io.BufferedReader):
+    """The ``SafeIndexedGzipFile`` is an ``io.BufferedReader`` which wraps
+    an :class:`IndexedGzipFile` instance. By accessing the ``IndexedGzipFile``
+    instance through an ``io.BufferedReader``, read performance is improved
+    through buffering, and access to the I/O methods is made thread-safe.
 
-class SafeIndexedGzipFile(IndexedGzipFile):
-    """The ``SafeIndexedGzipFile`` is a sub-class of the
-    :class:`IndexedGzipFile` which provides (limited) thread-safe access to a
-    file. Access to the :meth:`seek`, :meth:`read`, and :meth:`write` methods
-    is mutually exclusive, i.e. only a single thread may accesss them at any
-    time.
+    A :meth:`pread` method is also implemented, as it is not implemented by
+    the ``io.BufferedReader``.
     """
 
 
-    def __mutex(func):
-        """Decorator which marks a method as being mutually exclusive. Access
-        to the method is protected by a ``threading.RLock`` object.
+    def __init__(self, *args, **kwargs):
+        """Opens an ``IndexedGzipFile``, and then calls
+        ``io.BufferedReader.__init__``.
+
+        :arg buffer_size: Optional, must be passed as a keyword argument.
+                          Passed through to ``io.BufferedReader.__init__``.
+                          If not provided, a default value of 1048576 is used.
+
+        All other arguments are passed through to ``IndezedGzipFile.__init__``.
         """
 
-        def decorator(self, *args, **kwargs):
-
-            self.__fileLock.acquire()
-
-            try:
-                return func(self, *args, **kwargs)
-
-            finally:
-                self.__fileLock.release()
-
-        return decorator
-
-
-    def __init__(self, *args, **kwargs):
-        """Creates a ``RLock`` for protecting access to the file methods. """
-        IndexedGzipFile.__init__(self, *args, **kwargs)
-
-        # We use an RLock because seek() calls tell()
+        buffer_size     = kwargs.pop('buffer_size', 1048576)
+        fobj            = IndexedGzipFile(*args, **kwargs)
         self.__fileLock = threading.RLock()
 
-
-    @__mutex
-    def seek(self, *args, **kwargs):
-        """See :meth:`IndexedGzipFile.seek`. """
-        return IndexedGzipFile.seek(self, *args, **kwargs)
+        io.BufferedReader.__init__(self, fobj, buffer_size)
 
 
-    @__mutex
-    def tell(self, *args, **kwargs):
-        """See :meth:`IndexedGzipFile.tell`. """
-        return IndexedGzipFile.tell(self, *args, **kwargs)
-
-
-    @__mutex
-    def read(self, *args, **kwargs):
-        """See :meth:`IndexedGzipFile.read`. """
-        return IndexedGzipFile.read(self, *args, **kwargs)
-
-
-    @__mutex
-    def readinto(self, *args, **kwargs):
-        """See :meth:`IndexedGzipFile.readinto`. """
-        return IndexedGzipFile.readinto(self, *args, **kwargs)
-
-
-    @__mutex
-    def pread(self, *args, **kwargs):
-        """See :meth:`IndexedGzipFile.pread`. """
-        return IndexedGzipFile.pread(self, *args, **kwargs)
-
-
-    @__mutex
-    def write(self, *args, **kwargs):
-        """See :meth:`IndexedGzipFile.write`. """
-        return IndexedGzipFile.write(self, *args, **kwargs)
-
-
-    @__mutex
-    def flush(self, *args, **kwargs):
-        """See :meth:`IndexedGzipFile.flush`. """
-        return IndexedGzipFile.flush(self, *args, **kwargs)
+    def pread(self, nbytes, offset):
+        """Seeks to ``offset``, then reads and returns up to ``nbytes``.
+        The calls to seek and read are protected by a ``threading.RLock``.
+        """
+        with self.__fileLock:
+            self.seek(offset)
+            return self.read(nbytes)

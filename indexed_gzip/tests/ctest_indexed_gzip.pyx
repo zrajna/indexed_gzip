@@ -40,6 +40,11 @@ def read_element(gzf, element, seek=True):
     return val[0]
 
 
+def write_text_to_gzip_file(fname, lines):
+    with gzip.open(fname, mode='wb') as f:
+        for line in lines:
+            f.write('{}\n'.format(line).encode())
+
 
 def test_open_close(testfile, nelems, seed):
 
@@ -158,6 +163,7 @@ def test_read_all(testfile, nelems, use_mmap):
     # Check that every value is valid
     assert check_data_valid(data, 0)
 
+
 def test_read_beyond_end(concat):
     with testdir() as tdir:
         nelems   = 65536
@@ -231,6 +237,72 @@ def test_seek_and_tell(testfile, nelems, niters, seed):
             assert f.tell()   == filesize
 
 
+def test_readinto():
+    lines = textwrap.dedent("""
+    line 1
+    line 2
+    this is line 3
+    line the fourth
+    here is the fifth line
+    """).strip().split('\n')
+
+
+    def line_offset(idx):
+        return sum([len(l) for l in lines[:idx]]) + idx
+
+
+    with testdir() as td:
+        testfile = op.join(td, 'test.gz')
+        write_text_to_gzip_file(testfile, lines)
+        with igzip.IndexedGzipFile(filename=testfile) as f:
+
+            # read first line into a byte array
+            buf = bytearray(len(lines[0]))
+            f.seek(0)
+            assert f.readinto(buf) == len(lines[0])
+            assert buf.decode() == lines[0]
+
+            # read first line into memoryvew
+            buf = memoryview(bytearray(len(lines[0])))
+            f.seek(0)
+            assert f.readinto(buf) == len(lines[0])
+            assert buf.tobytes().decode() == lines[0]
+
+            # read an arbitrary line
+            offset = line_offset(2)
+            buf = bytearray(len(lines[2]))
+            f.seek(offset)
+            assert f.readinto(buf) == len(lines[2])
+            assert buf.decode() == lines[2]
+
+            # read the end line, sans-newline
+            offset = line_offset(len(lines) - 1)
+            buf = bytearray(len(lines[-1]))
+            f.seek(offset)
+            assert f.readinto(buf) == len(lines[-1])
+            assert buf.decode() == lines[-1]
+
+            # read the end line, with newline
+            buf = bytearray(len(lines[-1]) + 1)
+            f.seek(offset)
+            assert f.readinto(buf) == len(lines[-1]) + 1
+            assert buf.decode() == lines[-1] + '\n'
+
+            # read the end line with a bigger buffer
+            buf = bytearray(len(lines[-1]) + 10)
+            f.seek(offset)
+            assert f.readinto(buf) == len(lines[-1]) + 1
+            print(buf.decode())
+            assert buf.decode() == lines[-1] + '\n' + (b'\0' * 9).decode()
+
+            # start at EOF, and try to read something
+            filelen = sum([len(l) for l in lines]) + len(lines)
+            f.seek(filelen)
+            buf = bytearray([chr(99) for i in range(len(buf))])
+            assert f.readinto(buf) == 0
+            assert all([b == chr(99) for b in buf.decode()])
+
+
 def test_readline():
     lines = textwrap.dedent("""
     this is
@@ -242,9 +314,7 @@ def test_readline():
 
     with testdir() as td:
         fname = op.join(td, 'test.gz')
-        with gzip.open(fname, mode='wb') as f:
-            for line in lines:
-                f.write('{}\n'.format(line).encode())
+        write_text_to_gzip_file(fname, lines)
 
         with igzip.IndexedGzipFile(fname) as f:
             seekpos = 0
@@ -264,9 +334,7 @@ def test_readline_sizelimit():
 
     with testdir() as td:
         fname = op.join(td, 'test.gz')
-        with gzip.open(fname, mode='wb') as f:
-            for line in lines:
-                f.write((line + '\n').encode())
+        write_text_to_gzip_file(fname, lines)
 
         with igzip.IndexedGzipFile(fname) as f:
 
@@ -302,9 +370,7 @@ def test_readlines():
 
     with testdir() as td:
         fname = op.join(td, 'test.gz')
-        with gzip.open(fname, mode='wb') as f:
-            for line in lines:
-                f.write('{}\n'.format(line).encode())
+        write_text_to_gzip_file(fname, lines)
 
         with igzip.IndexedGzipFile(fname) as f:
 
@@ -325,9 +391,7 @@ def test_readlines_sizelimit():
 
     with testdir() as td:
         fname = op.join(td, 'test.gz')
-        with gzip.open(fname, mode='wb') as f:
-            for line in lines:
-                f.write((line + '\n').encode())
+        write_text_to_gzip_file(fname, lines)
 
         limits = range(len(data) + 2)
 
@@ -364,9 +428,7 @@ def test_iter():
 
     with testdir() as td:
         fname = op.join(td, 'test.gz')
-        with gzip.open(fname, mode='wb') as f:
-            for line in lines:
-                f.write('{}\n'.format(line).encode())
+        write_text_to_gzip_file(fname, lines)
 
         with igzip.IndexedGzipFile(fname) as f:
             for i, gotline in enumerate(f):

@@ -24,6 +24,7 @@ def test_read_all(               testfile, nelems, use_mmap):     ctest_indexed_
 def test_read_beyond_end(        concat):                         ctest_indexed_gzip.test_read_beyond_end(        concat)
 def test_seek_and_read(          testfile, nelems, niters, seed): ctest_indexed_gzip.test_seek_and_read(          testfile, nelems, niters, seed)
 def test_seek_and_tell(          testfile, nelems, niters, seed): ctest_indexed_gzip.test_seek_and_tell(          testfile, nelems, niters, seed)
+def test_readinto():                                              ctest_indexed_gzip.test_readinto()
 def test_readline():                                              ctest_indexed_gzip.test_readline()
 def test_readline_sizelimit():                                    ctest_indexed_gzip.test_readline_sizelimit()
 def test_readlines():                                             ctest_indexed_gzip.test_readlines()

@@ -666,7 +666,11 @@ cdef class DroppingIndexedGzipFile(IndexedGzipFile):
             self.index.fd  = NULL
 
     def close(self):
-        super(DroppingIndexedGzipFile, self).close()
+        if self.filename is None:
+            super(DroppingIndexedGzipFile, self).close()
+        else:
+            zran.zran_free(&self.index)
+
         self.finalized = True
 
     @property

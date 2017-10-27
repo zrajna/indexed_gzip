@@ -611,6 +611,112 @@ cdef class ReadBuffer:
         log.debug('ReadBuffer.__dealloc__()')
 
 
+cdef class DroppingIndexedGzipFile(IndexedGzipFile):
+    cdef object filename
+    cdef bint finalized
+
+    def __init__(self,
+                 filename=None,
+                 fid=None,
+                 mode=None,
+                 auto_build=True,
+                 spacing=4194304,
+                 window_size=32768,
+                 readbuf_size=1048576,
+                 readall_buf_size=16777216):
+        """Create an ``IndexedGzipFile``. The file may be specified either
+        with an open file handle, or with a filename. If the former, the file
+        must have been opened in ``'rb'`` mode.
+
+        :arg filename:         File name.
+
+        :arg mode:             Opening mode. Must be either ``'r'`` or ``'rb``.
+
+        :arg fid:              Open file handle.
+
+        :arg auto_build:       If ``True`` (the default), the index is
+                               automatically built on seeks/reads.
+
+        :arg spacing:          Number of bytes between index seek points.
+
+        :arg window_size:      Number of bytes of uncompressed data stored with
+                               each seek point.
+
+        :arg readbuf_size:     Size of buffer in bytes for storing compressed
+                               data read in from the file.
+
+
+        :arg readall_buf_size: Size of buffer in bytes used by :meth:`read`
+                               when reading until EOF.
+        """
+        self.filename = filename
+        self._close()
+
+    def _open(self):
+        if self.filename is not None:
+            self.pyfid = open(self.filename, 'rb')
+            self.cfid = fdopen(self.pyfid.fileno(), 'rb')
+            self.index.fd = self.cfid
+
+    def _close(self):
+        if self.filename is not None:
+            self.pyfid.close()
+            self.pyfid = None
+            self.cfid  = NULL
+            self.index.fd  = NULL
+
+    def close(self):
+        super(DroppingIndexedGzipFile, self).close()
+        self.finalized = True
+
+    @property
+    def closed(self):
+        return self.finalized
+
+    # Wrap functions that need the file handle with _open and _close
+    def build_full_index(self):
+        self._open()
+        ret = super(DroppingIndexedGzipFile, self).build_full_index()
+        self._close()
+        return ret
+
+    def seek(self, offset, whence=SEEK_SET):
+        self._open()
+        ret = super(DroppingIndexedGzipFile, self).seek(offset, whence)
+        self._close()
+        return ret
+
+    def read(self, nbytes=-1):
+        self._open()
+        ret = super(DroppingIndexedGzipFile, self).read(nbytes)
+        self._close()
+        return ret
+
+    def readinto(self, buf):
+        self._open()
+        ret = super(DroppingIndexedGzipFile, self).readinto(buf)
+        self._close()
+        return ret
+
+    def pread(self, nbytes, offset):
+        self._open()
+        ret = super(DroppingIndexedGzipFile, self).pread(nbytes, offset)
+        self._close()
+        return ret
+
+    def readline(self, size=-1):
+        self._open()
+        ret = super(DroppingIndexedGzipFile, self).readline(size)
+        self._close()
+        return ret
+
+    def readlines(self, hint=-1):
+        self._open()
+        ret = super(DroppingIndexedGzipFile, self).readlines(hint)
+        self._close()
+        return ret
+
+
 class SafeIndexedGzipFile(io.BufferedReader):
     """The ``SafeIndexedGzipFile`` is an ``io.BufferedReader`` which wraps
     an :class:`IndexedGzipFile` instance. By accessing the ``IndexedGzipFile``
@@ -634,10 +740,10 @@ class SafeIndexedGzipFile(io.BufferedReader):
         """
 
         buffer_size     = kwargs.pop('buffer_size', 1048576)
-        fobj            = IndexedGzipFile(*args, **kwargs)
+        fobj            = DroppingIndexedGzipFile(*args, **kwargs)
         self.__fileLock = threading.RLock()
 
-        io.BufferedReader.__init__(self, fobj, buffer_size)
+        super(SafeIndexedGzipFile, self).__init__(fobj, buffer_size)
 
 
     def pread(self, nbytes, offset):

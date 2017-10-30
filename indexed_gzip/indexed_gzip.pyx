@@ -88,10 +88,6 @@ cdef class IndexedGzipFile:
     """
 
 
-    cdef FILE *cfid
-    """A reference to the C file handle. """
-
-
     cdef object pyfid
     """A reference to the python file handle. """
 
@@ -156,13 +152,13 @@ cdef class IndexedGzipFile:
         else:
             self.pyfid = fid
 
-        self.cfid = fdopen(self.pyfid.fileno(), 'rb')
+        cfid = fdopen(self.pyfid.fileno(), 'rb')
 
         if self.auto_build: flags = zran.ZRAN_AUTO_BUILD
         else:               flags = 0
 
         if zran.zran_init(index=&self.index,
-                          fd=self.cfid,
+                          fd=cfid,
                           spacing=spacing,
                           window_size=window_size,
                           readbuf_size=readbuf_size,
@@ -183,14 +179,12 @@ cdef class IndexedGzipFile:
     def _acq_fh(self):
         if self.own_file:
             self.pyfid = open(self.filename, 'rb')
-            self.cfid = fdopen(self.pyfid.fileno(), 'rb')
-            self.index.fd = self.cfid
+            self.index.fd = fdopen(self.pyfid.fileno(), 'rb')
 
     def _rel_fh(self):
         if self.own_file:
             self.pyfid.close()
             self.pyfid = None
-            self.cfid  = NULL
             self.index.fd  = NULL
 
     def __init__(self, *args, **kwargs):

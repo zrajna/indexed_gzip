@@ -91,8 +91,17 @@ cdef class IndexedGzipFile:
     cdef object pyfid
     """A reference to the python file handle. """
 
+
     cdef object filename
+    """String containing path of file being indexed. Used to release and
+    reopen file handles between seeks and reads.
+    Set to ``None`` if file handle is passed.
+    """
+
     cdef bint finalized
+    """Flag which is set to ``True`` if the IndexedGzipFile has been closed.
+    Further operations will fail if ``True``.
+    """
 
 
     def __cinit__(self,

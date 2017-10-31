@@ -24,20 +24,34 @@ pytestmark = pytest.mark.indexed_gzip_test
 
 
 def test_SafeIndexedGzipFile_open_close(testfile):
+    _test_SafeIndexedGzipFile_open_close(testfile, False)
 
-    f = igzip.SafeIndexedGzipFile(filename=testfile)
+def test_SafeIndexedGzipFile_open_close_drop_handles(testfile):
+    _test_SafeIndexedGzipFile_open_close(testfile, True)
+
+def test_SafeIndexedGzipFile_pread_threaded(testfile, nelems):
+    _test_SafeIndexedGzipFile_pread_threaded(testfile, nelems, False)
+
+def test_SafeIndexedGzipFile_pread_threaded_drop_handles(testfile, nelems):
+    _test_SafeIndexedGzipFile_pread_threaded(testfile, nelems, True)
+
+
+def _test_SafeIndexedGzipFile_open_close(testfile, drop):
+
+    f = igzip.SafeIndexedGzipFile(filename=testfile, drop_handles=drop)
     f.seek(10)
     f.read(10)
     f.close()
 
 
-def test_SafeIndexedGzipFile_pread_threaded(testfile, nelems):
+def _test_SafeIndexedGzipFile_pread_threaded(testfile, nelems, drop):
 
     filesize     = nelems * 8
     indexSpacing = max(524288, filesize // 2000)
 
     with igzip.SafeIndexedGzipFile(filename=testfile,
-                                   spacing=indexSpacing) as f:
+                                   spacing=indexSpacing,
+                                   drop_handles=drop) as f:
 
         readelems = 50
         readsize  = readelems * 8

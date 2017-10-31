@@ -195,8 +195,11 @@ Initial work on `indexed_gzip` took place at
 University of Oxford, UK.
 
 
-Many thanks to Martin Craig (@mcraig-ibme) for help in porting `indexed_gzip`
-to Windows.
+Many thanks to:
+
+ - Martin Craig (@mcraig-ibme): porting `indexed_gzip` to Windows (#3)
+ - Zalan Rajna (@zrajna): bug fixes (#2)
+ - Chris Markiewicz (@effigies): Option to drop file handles (#6)
 
 
 ## License

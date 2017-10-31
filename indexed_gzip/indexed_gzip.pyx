@@ -57,6 +57,13 @@ class ZranError(Exception):
     pass
 
 
+class NoHandleError(Exception):
+    """Exception raised by the :class:`IndexedGzipFile` when
+    ``drop_handles is True`` and an attempt is made to access the underlying
+    file object.
+    """
+
+
 cdef class IndexedGzipFile:
     """The ``IndexedGzipFile`` class allows for fast random access of a gzip
     file by using the ``zran`` library to build and maintain an index of seek
@@ -248,16 +255,20 @@ cdef class IndexedGzipFile:
 
 
     def fileno(self):
-        """Calls ``fileno`` on the underlying file object. """
-        if self.filename is not None:
-            raise NotImplementedError
+        """Calls ``fileno`` on the underlying file object. Raises a
+        :exc:`NoHandleError` if ``drop_handles is True``.
+        """
+        if self.drop_handles:
+            raise NoHandleError()
         return self.pyfid.fileno()
 
 
     def fileobj(self):
-        """Returns a reference to the python file object. """
-        if self.filename is not None:
-            raise NotImplementedError
+        """Returns a reference to the python file object. Raises a
+        :exc:`NoHandleError` if ``drop_handles is True``.
+        """
+        if self.drop_handles:
+            raise NoHandleError()
         return self.pyfid
 
 

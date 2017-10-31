@@ -223,7 +223,11 @@ cdef class IndexedGzipFile:
             raise IOError('IndexedGzipFile is already closed')
 
         zran.zran_free(&self.index)
+
+        self.filename = None
+        self.pyfid = None
         self.finalized = True
+
         log.debug('{}.close()'.format(type(self).__name__))
 
 

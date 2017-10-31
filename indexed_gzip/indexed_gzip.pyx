@@ -120,7 +120,7 @@ cdef class IndexedGzipFile:
                   window_size=32768,
                   readbuf_size=1048576,
                   readall_buf_size=16777216,
-                  drop_handles=False):
+                  drop_handles=True):
         """Create an ``IndexedGzipFile``. The file may be specified either with
         an open file handle (``fid``), or with a ``filename``. If the former,
         the file must have been opened in ``'rb'`` mode.
@@ -145,13 +145,12 @@ cdef class IndexedGzipFile:
         :arg readall_buf_size: Size of buffer in bytes used by :meth:`read`
                                when reading until EOF.
 
-        :arg drop_handles:     Defaults to ``False``. Has no effect if an open
-                               ``fid`` is specified, rather than a
-                               ``filename``.  If ``True``, a handle to the file
-                               is opened and closed on every access. Otherwise
-                               the file is opened at ``__cinit__``, and kept
-                               open until this ``IndexedGzipFile`` is
-                               destroyed.
+        :arg drop_handles:     Has no effect if an open ``fid`` is specified,
+                               rather than a ``filename``.  If ``True`` (the
+                               default), a handle to the file is opened and
+                               closed on every access. Otherwise the file is
+                               opened at ``__cinit__``, and kept open until
+                               this ``IndexedGzipFile`` is destroyed.
         """
 
         if (fid is     None and filename is     None) or \

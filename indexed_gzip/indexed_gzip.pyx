@@ -81,13 +81,6 @@ cdef class IndexedGzipFile:
     """Used by meth:`read` as the read buffer size."""
 
 
-    cdef bint own_file
-    """Flag which is set to ``True`` if the user specified a file name instead
-    of an open file handle. In this case, the IndexedGzipFile is responsible
-    for closing the file handle when it is destroyed.
-    """
-
-
     cdef object pyfid
     """A reference to the python file handle. """
 
@@ -151,11 +144,10 @@ cdef class IndexedGzipFile:
                              '\'r\' or \'rb\''.format(mode))
         mode = 'rb'
 
-        self.own_file         = fid is None
         self.auto_build       = auto_build
         self.readall_buf_size = readall_buf_size
 
-        if self.own_file:
+        if fid is None:
             self.filename = filename
             self.pyfid = open(filename, 'rb')
         else:
@@ -186,12 +178,12 @@ cdef class IndexedGzipFile:
         self._rel_fh()
 
     def _acq_fh(self):
-        if self.own_file:
+        if self.filename is not None:
             self.pyfid = open(self.filename, 'rb')
             self.index.fd = fdopen(self.pyfid.fileno(), 'rb')
 
     def _rel_fh(self):
-        if self.own_file:
+        if self.filename is not None:
             self.pyfid.close()
             self.pyfid = None
             self.index.fd  = NULL
@@ -205,14 +197,14 @@ cdef class IndexedGzipFile:
 
     def fileno(self):
         """Calls ``fileno`` on the underlying file object. """
-        if self.own_file:
+        if self.filename is not None:
             raise NotImplementedError
         return self.pyfid.fileno()
 
 
     def fileobj(self):
         """Returns a reference to the python file object. """
-        if self.own_file:
+        if self.filename is not None:
             raise NotImplementedError
         return self.pyfid
 

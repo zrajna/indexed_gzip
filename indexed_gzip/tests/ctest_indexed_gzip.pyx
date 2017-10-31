@@ -50,14 +50,14 @@ def test_open_close(testfile, nelems, seed, drop):
 
     f = igzip.IndexedGzipFile(filename=testfile, drop_handles=drop)
 
-    try:
-        element = np.random.randint(0, nelems, 1)
-        readval = read_element(f, element)
+    assert not f.closed
 
-        assert readval == element
+    element = np.random.randint(0, nelems, 1)
+    readval = read_element(f, element)
 
-    finally:
-        f.close()
+    assert readval == element
+
+    f.close()
 
     assert f.closed
 
@@ -87,7 +87,15 @@ def test_atts(testfile, drop):
             assert not f.writable()
             assert f.mode     == 'rb'
             assert f.tell()   == 0
-            assert f.fileno() == f.fileobj().fileno()
+
+            if not drop:
+                assert f.fileobj() is not None
+                assert f.fileno() == f.fileobj().fileno()
+            else:
+                with pytest.raises(igzip.NoHandleError):
+                    f.fileobj()
+                with pytest.raises(igzip.NoHandleError):
+                    f.fileno()
 
 
 def test_init_failure_cases(concat, drop):
@@ -152,19 +160,55 @@ def test_create_from_open_handle(testfile, nelems, seed, drop):
     f   = open(testfile, 'rb')
     gzf = igzip.IndexedGzipFile(fid=f, drop_handles=drop)
 
+    assert gzf.fileobj() is f
+    assert not gzf.drop_handles
+
     element = np.random.randint(0, nelems, 1)
     readval = read_element(gzf, element)
+
 
     gzf.close()
 
     try:
-
         assert readval == element
         assert gzf.closed
         assert not f.closed
 
     finally:
         f.close()
+
+
+def test_handles_not_dropped(testfile, nelems, seed):
+
+    # When drop_handles is False
+    with igzip.IndexedGzipFile(filename=testfile, drop_handles=False) as f:
+        fid = f.fileobj()
+
+        assert fid is not None
+
+        # Check that the file object
+        # doesn't change across reads
+        for i in range(5):
+
+            element = np.random.randint(0, nelems, 1)
+            readval = read_element(f, element)
+
+            assert readval == element
+            assert f.fileobj() is fid
+
+    # Also when given an open stream
+    with open(testfile, 'rb') as f:
+        with igzip.IndexedGzipFile(fid=f) as gzf:
+
+            assert gzf.fileobj() is f
+
+            for i in range(5):
+
+                element = np.random.randint(0, nelems, 1)
+                readval = read_element(gzf, element)
+
+                assert readval == element
+                assert gzf.fileobj() is f
 
 
 def test_read_all(testfile, nelems, use_mmap, drop):

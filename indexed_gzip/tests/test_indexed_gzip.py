@@ -53,6 +53,9 @@ def test_create_from_open_handle_drop_handles(testfile, nelems, seed):
     ctest_indexed_gzip.test_create_from_open_handle(
         testfile, nelems, seed, True)
 
+def test_handles_not_dropped(testfile, nelems, seed):
+    ctest_indexed_gzip.test_handles_not_dropped(testfile, nelems, seed)
+
 def test_read_all(testfile, nelems, use_mmap):
     ctest_indexed_gzip.test_read_all(testfile, nelems, use_mmap, False)
 

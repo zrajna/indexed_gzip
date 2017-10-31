@@ -32,6 +32,7 @@ from cpython.buffer cimport (PyObject_GetBuffer,
 cimport indexed_gzip.zran as zran
 
 import io
+import contextlib
 import threading
 import logging
 
@@ -72,24 +73,30 @@ cdef class IndexedGzipFile:
     """A reference to the ``zran_index`` struct. """
 
 
-    cdef bint auto_build
+    cdef readonly bint auto_build
     """Flag which is set to ``True`` if the file index is built automatically
     on seeks/reads.
     """
 
-    cdef unsigned int readall_buf_size
+
+    cdef readonly unsigned int readall_buf_size
     """Used by meth:`read` as the read buffer size."""
+
+
+    cdef readonly object filename
+    """String containing path of file being indexed. Used to release and
+    reopen file handles between seeks and reads.
+    Set to ``None`` if file handle is passed.
+    """
+
+
+    cdef readonly bint drop_handles
+    """Copy of the ``drop_handles`` flag as passed to :meth:`__cinit__`. """
 
 
     cdef object pyfid
     """A reference to the python file handle. """
 
-
-    cdef object filename
-    """String containing path of file being indexed. Used to release and
-    reopen file handles between seeks and reads.
-    Set to ``None`` if file handle is passed.
-    """
 
     cdef bint finalized
     """Flag which is set to ``True`` if the IndexedGzipFile has been closed.
@@ -105,10 +112,11 @@ cdef class IndexedGzipFile:
                   spacing=4194304,
                   window_size=32768,
                   readbuf_size=1048576,
-                  readall_buf_size=16777216):
-        """Create an ``IndexedGzipFile``. The file may be specified either
-        with an open file handle, or with a filename. If the former, the file
-        must have been opened in ``'rb'`` mode.
+                  readall_buf_size=16777216,
+                  drop_handles=False):
+        """Create an ``IndexedGzipFile``. The file may be specified either with
+        an open file handle (``fid``), or with a ``filename``. If the former,
+        the file must have been opened in ``'rb'`` mode.
 
         :arg filename:         File name.
 
@@ -127,12 +135,20 @@ cdef class IndexedGzipFile:
         :arg readbuf_size:     Size of buffer in bytes for storing compressed
                                data read in from the file.
 
-
         :arg readall_buf_size: Size of buffer in bytes used by :meth:`read`
                                when reading until EOF.
+
+        :arg drop_handles:     Defaults to ``False``. Has no effect if an open
+                               ``fid`` is specified, rather than a
+                               ``filename``.  If ``True``, a handle to the file
+                               is opened and closed on every access. Otherwise
+                               the file is opened at ``__cinit__``, and kept
+                               open until this ``IndexedGzipFile`` is
+                               destroyed.
         """
 
-        if fid is None and filename is None:
+        if (fid is     None and filename is     None) or \
+           (fid is not None and filename is not None):
             raise ValueError('One of fid or filename must be specified')
 
         if fid is not None and fid.mode != 'rb':
@@ -144,55 +160,91 @@ cdef class IndexedGzipFile:
                              '\'r\' or \'rb\''.format(mode))
         mode = 'rb'
 
+        # if file is specified with an open
+        # file handle, drop_handles is ignored
+        if fid is not None:
+            drop_handles = False
+
+        # if not drop_handles, we open a
+        # file handle and keep it open for
+        # the lifetime of this object.
+        if fid is None and not drop_handles:
+            fid = open(filename, mode)
+
         self.auto_build       = auto_build
         self.readall_buf_size = readall_buf_size
-
-        if fid is None:
-            self.filename = filename
-            self.pyfid = open(filename, 'rb')
-        else:
-            self.pyfid = fid
-
-        cfid = fdopen(self.pyfid.fileno(), 'rb')
+        self.drop_handles     = drop_handles
+        self.filename         = filename
+        self.pyfid            = fid
+        self.index.fd         = NULL
 
         if self.auto_build: flags = zran.ZRAN_AUTO_BUILD
         else:               flags = 0
 
-        if zran.zran_init(index=&self.index,
-                          fd=cfid,
-                          spacing=spacing,
-                          window_size=window_size,
-                          readbuf_size=readbuf_size,
-                          flags=flags):
-            raise ZranError('zran_init returned error')
+        with self.__file_handle():
+            if zran.zran_init(index=&self.index,
+                              fd=self.index.fd,
+                              spacing=spacing,
+                              window_size=window_size,
+                              readbuf_size=readbuf_size,
+                              flags=flags):
+                raise ZranError('zran_init returned error')
 
-        log.debug('{}.__init__({}, {}, {}, {}, {}, {})'.format(
+        log.debug('{}.__init__({}, {}, {}, {}, {}, {}, {})'.format(
             type(self).__name__,
             fid,
             filename,
             auto_build,
             spacing,
             window_size,
-            readbuf_size))
+            readbuf_size,
+            drop_handles))
 
-        self._rel_fh()
-
-    def _acq_fh(self):
-        if self.filename is not None:
-            self.pyfid = open(self.filename, 'rb')
-            self.index.fd = fdopen(self.pyfid.fileno(), 'rb')
-
-    def _rel_fh(self):
-        if self.filename is not None:
-            self.pyfid.close()
-            self.pyfid = None
-            self.index.fd  = NULL
 
     def __init__(self, *args, **kwargs):
         """This method does nothing. It is here to make sub-classing
         ``IndexedGzipFile`` easier.
         """
         pass
+
+
+    @contextlib.contextmanager
+    def __file_handle(self):
+        """This method is used as a context manager whenever access to the
+        underlying file stream is required. It makes sure that the ``pyfid``
+        and ``index.fd`` fields are set appropriately, opening/closing
+        the file handle as necessary (depending on the value of
+        :attr:`drop_handles`).
+        """
+
+        # If a file handle already exists,
+        # return it. This clause makes this
+        # context manager reentrant.
+        if self.index.fd is not NULL:
+            yield
+
+        # if not drop_handles, then
+        # we assume that pyfid holds
+        # a ref to a python file
+        # object
+        elif not self.drop_handles:
+            if self.index.fd is NULL:
+                self.index.fd = fdopen(self.pyfid.fileno(), 'rb')
+            yield
+
+        # otherwise we open a new
+        # file handle on each access
+        else:
+
+            try:
+                with open(self.filename, 'rb') as pyfid:
+                    self.pyfid    = pyfid
+                    self.index.fd = fdopen(pyfid.fileno(), 'rb')
+                    yield
+
+            finally:
+                self.pyfid    = None
+                self.index.fd = NULL
 
 
     def fileno(self):
@@ -225,8 +277,8 @@ cdef class IndexedGzipFile:
 
         zran.zran_free(&self.index)
 
-        self.filename = None
-        self.pyfid = None
+        self.filename  = None
+        self.pyfid     = None
         self.finalized = True
 
         log.debug('{}.close()'.format(type(self).__name__))
@@ -289,9 +341,9 @@ cdef class IndexedGzipFile:
     def build_full_index(self):
         """Re-builds the full file index. """
 
-        self._acq_fh()
-        ret = zran.zran_build_index(&self.index, 0, 0)
-        self._rel_fh()
+        with self.__file_handle():
+            ret = zran.zran_build_index(&self.index, 0, 0)
+
         if ret != 0:
             raise ZranError('zran_build_index returned error')
 
@@ -324,10 +376,8 @@ cdef class IndexedGzipFile:
         if whence not in (SEEK_SET, SEEK_CUR):
             raise ValueError('Seek from end not supported')
 
-        self._acq_fh()
-        with nogil:
+        with self.__file_handle(), nogil:
             ret = zran.zran_seek(index, off, c_whence, NULL)
-        self._rel_fh()
 
         if ret < 0:
             raise ZranError('zran_seek returned error: {}'.format(ret))
@@ -374,10 +424,8 @@ cdef class IndexedGzipFile:
             buffer = <char *>buf.buffer + offset
 
             # read some bytes
-            self._acq_fh()
-            with nogil:
+            with self.__file_handle(), nogil:
                 ret = zran.zran_read(index, buffer, bufsz)
-            self._rel_fh()
 
             # see how the read went
             if ret == zran.ZRAN_READ_FAIL:
@@ -439,17 +487,15 @@ cdef class IndexedGzipFile:
         PyObject_GetBuffer(buf, &pbuf, PyBUF_SIMPLE | PyBUF_ANY_CONTIGUOUS)
 
         # read some bytes
-        self._acq_fh()
         try:
 
             vbuf = <void *>pbuf.buf
-            with nogil:
+            with self.__file_handle(), nogil:
                 ret = zran.zran_read(index, vbuf, bufsz)
 
         # release the py_buffer
         finally:
             PyBuffer_Release(&pbuf)
-            self._rel_fh()
 
         # see how the read went
         if ret == zran.ZRAN_READ_FAIL:
@@ -479,8 +525,9 @@ cdef class IndexedGzipFile:
         """Seeks to the specified ``offset``, then reads and returns
         ``nbytes``. See :meth:`seek` and :meth:`read`.
         """
-        IndexedGzipFile.seek(self, offset)
-        return IndexedGzipFile.read(self, nbytes)
+        with self.__file_handle():
+            IndexedGzipFile.seek(self, offset)
+            return IndexedGzipFile.read(self, nbytes)
 
 
     def readline(self, size=-1):
@@ -498,37 +545,38 @@ cdef class IndexedGzipFile:
         bufsz    = 1024
 
         # Read in chunks of [bufsz] bytes at a time
-        while True:
+        with self.__file_handle():
+            while True:
 
-            buf = self.read(bufsz)
+                buf = self.read(bufsz)
 
-            lineidx  = buf.find(b'\n')
-            haveline = lineidx  >= 0
-            eof      = len(buf) == 0
+                lineidx  = buf.find(b'\n')
+                haveline = lineidx  >= 0
+                eof      = len(buf) == 0
 
-            # Are we at EOF? Nothing more to do
-            if eof:
-                break
+                # Are we at EOF? Nothing more to do
+                if eof:
+                    break
 
-            # Have we found a line? Discard
-            # everything that comes after it
-            if haveline:
-                linebuf = linebuf + buf[:lineidx + 1]
+                # Have we found a line? Discard
+                # everything that comes after it
+                if haveline:
+                    linebuf = linebuf + buf[:lineidx + 1]
 
-            # If we've found a line, and are
-            # not size-limiting, we're done
-            if haveline and size < 0:
-                break
+                # If we've found a line, and are
+                # not size-limiting, we're done
+                if haveline and size < 0:
+                    break
 
-            # If we're size limiting, and have
-            # read in enough bytes, we're done
-            if size >= 0 and len(linebuf) > size:
-                linebuf = linebuf[:size]
-                break
+                # If we're size limiting, and have
+                # read in enough bytes, we're done
+                if size >= 0 and len(linebuf) > size:
+                    linebuf = linebuf[:size]
+                    break
 
-        # Rewind the seek location
-        # to the finishing point
-        self.seek(startpos + len(linebuf))
+            # Rewind the seek location
+            # to the finishing point
+            self.seek(startpos + len(linebuf))
 
         return linebuf
 
@@ -542,18 +590,19 @@ cdef class IndexedGzipFile:
         totalsize = 0
         lines     = []
 
-        while True:
+        with self.__file_handle():
+            while True:
 
-            line = self.readline()
-            if line == b'':
-                break
+                line = self.readline()
+                if line == b'':
+                    break
 
-            lines.append(line)
+                lines.append(line)
 
-            totalsize += len(line)
+                totalsize += len(line)
 
-            if hint >= 0 and totalsize > hint:
-                break
+                if hint >= 0 and totalsize > hint:
+                    break
 
         return lines
 

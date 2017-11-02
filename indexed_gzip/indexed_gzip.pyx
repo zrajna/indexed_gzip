@@ -162,6 +162,10 @@ cdef class IndexedGzipFile:
             warnings.warn('fid is deprecated - use fileobj instead',
                           DeprecationWarning)
 
+        if fid is not None and fileobj is None:
+            fileobj = fid
+            fid     = None
+
         if (fileobj is     None and filename is     None) or \
            (fileobj is not None and fid      is not None) or \
            (fileobj is not None and filename is not None):

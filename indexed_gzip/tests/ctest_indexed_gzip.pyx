@@ -117,13 +117,13 @@ def test_init_failure_cases(concat, drop):
         # No writing
         f  = open(testfile, mode='wb')
         with pytest.raises(ValueError):
-            gf = igzip.IndexedGzipFile(fid=f, drop_handles=drop)
+            gf = igzip.IndexedGzipFile(fileobj=f, drop_handles=drop)
         f.close()
 
         # No writing
         f  = open(testfile, mode='w')
         with pytest.raises(ValueError):
-            gf = igzip.IndexedGzipFile(fid=f, drop_handles=drop)
+            gf = igzip.IndexedGzipFile(fileobj=f, drop_handles=drop)
         f.close()
 
         # Need a filename or fid
@@ -134,7 +134,7 @@ def test_init_failure_cases(concat, drop):
         with pytest.raises(ValueError):
             with open(testfile, mode='rb'):
                 f = igzip.IndexedGzipFile(filename=testfile,
-                                          fid=f,
+                                          fileobj=f,
                                           drop_handles=drop)
 
 
@@ -158,7 +158,7 @@ def test_init_success_cases(concat, drop):
 def test_create_from_open_handle(testfile, nelems, seed, drop):
 
     f   = open(testfile, 'rb')
-    gzf = igzip.IndexedGzipFile(fid=f, drop_handles=drop)
+    gzf = igzip.IndexedGzipFile(fileobj=f, drop_handles=drop)
 
     assert gzf.fileobj() is f
     assert not gzf.drop_handles
@@ -198,7 +198,7 @@ def test_handles_not_dropped(testfile, nelems, seed):
 
     # Also when given an open stream
     with open(testfile, 'rb') as f:
-        with igzip.IndexedGzipFile(fid=f) as gzf:
+        with igzip.IndexedGzipFile(fileobj=f) as gzf:
 
             assert gzf.fileobj() is f
 

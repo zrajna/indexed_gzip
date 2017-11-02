@@ -3,6 +3,8 @@
 
 [![Build Status](https://travis-ci.org/pauldmccarthy/indexed_gzip.svg?branch=master)](https://travis-ci.org/pauldmccarthy/indexed_gzip)
 
+[![PyPi version](https://img.shields.io/pypi/v/indexed_gzip.svg)](https://pypi.python.org/pypi/indexed_gzip/)
+
 
  *Fast random access of gzip files in Python*
 
@@ -57,7 +59,7 @@ pip install indexed_gzip
 To compile `indexed_gzip`, make sure you have [cython](http://cython.org/)
 installed, and then run:
 ```sh
-python setup.py build_ext --inplace
+python setup.py develop
 ```
 
 
@@ -81,7 +83,7 @@ import indexed_gzip as igzip
 # handle. For the latter use, the file handle
 # must be opened in read-only binary mode.
 # Write support is currently non-existent.
-myfile = igzip.IndexedGzipFile(filename='big_file.gz')
+myfile = igzip.IndexedGzipFile('big_file.gz')
 
 some_offset_into_uncompressed_data = 234195
 
@@ -93,7 +95,18 @@ data = myfile.read(1048576)
 ```
 
 
-Or you can use `indexed_gzip` with `nibabel`:
+Or you can use `indexed_gzip` with `nibabel` 2.2.0 - `nibabel` will
+automatically use `indexed_gzip` if it is present:
+
+
+```python
+import nibabel as nib
+
+image = nib.load('big_image.nii.gz', keep_file_open=True)
+```
+
+
+To use `indexed_gzip` with `nibabel` 2.1.0 or older:
 
 
 ```python
@@ -150,17 +163,18 @@ image = nib.Nifti1Image.from_file_map(fmap)
 ## Performance
 
 
-A small [test script](benchmark_indexed_gzip.py) is included with `indexed_gzip`;
-this script compares the performance of the `IndexedGzipFile` class with the
-`gzip.GzipFile` class. This script does the following:
+A small [test script](indexed_gzip/tests/benchmark.py) is included with
+`indexed_gzip`; this script compares the performance of the `IndexedGzipFile`
+class with the `gzip.GzipFile` class. This script does the following:
 
+  1. Generates a test file.
 
-  1. Generates a specified number of seek locations, uniformly spaced
-     throughout the input file.
+  2. Generates a specified number of seek locations, uniformly spaced
+     throughout the test file.
 
-  2. Randomly shuffles these locations
+  3. Randomly shuffles these locations
 
-  3. Seeks to each location, and reads a chunk of data from the file.
+  4. Seeks to each location, and reads a chunk of data from the file.
 
 
 This plot shows the results of this test for a few compresed files of varying
@@ -195,10 +209,10 @@ Initial work on `indexed_gzip` took place at
 University of Oxford, UK.
 
 
-Many thanks to:
+Many thanks to the following contributors (listed chronologically):
 
- - Martin Craig (@mcraig-ibme): porting `indexed_gzip` to Windows (#3)
  - Zalan Rajna (@zrajna): bug fixes (#2)
+ - Martin Craig (@mcraig-ibme): porting `indexed_gzip` to Windows (#3)
  - Chris Markiewicz (@effigies): Option to drop file handles (#6)
 
 

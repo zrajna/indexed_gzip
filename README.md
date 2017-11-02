@@ -95,7 +95,10 @@ data = myfile.read(1048576)
 ```
 
 
-Or you can use `indexed_gzip` with `nibabel` 2.2.0 - `nibabel` will
+## Using with `nibabel`
+
+
+You can use `indexed_gzip` with `nibabel` 2.2.0 - `nibabel` will
 automatically use `indexed_gzip` if it is present:
 
 
@@ -134,15 +137,21 @@ vol3 = image.dataobj[:, :, :, 3]
 ```
 
 
+## Write support
+
+
 `indexed_gzip` does not currently have any support for writing. Currently if you
 wish to write to a file, you will need to save the file by alternate means (e.g.
 via `gzip` or `nibabel`), and then re-create a new `IndexedGzipFile` instance.
-Building on the `nibabel` example above:
+For example:
 
 
 ```python
 
+import nibabel as nib
+
 # Load the entire image into memory
+image = nib.load('big_image.nii.gz')
 data = image.get_data()
 
 # Make changes to the data
@@ -151,12 +160,8 @@ data[:, :, :, 5] *= 100
 # Save the image using nibabel
 nib.save(data, 'big_image.nii.gz')
 
-# Re-create an IndexedGzipFile and
-# Nifti1Image instance as above
-fobj = igzip.IndexedGzipFile(...)
-fmap = nib.Nifti1Image.make_file_map()
-fmap['image'].fileobj = fobj
-image = nib.Nifti1Image.from_file_map(fmap)
+# Re-load the image
+image = nib.load('big_image.nii.gz')
 ```
 
 

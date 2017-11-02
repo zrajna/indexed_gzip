@@ -52,9 +52,18 @@ def gen_file(fname, nbytes):
     # zero out 10% so there is something to compress
     zeros = np.random.randint(0, nelems, int(nelems / 10.0))
     data[zeros] = 0
+    data = data.tostring()
 
-    with gzip.open(fname, 'wb') as outf:
-        outf.write(data.tostring())
+    # write 1GB max at a time - the gzip
+    # module doesn't like writing >= 4GB
+    # in one go.
+    chunksize = 1073741824
+
+    while len(data) > 0:
+        chunk = data[:chunksize]
+        data  = data[chunksize:]
+        with gzip.open(fname, 'ab') as outf:
+            outf.write(chunk)
 
 
 def benchmark_file(fobj, seeks, lens, update):

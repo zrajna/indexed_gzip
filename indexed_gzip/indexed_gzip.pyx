@@ -33,6 +33,7 @@ from cpython.buffer cimport (PyObject_GetBuffer,
 cimport indexed_gzip.zran as zran
 
 import io
+import warnings
 import contextlib
 import threading
 import logging
@@ -115,6 +116,7 @@ cdef class IndexedGzipFile:
     def __cinit__(self,
                   filename=None,
                   fid=None,
+                  fileobj=None,
                   mode=None,
                   auto_build=True,
                   spacing=4194304,
@@ -130,7 +132,9 @@ cdef class IndexedGzipFile:
 
         :arg mode:             Opening mode. Must be either ``'r'`` or ``'rb``.
 
-        :arg fid:              Open file handle.
+        :arg fileobj:          Open file handle.
+
+        :arg fid:              Deprecated, use ``fileobj`` instead.
 
         :arg auto_build:       If ``True`` (the default), the index is
                                automatically built on seeks/reads.
@@ -154,35 +158,41 @@ cdef class IndexedGzipFile:
                                this ``IndexedGzipFile`` is destroyed.
         """
 
-        if (fid is     None and filename is     None) or \
-           (fid is not None and filename is not None):
-            raise ValueError('One of fid or filename must be specified')
+        if fid is not None:
+            warnings.warn('fid is deprecated - use fileobj instead',
+                          DeprecationWarning)
 
-        if fid is not None and fid.mode != 'rb':
+        if (fileobj is     None and filename is     None) or \
+           (fileobj is not None and fid      is not None) or \
+           (fileobj is not None and filename is not None):
+            raise ValueError('One of fileobj or filename must be specified')
+
+        if fileobj is not None and fileobj.mode != 'rb':
             raise ValueError('The gzip file must be opened in '
                              'read-only binary ("rb") mode')
 
-        if (fid is None) and (mode not in (None, 'r', 'rb')):
+        if (fileobj is None) and (mode not in (None, 'r', 'rb')):
             raise ValueError('Invalid mode ({}), must be '
                              '\'r\' or \'rb\''.format(mode))
+
         mode = 'rb'
 
         # if file is specified with an open
         # file handle, drop_handles is ignored
-        if fid is not None:
+        if fileobj is not None:
             drop_handles = False
 
         # if not drop_handles, we open a
         # file handle and keep it open for
         # the lifetime of this object.
-        if fid is None and not drop_handles:
-            fid = open(filename, mode)
+        if fileobj is None and not drop_handles:
+            fileobj = open(filename, mode)
 
         self.auto_build       = auto_build
         self.readall_buf_size = readall_buf_size
         self.drop_handles     = drop_handles
         self.filename         = filename
-        self.pyfid            = fid
+        self.pyfid            = fileobj
         self.index.fd         = NULL
 
         if self.auto_build: flags = zran.ZRAN_AUTO_BUILD
@@ -199,7 +209,7 @@ cdef class IndexedGzipFile:
 
         log.debug('{}.__init__({}, {}, {}, {}, {}, {}, {})'.format(
             type(self).__name__,
-            fid,
+            fileobj,
             filename,
             auto_build,
             spacing,

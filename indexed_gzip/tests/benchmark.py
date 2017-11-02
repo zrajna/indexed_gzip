@@ -5,15 +5,16 @@
 # Author: Paul McCarthy <pauldmccarthy@gmail.com>
 #
 
-import os
-import sys
-import gzip
-import time
-import shutil
-import hashlib
-import tempfile
-import argparse
-import contextlib
+import            os
+import os.path as op
+import            sys
+import            gzip
+import            time
+import            shutil
+import            hashlib
+import            tempfile
+import            argparse
+import            contextlib
 
 import numpy as np
 
@@ -35,15 +36,25 @@ def tempdir():
         shutil.rmtree(testdir)
 
 
-def gen_file(nbytes):
+def size(filename):
 
-    fname = 'test.gz'
-    data  = np.random.randint(0, 255, nbytes, dtype=np.uint8)
+    with open(filename, 'rb') as f:
+        f.seek(-1, 2)
+        return f.tell()
+
+
+def gen_file(fname, nbytes):
+
+    nelems = int(nbytes / 4)
+
+    data = np.random.randint(0, 2 ** 32, nelems, dtype=np.uint32)
+
+    # zero out 10% so there is something to compress
+    zeros = np.random.randint(0, nelems, int(nelems / 10.0))
+    data[zeros] = 0
 
     with gzip.open(fname, 'wb') as outf:
         outf.write(data.tostring())
-
-    return fname
 
 
 def benchmark_file(fobj, seeks, lens, update):
@@ -65,33 +76,26 @@ def benchmark_file(fobj, seeks, lens, update):
     return str(hashobj.hexdigest()), elapsed
 
 
-def benchmark(nseeks, nbytes):
+def benchmark(filename, nseeks):
 
-    print('Generating test data...')
-
-    filename = gen_file(nbytes)
-    seeks    = np.linspace(0, nbytes - 2, nseeks, dtype=np.int)
+    nbytes = size(filename)
+    seeks  = np.linspace(0, nbytes, nseeks, dtype=np.int)
+    lens   = np.random.randint(1048576, 16777216, nseeks)
 
     np.random.shuffle(seeks)
-
-    lens = [np.random.randint(1, 1 + nbytes - s) for s in seeks]
 
     names = [
         'GzipFile',
         'IndexedGzipFile(drop_handles=True)',
-        'IndexedGzipFile(drop_handles=False)',
-        'SafeIndexedGzipFile(drop_handles=True)',
-        'SafeIndexedGzipFile(drop_handles=True)',
+        'IndexedGzipFile(drop_handles=False)'
     ]
     namelen = max([len(n) for n in names])
     namefmt = '{{:<{}s}}'.format(namelen)
 
     fobjs = [
-        lambda : gzip.GzipFile(            filename, 'rb'),
-        lambda : igzip.IndexedGzipFile(    filename, drop_handles=True),
-        lambda : igzip.IndexedGzipFile(    filename, drop_handles=False),
-        lambda : igzip.SafeIndexedGzipFile(filename, drop_handles=True),
-        lambda : igzip.SafeIndexedGzipFile(filename, drop_handles=False),
+        lambda : gzip.GzipFile(        filename, 'rb'),
+        lambda : igzip.IndexedGzipFile(filename, drop_handles=True),
+        lambda : igzip.IndexedGzipFile(filename, drop_handles=False),
     ]
 
     for name, fobj in zip(names, fobjs):
@@ -105,7 +109,7 @@ def benchmark(nseeks, nbytes):
         with fobj() as f:
             md5, time = benchmark_file(f, seeks, lens, update)
 
-        print('{} {:0.0f}. {:0.0f}s'.format(md5, (time / 60.0), (time % 60.0)))
+        print('  {} {:0.0f}s'.format(md5, time))
 
 
 if __name__ == '__main__':
@@ -115,13 +119,18 @@ if __name__ == '__main__':
     parser.add_argument('-b',
                         '--bytes',
                         type=int,
-                        help='Size of test file in bytes',
+                        help='Uncompressed size of test file in bytes. '
+                             'Ignored if a --file is specified',
                         default=16777216)
     parser.add_argument('-s',
                         '--seeks',
                         type=int,
                         help='Number of random seeks',
                         default=1000)
+    parser.add_argument('-f',
+                        '--file',
+                        type=str,
+                        help='Test file (default: generate one)')
     parser.add_argument('-r',
                         '--randomseed',
                         type=int,
@@ -129,8 +138,27 @@ if __name__ == '__main__':
 
     namespace = parser.parse_args()
 
-    if namespace.seed is not None:
+    if namespace.randomseed is not None:
         np.random.seed(namespace.seed)
 
+    if namespace.file is not None:
+        namespace.file = op.abspath(namespace.file)
+
     with tempdir():
-        benchmark(namespace.seeks, namespace.bytes)
+        if namespace.file is None:
+
+            print('Generating test data ({:0.2f}MB)...'.format(
+                namespace.bytes / 1048576.), end='')
+            sys.stdout.flush()
+
+            namespace.file = 'test.gz'
+
+            gen_file(namespace.file, namespace.bytes)
+
+            print(' {:0.2f}MB compressed'.format(
+                size(namespace.file) / 1048576.0))
+
+        if namespace.randomseed is not None:
+            np.random.seed(namespace.seed)
+
+        benchmark(namespace.file, namespace.seeks)

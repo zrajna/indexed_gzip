@@ -183,7 +183,7 @@ class with the `gzip.GzipFile` class. This script does the following:
 
 
 This plot shows the results of this test for a few compresed files of varying
-sizes, with 1000 seeks:
+sizes, with 500 seeks:
 
 
 ![Indexed gzip performance](./performance.png)

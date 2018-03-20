@@ -2384,3 +2384,450 @@ fail:
 
     return ZRAN_READ_FAIL;
 }
+
+/*
+ * Store checkpoint information from index to file fd. File should be opened in
+ * binary write mode.
+ */
+int zran_export_index(zran_index_t *index,
+                      FILE *fd) {
+
+    /*
+     * TODO: Endianness check for fwrite calls. Prefer little-endian to be
+     * consistent with gzip library.
+     */
+
+    /* Used to check return value of fwrite calls. */
+    size_t f_ret;
+
+    /* Used for iterating over elements of zran_index_t.list. */
+    zran_point_t *point;
+    zran_point_t *list_end;
+
+    /*
+     * compressed_size and uncompressed_size are defined as size_t in
+     * zran_index_t. They are stored in fixed-length 64-bit variables to be
+     * exported portably. Other fields in zran_index_t are defined with
+     * fixed-length types, so they are exported directly from index.
+     */
+    uint64_t compressed_size   = index->compressed_size;
+    uint64_t uncompressed_size = index->uncompressed_size;
+
+    zran_log("zran_export_index: (%lu, %lu, %u, %u, %u)\n",
+             index->compressed_size,
+             index->uncompressed_size,
+             index->spacing,
+             index->window_size,
+             index->npoints);
+
+    /* Write compressed size, and check for errors. */
+    f_ret = fwrite(&compressed_size, sizeof(compressed_size), 1, fd);
+
+    if (ferror(fd)) goto fail;
+    if (f_ret != 1) goto fail;
+
+    /* Write uncompressed size, and check for errors. */
+    f_ret = fwrite(&uncompressed_size, sizeof(uncompressed_size), 1, fd);
+
+    if (ferror(fd)) goto fail;
+    if (f_ret != 1) goto fail;
+
+    /* Write spacing, and check for errors. */
+    f_ret = fwrite(&index->spacing, sizeof(index->spacing), 1, fd);
+
+    if (ferror(fd)) goto fail;
+    if (f_ret != 1) goto fail;
+
+    /* Write window size, and check for errors. */
+    f_ret = fwrite(&index->window_size, sizeof(index->window_size), 1, fd);
+
+    if (ferror(fd)) goto fail;
+    if (f_ret != 1) goto fail;
+
+    /* Write number of points, and check for errors. */
+    f_ret = fwrite(&index->npoints, sizeof(index->npoints), 1, fd);
+
+    if (ferror(fd)) goto fail;
+    if (f_ret != 1) goto fail;
+
+    /*
+     * Initialize point to the first element of the list, and list_end to the
+     * end of the list.
+     */
+    point    = index->list;
+    list_end = index->list + index->npoints;
+
+    /* Write all points iteratively. */
+    while (point < list_end) {
+
+        /*
+         * Below, it's preferred to write members of points elementwise to
+         * avoid handling struct alignment and padding issues.
+         */
+
+        /* Write compressed offset, and check for errors. */
+        f_ret = fwrite(&point->cmp_offset, sizeof(point->cmp_offset), 1, fd);
+
+        if (ferror(fd)) goto fail;
+        if (f_ret != 1) goto fail;
+
+        /* Write uncompressed offset, and check for errors. */
+        f_ret = fwrite(&point->uncmp_offset, sizeof(point->uncmp_offset), 1, fd);
+
+        if (ferror(fd)) goto fail;
+        if (f_ret != 1) goto fail;
+
+        /* Write bit offset, and check for errors. */
+        f_ret = fwrite(&point->bits, sizeof(point->bits), 1, fd);
+
+        if (ferror(fd)) goto fail;
+        if (f_ret != 1) goto fail;
+
+        /*
+         * Data is NULL for the first element of the list, and therefore it is
+         * exported for all elements except the first one.
+         */
+        if(point != index->list) {
+
+            /* Write checkpoint data, and check for errors. */
+            f_ret = fwrite(point->data, index->window_size, 1, fd);
+
+            if (ferror(fd)) goto fail;
+            if (f_ret != 1) goto fail;
+        }
+
+        #ifdef ZRAN_VERBOSE
+        zran_log("zran_export_index: (cmp: %lu, uncmp: %lu, bits: %u, ",
+                 point->cmp_offset,
+                 point->uncmp_offset,
+                 point->bits);
+
+        /* First point supposed to not have a checkpoint window. */
+        if(point->data != NULL) {
+
+            /* Print first and last three bytes of the checkpoint window. */
+            zran_log("window: [%02x %02x %02x...%02x %02x %02x])\n",
+                     point->data[0],
+                     point->data[1],
+                     point->data[2],
+                     point->data[index->window_size - 3],
+                     point->data[index->window_size - 2],
+                     point->data[index->window_size - 1]);
+        } else {
+            zran_log("window: NULL)\n");
+        }
+        #endif
+
+        /* Done with this point. Proceed to next one. */
+        point++;
+    }
+
+    /*
+     * It is important to flush written file when done, since underlying file
+     * descriptor can be closed by Python code before having a chance to flush.
+     */
+    fflush(fd);
+
+    return ZRAN_EXPORT_OK;
+
+fail:
+    return ZRAN_EXPORT_WRITE_ERROR;
+
+}
+
+/*
+ * Load checkpoint information from file fd to index. File should be opened in
+ * binary read mode.
+ */
+int zran_import_index(zran_index_t *index,
+                      FILE *fd) {
+
+    /* Used to check return value of fread calls. */
+    size_t f_ret;
+
+    /* Return value of function if a failure happens. */
+    int fail_ret;
+
+    /* Used for iterating over elements of zran_index_t.list. */
+    zran_point_t *point;
+    zran_point_t *list_end;
+
+    /*
+     * Data fields that will be read from the file. They aren't stored directly
+     * to index struct to keep original index in case of any failures while
+     * reading those data.
+     */
+    uint64_t      compressed_size;
+    uint64_t      uncompressed_size;
+    uint32_t      spacing;
+    uint32_t      window_size;
+    uint32_t      npoints;
+    zran_point_t *new_list = NULL;
+
+    /* Read compressed size, and check for file errors and EOF. */
+    f_ret = fread(&compressed_size, sizeof(compressed_size), 1, fd);
+
+    if (feof(fd))   goto eof;
+    if (ferror(fd)) goto read_error;
+    if (f_ret != 1) goto read_error;
+
+    /*
+     * Make sanity checks for compressed size. Since compressed_size is of type
+     * size_t, and the value encoded in the export file is 64-bit, it can
+     * overflow. It is also compared to the existing size in the current index
+     * (set in zran_init), if they don't match this means this index file is
+     * not created for this compressed file.
+     */
+    if (compressed_size >= SIZE_MAX)               goto overflow;
+    if (compressed_size != index->compressed_size) goto inconsistent;
+
+    /* Read uncompressed size, and check for file errors and EOF. */
+    f_ret = fread(&uncompressed_size, sizeof(uncompressed_size), 1, fd);
+
+    if (feof(fd))   goto eof;
+    if (ferror(fd)) goto read_error;
+    if (f_ret != 1) goto read_error;
+
+    /*
+     * Make sanity checks for uncompressed size. Similar to compressed_size,
+     * the value is checked against overflow. Uncompressed size may not be set
+     * in either current index or exported file, or both. Therefore, they are
+     * compared only if it's set in both.
+     */
+    if (uncompressed_size >= SIZE_MAX) goto overflow;
+    if (uncompressed_size        != 0 &&
+        index->uncompressed_size != 0 &&
+        index->uncompressed_size != uncompressed_size) goto inconsistent;
+
+    /* Read spacing, and check for file errors and EOF. */
+    f_ret = fread(&spacing, sizeof(spacing), 1, fd);
+
+    if (feof(fd))   goto eof;
+    if (ferror(fd)) goto read_error;
+    if (f_ret != 1) goto read_error;
+
+    /* Read window size, and check for file errors and EOF. */
+    f_ret = fread(&window_size, sizeof(window_size), 1, fd);
+
+    if (feof(fd))   goto eof;
+    if (ferror(fd)) goto read_error;
+    if (f_ret != 1) goto read_error;
+
+    /*
+     * Make sanity checks for window size and spacing. These are similar to
+     * sanity checks done in zran_init.
+     */
+    if (window_size < 32768)       goto fail;
+    if (spacing     < window_size) goto fail;
+
+    /* Read number of points, and check for file errors and EOF. */
+    f_ret = fread(&npoints, sizeof(npoints), 1, fd);
+
+    if (feof(fd))   goto eof;
+    if (ferror(fd)) goto read_error;
+    if (f_ret != 1) goto read_error;
+
+    zran_log("zran_import_index: (%lu, %lu, %u, %u, %u)\n",
+             compressed_size,
+             uncompressed_size,
+             spacing,
+             window_size,
+             npoints);
+
+    /*
+     * At this step, the number of points is known. Allocate space for new list
+     * of points. This pointer should be cleaned up before exit in case of
+     * failure.
+     */
+    new_list = calloc(1, sizeof(zran_point_t) * npoints);
+
+    if (new_list == NULL) goto memory_error;
+
+    /*
+     * Initialize point to the first element of the list, and list_end to the
+     * end of the list.
+     */
+    point    = new_list;
+    list_end = new_list + npoints;
+
+    /* Read new points iteratively. */
+    while (point < list_end)
+    {
+
+        /* Read compressed offset, and check for errors. */
+        f_ret = fread(&point->cmp_offset, sizeof(point->cmp_offset), 1, fd);
+
+        if (feof(fd))   goto eof;
+        if (ferror(fd)) goto read_error;
+        if (f_ret != 1) goto read_error;
+
+        /* Read uncompressed offset, and check for errors. */
+        f_ret = fread(&point->uncmp_offset, sizeof(point->uncmp_offset), 1, fd);
+
+        if (feof(fd))   goto eof;
+        if (ferror(fd)) goto read_error;
+        if (f_ret != 1) goto read_error;
+
+        /* Read bit offset, and check for errors. */
+        f_ret = fread(&point->bits, sizeof(point->bits), 1, fd);
+
+        if (feof(fd))   goto eof;
+        if (ferror(fd)) goto read_error;
+        if (f_ret != 1) goto read_error;
+
+        /*
+         * Data is NULL for the first element of the list, and therefore it is
+         * imported for all elements except the first one.
+         */
+        if (point != new_list) {
+
+            /*
+             * Allocate space for checkpoint data. These pointers in each point
+             * should be cleaned up in case of any failures.
+             */
+            point->data = calloc(1, index->window_size);
+
+            if (point->data == NULL) goto memory_error;
+
+            /*
+             * Read checkpoint data, and check for errors. End of file can be
+             * reached just after the last element, so it's not an error for
+             * the last element.
+             */
+            f_ret = fread(point->data, index->window_size, 1, fd);
+
+            if (feof(fd) && point < list_end - 1) goto eof;
+            if (ferror(fd))                       goto read_error;
+            if (f_ret != 1)                       goto read_error;
+
+            /*
+             * TODO: If there are still more data after importing is done, it
+             * is silently ignored. It might be handled by other means.
+             */
+        }
+
+        #ifdef ZRAN_VERBOSE
+        zran_log("zran_import_index: (cmp: %lu, uncmp: %lu, bits: %u, ",
+                 point->cmp_offset,
+                 point->uncmp_offset,
+                 point->bits);
+
+        /* First point supposed to not have a checkpoint window. */
+        if (point->data != NULL) {
+
+            /* Print first and last three bytes of the checkpoint window. */
+            zran_log("window: [%02x %02x %02x...%02x %02x %02x])\n",
+                     point->data[0],
+                     point->data[1],
+                     point->data[2],
+                     point->data[index->window_size - 3],
+                     point->data[index->window_size - 2],
+                     point->data[index->window_size - 1]);
+        } else {
+            zran_log("window: NULL)\n");
+        }
+        #endif
+
+        /* Done with this point. Proceed to the next one. */
+        point++;
+
+    }
+
+    /* There are no errors, it's safe to overwrite existing index data now. */
+
+    /* If a new uncompressed_size is read, update current index. */
+    if (index->uncompressed_size == 0 && uncompressed_size != 0) {
+        index->uncompressed_size = uncompressed_size;
+    }
+
+    /* Overwrite spacing. */
+    if (index->spacing != spacing) {
+        index->spacing = spacing;
+    }
+
+    /* Overwrite window size. */
+    if (index->window_size != window_size) {
+        index->window_size = window_size;
+    }
+
+    /*
+     * Now, we will release current checkpoint list of the index, and then
+     * point to the new list.
+     */
+
+    /*
+     * Initialize point to the second element of the list, and list_end to the
+     * end of the list. We initialize to the second element, because first
+     * element does not keep checkpoint data.
+     */
+    point    = index->list + 1;
+    list_end = index->list + index->npoints;
+
+    while (point < list_end) {
+        free(point->data);
+        point++;
+    }
+
+    /* Now release the old list. */
+    free(index->list);
+
+    /* The old list is dead, long live the new list! */
+    index->list    = new_list;
+    index->npoints = npoints;
+
+    /* Let's not forget to update the size as well. */
+    index->size    = npoints;
+
+    return ZRAN_IMPORT_OK;
+
+    /* For each failure case, we assign return value and then clean up. */
+fail:
+    fail_ret = ZRAN_IMPORT_FAIL;
+    goto cleanup;
+
+eof:
+    fail_ret = ZRAN_IMPORT_EOF;
+    goto cleanup;
+
+read_error:
+    fail_ret = ZRAN_IMPORT_READ_ERROR;
+    goto cleanup;
+
+overflow:
+    fail_ret = ZRAN_IMPORT_OVERFLOW;
+    goto cleanup;
+
+inconsistent:
+    fail_ret = ZRAN_IMPORT_INCONSISTENT;
+    goto cleanup;
+
+memory_error:
+    fail_ret = ZRAN_IMPORT_MEMORY_ERROR;
+    goto cleanup;
+
+cleanup:
+    if (new_list != NULL) {
+
+        /*
+         * Initialize point to the second element of the list, and list_end to
+         * the end of the list. We initialize to the second element, because
+         * first element does not keep checkpoint data.
+         */
+        point    = new_list + 1;
+        list_end = new_list + npoints;
+
+        /*
+         * Release until the end of list or the first NULL data pointer,
+         * whichever comes first.
+         */
+        while (point < list_end && point->data != NULL) {
+            free(point->data);
+            point++;
+        }
+
+        /* Release the list itself. */
+        free(new_list);
+    }
+
+    return fail_ret;
+}

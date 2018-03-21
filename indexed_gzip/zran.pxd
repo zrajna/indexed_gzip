@@ -12,10 +12,19 @@ from posix.types cimport off_t
 cdef extern from "zran.h":
 
     ctypedef struct zran_index_t:
-        FILE *fd;
+        FILE         *fd;
+        size_t        compressed_size;
+        size_t        uncompressed_size;
+        uint32_t      spacing;
+        uint32_t      window_size;
+        uint32_t      npoints;
+        zran_point_t *list;
 
     ctypedef struct zran_point_t:
-        pass
+        uint64_t  cmp_offset;
+        uint64_t  uncmp_offset;
+        uint8_t   bits;
+        uint8_t  *data;
 
     enum:
         ZRAN_AUTO_BUILD       =  1,

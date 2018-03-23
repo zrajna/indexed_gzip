@@ -372,7 +372,7 @@ cdef class IndexedGzipFile:
         if ret != 0:
             raise ZranError('zran_build_index returned error')
 
-        log.debug('{}.build_fuill_index()'.format(type(self).__name__))
+        log.debug('{}.build_full_index()'.format(type(self).__name__))
 
 
     def seek(self, offset, whence=SEEK_SET):
@@ -660,6 +660,85 @@ cdef class IndexedGzipFile:
         """Currently does nothing. """
         pass
 
+    def export_index(self, filename=None, fileobj=None):
+        '''Export index data to the given file. Either ``filename`` or
+        ``fileobj`` should be specified, but not both. ``fileobj`` should be
+        opened in 'wb' mode.
+
+        :arg filename: Name of the file.
+        :arg fileobj:  Open file handle.'''
+
+        if filename is None and fileobj is None:
+            raise ValueError('One of filename or fileobj must be specified')
+
+        if filename is not None and fileobj is not None:
+            raise ValueError(
+                'Only one of filename or fileobj must be specified')
+
+        if filename is not None:
+            fileobj = open(filename, 'wb')
+            close_file = True
+
+        else:
+            close_file = False
+            if fileobj.mode not in 'wb':
+                raise ValueError(
+                    'File should be opened write-only binary mode.')
+
+        try:
+            fd  = fdopen(fileobj.fileno(), 'ab')
+            ret = zran.zran_export_index(&self.index, fd)
+            if ret != zran.ZRAN_EXPORT_OK:
+                raise ZranError('export_index returned error: {}', ret)
+
+        finally:
+            if close_file:
+                fileobj.close()
+
+        log.debug('{}.export_index({}, {})'.format(
+            type(self).__name__,
+            filename,
+            fileobj))
+
+    def import_index(self, filename=None, fileobj=None):
+        '''Import index data from the given file. Either ``filename`` or
+        ``fileobj`` should be specified, but not both. ``fileobj`` should be
+        opened in 'rb' mode.
+
+        :arg filename: Name of the file.
+        :arg fileobj:  Open file handle.'''
+
+        if filename is None and fileobj is None:
+            raise ValueError('One of filename or fileobj must be specified')
+
+        if filename is not None and fileobj is not None:
+            raise ValueError(
+                'Only one of filename or fileobj must be specified')
+
+        if filename is not None:
+            fileobj    = open(filename, 'rb')
+            close_file = True
+
+        else:
+            close_file = False
+            if fileobj.mode not in 'rb':
+                raise ValueError(
+                    'File should be opened read-only binary mode.')
+
+        try:
+            fd  = fdopen(fileobj.fileno(), 'rb')
+            ret = zran.zran_import_index(&self.index, fd)
+            if ret != zran.ZRAN_IMPORT_OK:
+                raise ZranError('import_index returned error: {}', ret)
+
+        finally:
+            if close_file:
+                fileobj.close()
+
+        log.debug('{}.import_index({}, {})'.format(
+            type(self).__name__,
+            filename,
+            fileobj))
 
 cdef class ReadBuffer:
     """Wrapper around a chunk of memory.

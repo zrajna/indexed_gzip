@@ -2564,6 +2564,9 @@ int zran_import_index(zran_index_t *index,
     uint32_t      npoints;
     zran_point_t *new_list = NULL;
 
+    /* Check if file is read only. */
+    if (!is_readonly(fd)) goto fail;
+
     /* Read compressed size, and check for file errors and EOF. */
     f_ret = fread(&compressed_size, sizeof(compressed_size), 1, fd);
 

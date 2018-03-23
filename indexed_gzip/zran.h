@@ -323,8 +323,8 @@ enum {
  *     file.
  */
 int zran_export_index(
-  zran_index_t  *index; /* The index                  */
-  FILE          *fd;    /* Open handle to export file */
+  zran_index_t  *index, /* The index                  */
+  FILE          *fd     /* Open handle to export file */
 );
 
 /* Return codes for zran_import_index. */
@@ -339,10 +339,14 @@ enum {
 };
 
 /*
- * Import current index from the given file. Existing index will be deleted.
- * Updating an index file directly is not supported currently. To update an
- * index file first import it, create new checkpoints, and then export it
- * again.
+ * Import current index from the given file.  index must have been initialized
+ * by zran_init function before calling this function, as it is not supported
+ * importing into an uninitialised zran_index_t struct. Existing index will be
+ * overwritten including spacing and window_size values, whereas values of
+ * readbuf_size and flags will be kept.
+ *
+ * Updating an index file is not supported currently. To update an index file,
+ * first import it, create new checkpoints, and then export it again.
  *
  * See zran_export_index for exporting.
  *
@@ -370,8 +374,8 @@ enum {
  *     file.
  */
 int zran_import_index(
-  zran_index_t  *index; /* The index                  */
-  FILE          *fd;    /* Open handle to import file */
+  zran_index_t  *index, /* The index                  */
+  FILE          *fd     /* Open handle to import file */
 );
 
 #endif /* __ZRAN_H__ */

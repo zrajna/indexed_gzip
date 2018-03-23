@@ -661,12 +661,12 @@ cdef class IndexedGzipFile:
         pass
 
     def export_index(self, filename=None, fileobj=None):
-        '''Export index data to the given file. Either ``filename`` or
+        """Export index data to the given file. Either ``filename`` or
         ``fileobj`` should be specified, but not both. ``fileobj`` should be
         opened in 'wb' mode.
 
         :arg filename: Name of the file.
-        :arg fileobj:  Open file handle.'''
+        :arg fileobj:  Open file handle."""
 
         if filename is None and fileobj is None:
             raise ValueError('One of filename or fileobj must be specified')
@@ -681,7 +681,7 @@ cdef class IndexedGzipFile:
 
         else:
             close_file = False
-            if fileobj.mode not in 'wb':
+            if fileobj.mode is not 'wb':
                 raise ValueError(
                     'File should be opened write-only binary mode.')
 
@@ -701,12 +701,12 @@ cdef class IndexedGzipFile:
             fileobj))
 
     def import_index(self, filename=None, fileobj=None):
-        '''Import index data from the given file. Either ``filename`` or
+        """Import index data from the given file. Either ``filename`` or
         ``fileobj`` should be specified, but not both. ``fileobj`` should be
         opened in 'rb' mode.
 
         :arg filename: Name of the file.
-        :arg fileobj:  Open file handle.'''
+        :arg fileobj:  Open file handle."""
 
         if filename is None and fileobj is None:
             raise ValueError('One of filename or fileobj must be specified')
@@ -721,7 +721,7 @@ cdef class IndexedGzipFile:
 
         else:
             close_file = False
-            if fileobj.mode not in 'rb':
+            if fileobj.mode is not 'rb':
                 raise ValueError(
                     'File should be opened read-only binary mode.')
 

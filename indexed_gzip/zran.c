@@ -2397,7 +2397,7 @@ int zran_export_index(zran_index_t *index,
      * consistent with gzip library.
      */
 
-    /* Used to check return value of fwrite calls. */
+    /* Used for checking return value of fwrite calls. */
     size_t f_ret;
 
     /* Used for iterating over elements of zran_index_t.list. */
@@ -2526,7 +2526,10 @@ int zran_export_index(zran_index_t *index,
      * It is important to flush written file when done, since underlying file
      * descriptor can be closed by Python code before having a chance to flush.
      */
-    fflush(fd);
+    f_ret = fflush(fd);
+
+    if (ferror(fd)) goto fail;
+    if (f_ret != 0) goto fail;
 
     return ZRAN_EXPORT_OK;
 
@@ -2542,7 +2545,7 @@ fail:
 int zran_import_index(zran_index_t *index,
                       FILE *fd) {
 
-    /* Used to check return value of fread calls. */
+    /* Used for checking return value of fread calls. */
     size_t f_ret;
 
     /* Return value of function if a failure happens. */

@@ -370,8 +370,6 @@ enum {
  *   - ZRAN_IMPORT_MEMORY_ERROR to indicate failure to allocate memory for new
  *     index. This typically result from out-of-memory.
  *
- *   - ZRAN_EXPORT_WRITE_ERROR to indicate an error from writing to underlying
- *     file.
  */
 int zran_import_index(
   zran_index_t  *index, /* The index                  */

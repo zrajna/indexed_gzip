@@ -123,7 +123,8 @@ cdef class IndexedGzipFile:
                   window_size=32768,
                   readbuf_size=1048576,
                   readall_buf_size=16777216,
-                  drop_handles=True):
+                  drop_handles=True,
+                  index_file=None):
         """Create an ``IndexedGzipFile``. The file may be specified either with
         an open file handle (``fid``), or with a ``filename``. If the former,
         the file must have been opened in ``'rb'`` mode.
@@ -156,6 +157,10 @@ cdef class IndexedGzipFile:
                                closed on every access. Otherwise the file is
                                opened at ``__cinit__``, and kept open until
                                this ``IndexedGzipFile`` is destroyed.
+
+        :arg index_file:       Pre-generated index for this ``gz`` file -
+                               if provided, passed through to
+                               :meth:`import_index`.
         """
 
         if fid is not None:
@@ -220,6 +225,9 @@ cdef class IndexedGzipFile:
             window_size,
             readbuf_size,
             drop_handles))
+
+        if index_file is not None:
+            self.import_index(index_file)
 
 
     def __init__(self, *args, **kwargs):
@@ -660,13 +668,15 @@ cdef class IndexedGzipFile:
         """Currently does nothing. """
         pass
 
+
     def export_index(self, filename=None, fileobj=None):
         """Export index data to the given file. Either ``filename`` or
         ``fileobj`` should be specified, but not both. ``fileobj`` should be
         opened in 'wb' mode.
 
         :arg filename: Name of the file.
-        :arg fileobj:  Open file handle."""
+        :arg fileobj:  Open file handle.
+        """
 
         if filename is None and fileobj is None:
             raise ValueError('One of filename or fileobj must be specified')
@@ -700,13 +710,15 @@ cdef class IndexedGzipFile:
             filename,
             fileobj))
 
+
     def import_index(self, filename=None, fileobj=None):
         """Import index data from the given file. Either ``filename`` or
         ``fileobj`` should be specified, but not both. ``fileobj`` should be
         opened in 'rb' mode.
 
         :arg filename: Name of the file.
-        :arg fileobj:  Open file handle."""
+        :arg fileobj:  Open file handle.
+        """
 
         if filename is None and fileobj is None:
             raise ValueError('One of filename or fileobj must be specified')
@@ -739,6 +751,7 @@ cdef class IndexedGzipFile:
             type(self).__name__,
             filename,
             fileobj))
+
 
 cdef class ReadBuffer:
     """Wrapper around a chunk of memory.

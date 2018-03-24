@@ -117,3 +117,6 @@ def test_iter():
 
 def test_iter_drop_handles():
     ctest_indexed_gzip.test_iter(True)
+
+def test_import_export_index():
+    ctest_indexed_gzip.test_import_export_index()

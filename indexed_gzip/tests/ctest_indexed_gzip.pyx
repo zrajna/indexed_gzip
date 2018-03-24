@@ -499,3 +499,31 @@ def test_iter(drop):
 
             with pytest.raises(StopIteration):
                  next(f)
+
+
+def test_import_export_index():
+
+    with testdir() as td:
+
+        # make a test file
+        data = np.arange(65536, dtype=np.uint64)
+        with gzip.open('test.gz', 'wb') as f:
+            f.write(data.tostring())
+
+        # generate an index file
+        with igzip.IndexedGzipFile('test.gz') as f:
+            f.build_full_index()
+            f.export_index('test.gzidx')
+
+        # Check that index file works via __init__
+        with igzip.IndexedGzipFile('test.gz', index_file='test.gzidx') as f:
+            f.seek(65535 * 8)
+            val = np.fromstring(f.read(8), dtype=np.uint64)
+            assert val[0] == 65535
+
+        # Check that index file works via import_index
+        with igzip.IndexedGzipFile('test.gz') as f:
+            f.import_index('test.gzidx')
+            f.seek(65535 * 8)
+            val = np.fromstring(f.read(8), dtype=np.uint64)
+            assert val[0] == 65535

@@ -61,6 +61,8 @@ static double round(double val)
 #define zran_log(...)
 #endif
 
+/* Define magic bytes and version for export format. */
+const char zran_magic_bytes[] = {'G', 'Z', 'I', 'D', 'X', 0, 0};
 
 /*
  * Discards all points in the index which come after the specfiied
@@ -2420,6 +2422,12 @@ int zran_export_index(zran_index_t *index,
              index->window_size,
              index->npoints);
 
+    /* Write magic bytes, and check for errors. */
+    f_ret = fwrite(zran_magic_bytes, sizeof(zran_magic_bytes), 1, fd);
+
+    if (ferror(fd)) goto fail;
+    if (f_ret != 1) goto fail;
+
     /* Write compressed size, and check for errors. */
     f_ret = fwrite(&compressed_size, sizeof(compressed_size), 1, fd);
 
@@ -2555,6 +2563,9 @@ int zran_import_index(zran_index_t *index,
     zran_point_t *point;
     zran_point_t *list_end;
 
+    /* Used for checking magic bytes in the beginning of the file. */
+    char magic_bytes[sizeof(zran_magic_bytes)];
+
     /*
      * Data fields that will be read from the file. They aren't stored directly
      * to index struct to keep original index in case of any failures while
@@ -2569,6 +2580,18 @@ int zran_import_index(zran_index_t *index,
 
     /* Check if file is read only. */
     if (!is_readonly(fd)) goto fail;
+
+    /* Read magic bytes, and check for file errors and EOF. */
+    f_ret = fread(magic_bytes, sizeof(magic_bytes), 1, fd);
+
+    if (feof(fd))   goto eof;
+    if (ferror(fd)) goto read_error;
+    if (f_ret != 1) goto read_error;
+
+    /* Verify magic bytes. */
+    if (memcmp(magic_bytes, zran_magic_bytes, sizeof(magic_bytes))) {
+        goto unknown_format;
+    }
 
     /* Read compressed size, and check for file errors and EOF. */
     f_ret = fread(&compressed_size, sizeof(compressed_size), 1, fd);
@@ -2809,6 +2832,10 @@ inconsistent:
 
 memory_error:
     fail_ret = ZRAN_IMPORT_MEMORY_ERROR;
+    goto cleanup;
+
+unknown_format:
+    fail_ret = ZRAN_IMPORT_UNKNOWN_FORMAT;
     goto cleanup;
 
 cleanup:

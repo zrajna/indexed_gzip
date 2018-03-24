@@ -40,13 +40,14 @@ cdef extern from "zran.h":
         ZRAN_EXPORT_OK          =  0,
         ZRAN_EXPORT_WRITE_ERROR = -1,
 
-        ZRAN_IMPORT_OK           =  0,
-        ZRAN_IMPORT_FAIL         = -1,
-        ZRAN_IMPORT_EOF          = -2,
-        ZRAN_IMPORT_READ_ERROR   = -3,
-        ZRAN_IMPORT_OVERFLOW     = -4,
-        ZRAN_IMPORT_INCONSISTENT = -5,
-        ZRAN_IMPORT_MEMORY_ERROR = -6
+        ZRAN_IMPORT_OK             =  0,
+        ZRAN_IMPORT_FAIL           = -1,
+        ZRAN_IMPORT_EOF            = -2,
+        ZRAN_IMPORT_READ_ERROR     = -3,
+        ZRAN_IMPORT_OVERFLOW       = -4,
+        ZRAN_IMPORT_INCONSISTENT   = -5,
+        ZRAN_IMPORT_MEMORY_ERROR   = -6,
+        ZRAN_IMPORT_UNKNOWN_FORMAT = -7
 
     bint zran_init(zran_index_t *index,
                    FILE         *fd,

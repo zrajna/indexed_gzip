@@ -304,6 +304,9 @@ int64_t zran_read(
   uint64_t       len    /* Number of bytes to read   */
 );
 
+/* Magic bytes for exported index type. Value is defined in zran.c. */
+extern const char zran_magic_bytes[];
+
 /* Return codes for zran_export_index. */
 enum {
     ZRAN_EXPORT_OK          =  0,
@@ -329,13 +332,14 @@ int zran_export_index(
 
 /* Return codes for zran_import_index. */
 enum {
-    ZRAN_IMPORT_OK           =  0,
-    ZRAN_IMPORT_FAIL         = -1,
-    ZRAN_IMPORT_EOF          = -2,
-    ZRAN_IMPORT_READ_ERROR   = -3,
-    ZRAN_IMPORT_OVERFLOW     = -4,
-    ZRAN_IMPORT_INCONSISTENT = -5,
-    ZRAN_IMPORT_MEMORY_ERROR = -6
+    ZRAN_IMPORT_OK             =  0,
+    ZRAN_IMPORT_FAIL           = -1,
+    ZRAN_IMPORT_EOF            = -2,
+    ZRAN_IMPORT_READ_ERROR     = -3,
+    ZRAN_IMPORT_OVERFLOW       = -4,
+    ZRAN_IMPORT_INCONSISTENT   = -5,
+    ZRAN_IMPORT_MEMORY_ERROR   = -6,
+    ZRAN_IMPORT_UNKNOWN_FORMAT = -7
 };
 
 /*
@@ -370,6 +374,7 @@ enum {
  *   - ZRAN_IMPORT_MEMORY_ERROR to indicate failure to allocate memory for new
  *     index. This typically result from out-of-memory.
  *
+ *   - ZRAN_IMPORT_UNKNOWN_FORMAT to indicate given file is of unknown format.
  */
 int zran_import_index(
   zran_index_t  *index, /* The index                  */

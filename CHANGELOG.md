@@ -8,6 +8,11 @@ Changes in this release:
 * Added ability to import/export the index, via new `import_index` and
   `export_index` methods on the `IndexedGzipFile` class (#7, #8) - thanks
   @ozars!
+* Deprecated `SafeIndexedGzipFile` - the `IndexedGzipFile` is now
+  thread-safe, and has a read buffer. If you don't want buffering
+  or thread-safety, use the `_IndexedGzipFile` class.
+* Fixed bug in `seek` method - was not working with negative offsets.
+* More unit tests, and code coverage of `.py` and `.pyx` files.
 
 
 ## 0.7.1 (March 5th 2018)

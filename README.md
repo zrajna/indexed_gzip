@@ -12,6 +12,9 @@
  * [Overview](#overview)
  * [Installation](#installation)
  * [Usage](#usage)
+ * [Using with `nibabel`](#using-with-nibabel)
+ * [Index import/export](#index-import-export)
+ * [Write support](#write-support)
  * [Performance](#performance)
  * [Acknowledgements](#acknowledgements)
  * [License](#license)
@@ -116,7 +119,7 @@ To use `indexed_gzip` with `nibabel` 2.1.0 or older:
 import nibabel      as nib
 import indexed_gzip as igzip
 
-# Here we are usin 4MB spacing between
+# Here we are using 4MB spacing between
 # seek points, and using a larger read
 # buffer (than the default size of 16KB).
 fobj = igzip.IndexedGzipFile(
@@ -134,6 +137,33 @@ image = nib.Nifti1Image.from_file_map(fmap)
 # data - the index will automatically be
 # built as data is accessed.
 vol3 = image.dataobj[:, :, :, 3]
+```
+
+
+## Index import/export
+
+
+If you have a large file, you may wish to pre-generate the index once, and
+save it out to an index file:
+
+
+```python
+import indexed_gzip as igzip
+
+# Load the file, pre-generate the
+# index, and save it out to disk.
+fobj = igzip.IndexedGzipFile('big_file.gz')
+fobj.build_full_index()
+fobj.export_index('big_file.gzidx')
+```
+
+
+The next time you open the same file, you can load in the index:
+
+
+```python
+import indexed_gip as igzip
+fobj = igzip.IndexedGzipFile('big_file.gz', index_file='big_file.gzidx')
 ```
 
 
@@ -219,6 +249,7 @@ Many thanks to the following contributors (listed chronologically):
  - Zalan Rajna (@zrajna): bug fixes (#2)
  - Martin Craig (@mcraig-ibme): porting `indexed_gzip` to Windows (#3)
  - Chris Markiewicz (@effigies): Option to drop file handles (#6)
+ - Omer Ozarslan (@ozars): Index import/export (#8)
 
 
 ## License

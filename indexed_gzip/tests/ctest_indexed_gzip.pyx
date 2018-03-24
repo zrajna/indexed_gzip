@@ -48,7 +48,7 @@ def write_text_to_gzip_file(fname, lines):
 
 def test_open_close(testfile, nelems, seed, drop):
 
-    f = igzip.IndexedGzipFile(filename=testfile, drop_handles=drop)
+    f = igzip._IndexedGzipFile(filename=testfile, drop_handles=drop)
 
     assert not f.closed
 
@@ -64,7 +64,7 @@ def test_open_close(testfile, nelems, seed, drop):
 
 def test_open_close_ctxmanager(testfile, nelems, seed, drop):
 
-    with igzip.IndexedGzipFile(filename=testfile, drop_handles=drop) as f:
+    with igzip._IndexedGzipFile(filename=testfile, drop_handles=drop) as f:
 
         element = np.random.randint(0, nelems, 1)
         readval = read_element(f, element)
@@ -78,7 +78,7 @@ def test_atts(testfile, drop):
     modes = [None, 'rb', 'r']
 
     for m in modes:
-        with igzip.IndexedGzipFile(filename=testfile,
+        with igzip._IndexedGzipFile(filename=testfile,
                                    mode=m,
                                    drop_handles=drop) as f:
             assert not f.closed
@@ -106,34 +106,34 @@ def test_init_failure_cases(concat, drop):
 
         # No writing
         with pytest.raises(ValueError):
-            gf = igzip.IndexedGzipFile(filename=testfile,
+            gf = igzip._IndexedGzipFile(filename=testfile,
                                        mode='w',
                                        drop_handles=drop)
         with pytest.raises(ValueError):
-            gf = igzip.IndexedGzipFile(filename=testfile,
+            gf = igzip._IndexedGzipFile(filename=testfile,
                                        mode='wb',
                                        drop_handles=drop)
 
         # No writing
         f  = open(testfile, mode='wb')
         with pytest.raises(ValueError):
-            gf = igzip.IndexedGzipFile(fileobj=f, drop_handles=drop)
+            gf = igzip._IndexedGzipFile(fileobj=f, drop_handles=drop)
         f.close()
 
         # No writing
         f  = open(testfile, mode='w')
         with pytest.raises(ValueError):
-            gf = igzip.IndexedGzipFile(fileobj=f, drop_handles=drop)
+            gf = igzip._IndexedGzipFile(fileobj=f, drop_handles=drop)
         f.close()
 
         # Need a filename or fid
         with pytest.raises(ValueError):
-            f = igzip.IndexedGzipFile(drop_handles=drop)
+            f = igzip._IndexedGzipFile(drop_handles=drop)
 
         # can only specify one of filename/fid
         with pytest.raises(ValueError):
             with open(testfile, mode='rb'):
-                f = igzip.IndexedGzipFile(filename=testfile,
+                f = igzip._IndexedGzipFile(filename=testfile,
                                           fileobj=f,
                                           drop_handles=drop)
 
@@ -143,12 +143,12 @@ def test_init_success_cases(concat, drop):
         testfile = op.join(td, 'test.gz')
         gen_test_data(testfile, 65536, concat)
 
-        gf1 = igzip.IndexedGzipFile(filename=testfile,
+        gf1 = igzip._IndexedGzipFile(filename=testfile,
                                     drop_handles=drop)
-        gf2 = igzip.IndexedGzipFile(filename=testfile,
+        gf2 = igzip._IndexedGzipFile(filename=testfile,
                                     mode='r',
                                     drop_handles=drop)
-        gf3 = igzip.IndexedGzipFile(filename=testfile,
+        gf3 = igzip._IndexedGzipFile(filename=testfile,
                                     mode='rb',
                                     drop_handles=drop)
         gf1.close()
@@ -158,7 +158,7 @@ def test_init_success_cases(concat, drop):
 def test_create_from_open_handle(testfile, nelems, seed, drop):
 
     f   = open(testfile, 'rb')
-    gzf = igzip.IndexedGzipFile(fileobj=f, drop_handles=drop)
+    gzf = igzip._IndexedGzipFile(fileobj=f, drop_handles=drop)
 
     assert gzf.fileobj() is f
     assert not gzf.drop_handles
@@ -181,7 +181,7 @@ def test_create_from_open_handle(testfile, nelems, seed, drop):
 def test_handles_not_dropped(testfile, nelems, seed):
 
     # When drop_handles is False
-    with igzip.IndexedGzipFile(filename=testfile, drop_handles=False) as f:
+    with igzip._IndexedGzipFile(filename=testfile, drop_handles=False) as f:
         fid = f.fileobj()
 
         assert fid is not None
@@ -198,7 +198,7 @@ def test_handles_not_dropped(testfile, nelems, seed):
 
     # Also when given an open stream
     with open(testfile, 'rb') as f:
-        with igzip.IndexedGzipFile(fileobj=f) as gzf:
+        with igzip._IndexedGzipFile(fileobj=f) as gzf:
 
             assert gzf.fileobj() is f
 
@@ -217,7 +217,7 @@ def test_read_all(testfile, nelems, use_mmap, drop):
         pytest.skip('skipping test_read_all test as '
                     'it will require too much memory')
 
-    with igzip.IndexedGzipFile(filename=testfile, drop_handles=drop) as f:
+    with igzip._IndexedGzipFile(filename=testfile, drop_handles=drop) as f:
         data = f.read(nelems * 8)
 
     data = np.ndarray(shape=nelems, dtype=np.uint64, buffer=data)
@@ -233,7 +233,7 @@ def test_read_beyond_end(concat, drop):
 
         gen_test_data(testfile, nelems, concat)
 
-        with igzip.IndexedGzipFile(filename=testfile,
+        with igzip._IndexedGzipFile(filename=testfile,
                                    readall_buf_size=1024,
                                    drop_handles=drop) as f:
             # Try with a specific number of bytes
@@ -251,7 +251,7 @@ def test_read_beyond_end(concat, drop):
 
 def test_seek_and_read(testfile, nelems, niters, seed, drop):
 
-    with igzip.IndexedGzipFile(filename=testfile, drop_handles=drop) as f:
+    with igzip._IndexedGzipFile(filename=testfile, drop_handles=drop) as f:
 
         # Pick some random elements and make
         # sure their values are all right
@@ -271,7 +271,7 @@ def test_seek_and_tell(testfile, nelems, niters, seed, drop):
 
     filesize = nelems * 8
 
-    with igzip.IndexedGzipFile(filename=testfile, drop_handles=drop) as f:
+    with igzip._IndexedGzipFile(filename=testfile, drop_handles=drop) as f:
 
         # Pick some random seek positions
         # and make sure that seek and tell
@@ -318,7 +318,7 @@ def test_readinto(drop):
     with testdir() as td:
         testfile = op.join(td, 'test.gz')
         write_text_to_gzip_file(testfile, lines)
-        with igzip.IndexedGzipFile(filename=testfile, drop_handles=drop) as f:
+        with igzip._IndexedGzipFile(filename=testfile, drop_handles=drop) as f:
 
             # read first line into a byte array
             buf = bytearray(len(lines[0]))
@@ -379,7 +379,7 @@ def test_readline(drop):
         fname = op.join(td, 'test.gz')
         write_text_to_gzip_file(fname, lines)
 
-        with igzip.IndexedGzipFile(fname, drop_handles=drop) as f:
+        with igzip._IndexedGzipFile(fname, drop_handles=drop) as f:
             seekpos = 0
             for line in lines:
 
@@ -399,7 +399,7 @@ def test_readline_sizelimit(drop):
         fname = op.join(td, 'test.gz')
         write_text_to_gzip_file(fname, lines)
 
-        with igzip.IndexedGzipFile(fname, drop_handles=drop) as f:
+        with igzip._IndexedGzipFile(fname, drop_handles=drop) as f:
 
             # limit to one character before the end of the first line
             l = f.readline(len(lines[0]) - 1)
@@ -435,7 +435,7 @@ def test_readlines(drop):
         fname = op.join(td, 'test.gz')
         write_text_to_gzip_file(fname, lines)
 
-        with igzip.IndexedGzipFile(fname, drop_handles=drop) as f:
+        with igzip._IndexedGzipFile(fname, drop_handles=drop) as f:
 
             gotlines = f.readlines()
 
@@ -458,7 +458,7 @@ def test_readlines_sizelimit(drop):
 
         limits = range(len(data) + 2)
 
-        with igzip.IndexedGzipFile(fname, drop_handles=drop) as f:
+        with igzip._IndexedGzipFile(fname, drop_handles=drop) as f:
 
             for lim in limits:
                 f.seek(0)
@@ -493,7 +493,7 @@ def test_iter(drop):
         fname = op.join(td, 'test.gz')
         write_text_to_gzip_file(fname, lines)
 
-        with igzip.IndexedGzipFile(fname, drop_handles=drop) as f:
+        with igzip._IndexedGzipFile(fname, drop_handles=drop) as f:
             for i, gotline in enumerate(f):
                 assert (lines[i] + '\n').encode() == gotline
 
@@ -511,18 +511,18 @@ def test_import_export_index():
             f.write(data.tostring())
 
         # generate an index file
-        with igzip.IndexedGzipFile('test.gz') as f:
+        with igzip._IndexedGzipFile('test.gz') as f:
             f.build_full_index()
             f.export_index('test.gzidx')
 
         # Check that index file works via __init__
-        with igzip.IndexedGzipFile('test.gz', index_file='test.gzidx') as f:
+        with igzip._IndexedGzipFile('test.gz', index_file='test.gzidx') as f:
             f.seek(65535 * 8)
             val = np.fromstring(f.read(8), dtype=np.uint64)
             assert val[0] == 65535
 
         # Check that index file works via import_index
-        with igzip.IndexedGzipFile('test.gz') as f:
+        with igzip._IndexedGzipFile('test.gz') as f:
             f.import_index('test.gzidx')
             f.seek(65535 * 8)
             val = np.fromstring(f.read(8), dtype=np.uint64)

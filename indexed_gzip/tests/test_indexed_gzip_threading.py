@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# test_safe_indexed_gzip.py -
+# test_indexed_gzip_threading.py -
 #
 # Author: Paul McCarthy <pauldmccarthy@gmail.com>
 #
@@ -23,35 +23,35 @@ from . import check_data_valid
 pytestmark = pytest.mark.indexed_gzip_test
 
 
-def test_SafeIndexedGzipFile_open_close(testfile):
-    _test_SafeIndexedGzipFile_open_close(testfile, False)
+def test_IndexedGzipFile_open_close(testfile):
+    _test_IndexedGzipFile_open_close(testfile, False)
 
-def test_SafeIndexedGzipFile_open_close_drop_handles(testfile):
-    _test_SafeIndexedGzipFile_open_close(testfile, True)
+def test_IndexedGzipFile_open_close_drop_handles(testfile):
+    _test_IndexedGzipFile_open_close(testfile, True)
 
-def test_SafeIndexedGzipFile_pread_threaded(testfile, nelems):
-    _test_SafeIndexedGzipFile_pread_threaded(testfile, nelems, False)
+def test_IndexedGzipFile_pread_threaded(testfile, nelems):
+    _test_IndexedGzipFile_pread_threaded(testfile, nelems, False)
 
-def test_SafeIndexedGzipFile_pread_threaded_drop_handles(testfile, nelems):
-    _test_SafeIndexedGzipFile_pread_threaded(testfile, nelems, True)
+def test_IndexedGzipFile_pread_threaded_drop_handles(testfile, nelems):
+    _test_IndexedGzipFile_pread_threaded(testfile, nelems, True)
 
 
-def _test_SafeIndexedGzipFile_open_close(testfile, drop):
+def _test_IndexedGzipFile_open_close(testfile, drop):
 
-    f = igzip.SafeIndexedGzipFile(filename=testfile, drop_handles=drop)
+    f = igzip.IndexedGzipFile(filename=testfile, drop_handles=drop)
     f.seek(10)
     f.read(10)
     f.close()
 
 
-def _test_SafeIndexedGzipFile_pread_threaded(testfile, nelems, drop):
+def _test_IndexedGzipFile_pread_threaded(testfile, nelems, drop):
 
     filesize     = nelems * 8
     indexSpacing = max(524288, filesize // 2000)
 
-    with igzip.SafeIndexedGzipFile(filename=testfile,
-                                   spacing=indexSpacing,
-                                   drop_handles=drop) as f:
+    with igzip.IndexedGzipFile(filename=testfile,
+                               spacing=indexSpacing,
+                               drop_handles=drop) as f:
 
         readelems = 50
         readsize  = readelems * 8

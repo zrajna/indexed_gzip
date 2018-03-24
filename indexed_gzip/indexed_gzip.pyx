@@ -126,7 +126,7 @@ cdef class _IndexedGzipFile:
                   drop_handles=True,
                   index_file=None):
         """Create an ``_IndexedGzipFile``. The file may be specified either
-        with an open file handle (``fid``), or with a ``filename``. If the
+        with an open file handle (``fileobj``), or with a ``filename``. If the
         former, the file must have been opened in ``'rb'`` mode.
 
         :arg filename:         File name.

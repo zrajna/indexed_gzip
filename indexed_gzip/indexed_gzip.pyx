@@ -402,7 +402,7 @@ cdef class _IndexedGzipFile:
         """
 
         cdef int                ret
-        cdef uint64_t           off      = offset
+        cdef int64_t            off      = offset
         cdef uint8_t            c_whence = whence
         cdef zran.zran_index_t *index    = &self.index
 

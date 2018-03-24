@@ -2459,13 +2459,20 @@ int zran_export_index(zran_index_t *index,
     if (f_ret != 1) goto fail;
 
     /*
+     * We will make two passes over points list now. In the first pass, offset
+     * mapping information of each point will be written. In the second pass,
+     * checkpoint snapshot data will be written. This will keep offsets bundled
+     * together, which enables user to read all offset mappings in one pass.
+     */
+
+    /*
      * Initialize point to the first element of the list, and list_end to the
      * end of the list.
      */
     point    = index->list;
     list_end = index->list + index->npoints;
 
-    /* Write all points iteratively. */
+    /* Write all points iteratively for checkpoint offset mapping. */
     while (point < list_end) {
 
         /*
@@ -2491,44 +2498,48 @@ int zran_export_index(zran_index_t *index,
         if (ferror(fd)) goto fail;
         if (f_ret != 1) goto fail;
 
-        /*
-         * Data is NULL for the first element of the list, and therefore it is
-         * exported for all elements except the first one.
-         */
-        if(point != index->list) {
-
-            /* Write checkpoint data, and check for errors. */
-            f_ret = fwrite(point->data, index->window_size, 1, fd);
-
-            if (ferror(fd)) goto fail;
-            if (f_ret != 1) goto fail;
-        }
-
-        #ifdef ZRAN_VERBOSE
-        zran_log("zran_export_index: (cmp: %lu, uncmp: %lu, bits: %u, ",
+        zran_log("zran_export_index: (%lu, %lu, %lu, %u)\n",
+                 (index->npoints - (list_end - point)), // point index
                  point->cmp_offset,
                  point->uncmp_offset,
                  point->bits);
 
-        /* First point supposed to not have a checkpoint window. */
-        if(point->data != NULL) {
+        /* Done with this point. Proceed to next one. */
+        point++;
+    }
 
-            /* Print first and last three bytes of the checkpoint window. */
-            zran_log("window: [%02x %02x %02x...%02x %02x %02x])\n",
-                     point->data[0],
-                     point->data[1],
-                     point->data[2],
-                     point->data[index->window_size - 3],
-                     point->data[index->window_size - 2],
-                     point->data[index->window_size - 1]);
-        } else {
-            zran_log("window: NULL)\n");
-        }
-        #endif
+    /*
+     * Initialize point to the second element of the list (as first element has
+     * no data), and list_end to the end of the list.
+     */
+    point    = index->list + 1;
+    list_end = index->list + index->npoints;
+
+    /* Write all points iteratively for writing checkpoint data. */
+    while (point < list_end) {
+
+        /* Write checkpoint data, and check for errors. */
+        f_ret = fwrite(point->data, index->window_size, 1, fd);
+
+        if (ferror(fd)) goto fail;
+        if (f_ret != 1) goto fail;
+
+        /* Print first and last three bytes of the checkpoint window. */
+        zran_log("zran_export_index: "
+                     "(%lu, [%02x %02x %02x...%02x %02x %02x])\n",
+                 (index->npoints - (list_end - point)), // point index
+                 point->data[0],
+                 point->data[1],
+                 point->data[2],
+                 point->data[index->window_size - 3],
+                 point->data[index->window_size - 2],
+                 point->data[index->window_size - 1]);
 
         /* Done with this point. Proceed to next one. */
         point++;
     }
+
+    zran_log("zran_export_index: done\n");
 
     /*
      * It is important to flush written file when done, since underlying file
@@ -2679,7 +2690,7 @@ int zran_import_index(zran_index_t *index,
     point    = new_list;
     list_end = new_list + npoints;
 
-    /* Read new points iteratively. */
+    /* Read new points iteratively for reading offset mapping. */
     while (point < list_end)
     {
 
@@ -2704,62 +2715,63 @@ int zran_import_index(zran_index_t *index,
         if (ferror(fd)) goto read_error;
         if (f_ret != 1) goto read_error;
 
-        /*
-         * Data is NULL for the first element of the list, and therefore it is
-         * imported for all elements except the first one.
-         */
-        if (point != new_list) {
-
-            /*
-             * Allocate space for checkpoint data. These pointers in each point
-             * should be cleaned up in case of any failures.
-             */
-            point->data = calloc(1, index->window_size);
-
-            if (point->data == NULL) goto memory_error;
-
-            /*
-             * Read checkpoint data, and check for errors. End of file can be
-             * reached just after the last element, so it's not an error for
-             * the last element.
-             */
-            f_ret = fread(point->data, index->window_size, 1, fd);
-
-            if (feof(fd) && point < list_end - 1) goto eof;
-            if (ferror(fd))                       goto read_error;
-            if (f_ret != 1)                       goto read_error;
-
-            /*
-             * TODO: If there are still more data after importing is done, it
-             * is silently ignored. It might be handled by other means.
-             */
-        }
-
-        #ifdef ZRAN_VERBOSE
-        zran_log("zran_import_index: (cmp: %lu, uncmp: %lu, bits: %u, ",
+        zran_log("zran_import_index: (%lu, %lu, %lu, %u)\n",
+                 (npoints - (list_end - point)), // point index
                  point->cmp_offset,
                  point->uncmp_offset,
                  point->bits);
 
-        /* First point supposed to not have a checkpoint window. */
-        if (point->data != NULL) {
+        /* Done with this point. Proceed to the next one. */
+        point++;
+    }
 
-            /* Print first and last three bytes of the checkpoint window. */
-            zran_log("window: [%02x %02x %02x...%02x %02x %02x])\n",
-                     point->data[0],
-                     point->data[1],
-                     point->data[2],
-                     point->data[index->window_size - 3],
-                     point->data[index->window_size - 2],
-                     point->data[index->window_size - 1]);
-        } else {
-            zran_log("window: NULL)\n");
-        }
-        #endif
+    /*
+     * Initialize point to the second element of the list (as the first element
+     * has no data), and list_end to the end of the list.
+     */
+    point    = new_list + 1;
+    list_end = new_list + npoints;
+
+    /* Read new points iteratively for reading checkpoint data. */
+    while (point < list_end) {
+
+        /*
+         * Allocate space for checkpoint data. These pointers in each point
+         * should be cleaned up in case of any failures.
+         */
+        point->data = calloc(1, window_size);
+
+        if (point->data == NULL) goto memory_error;
+
+        /*
+         * Read checkpoint data, and check for errors. End of file can be
+         * reached just after the last element, so it's not an error for
+         * the last element.
+         */
+        f_ret = fread(point->data, window_size, 1, fd);
+
+        if (feof(fd) && point < list_end - 1) goto eof;
+        if (ferror(fd))                       goto read_error;
+        if (f_ret != 1)                       goto read_error;
+
+        /*
+         * TODO: If there are still more data after importing is done, it
+         * is silently ignored. It might be handled by other means.
+         */
+
+        /* Print first and last three bytes of the checkpoint window. */
+        zran_log("zran_import_index:"
+                     "(%lu, [%02x %02x %02x...%02x %02x %02x])\n",
+                 (npoints - (list_end - point)), // point index
+                 point->data[0],
+                 point->data[1],
+                 point->data[2],
+                 point->data[window_size - 3],
+                 point->data[window_size - 2],
+                 point->data[window_size - 1]);
 
         /* Done with this point. Proceed to the next one. */
         point++;
-
     }
 
     /* There are no errors, it's safe to overwrite existing index data now. */
@@ -2806,6 +2818,8 @@ int zran_import_index(zran_index_t *index,
 
     /* Let's not forget to update the size as well. */
     index->size    = npoints;
+
+    zran_log("zran_import_index: done\n");
 
     return ZRAN_IMPORT_OK;
 

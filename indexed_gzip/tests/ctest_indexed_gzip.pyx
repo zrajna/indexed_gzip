@@ -28,6 +28,10 @@ from . import gen_test_data
 from . import check_data_valid
 from . import testdir
 
+from libc.stdio cimport (SEEK_SET,
+                         SEEK_CUR,
+                         SEEK_END)
+
 
 def read_element(gzf, element, seek=True):
 
@@ -211,6 +215,42 @@ def test_handles_not_dropped(testfile, nelems, seed):
                 assert gzf.fileobj() is f
 
 
+def test_manual_build():
+    with testdir() as td:
+        nelems = 65536
+        fname = op.join(td, 'test.gz')
+
+        gen_test_data(fname, nelems, False)
+
+        with igzip._IndexedGzipFile(fname, auto_build=False) as f:
+
+            # Seeking should fail
+            with pytest.raises(igzip.NotCoveredError):
+                f.seek(1234)
+
+            # Reading from beginning should work
+            readval = read_element(f, 0, seek=False)
+            assert readval == 0
+
+            # Seek should still fail even after read
+            f.seek(0)
+            with pytest.raises(igzip.NotCoveredError):
+                f.seek(8)
+
+            # But reading from beginning should still work
+            readval = read_element(f, 0, seek=False)
+            assert readval == 0
+
+            # But after building the index,
+            # seeking and reading should work
+            f.build_full_index()
+
+            for i in range(5):
+                element = np.random.randint(0, nelems, 1)
+                readval = read_element(f, element)
+                assert readval == element
+
+
 def test_read_all(testfile, nelems, use_mmap, drop):
 
     if use_mmap:
@@ -247,6 +287,37 @@ def test_read_beyond_end(concat, drop):
         data2 = np.ndarray(shape=nelems, dtype=np.uint64, buffer=data2)
         assert check_data_valid(data1, 0)
         assert check_data_valid(data2, 0)
+
+
+def test_seek(concat):
+    with testdir() as tdir:
+        nelems   = 65536
+        testfile = op.join(tdir, 'test.gz')
+        gen_test_data(testfile, nelems, concat)
+
+        results = []
+
+        with igzip._IndexedGzipFile(testfile) as f:
+
+            results.append((f.read(8), 0))
+
+            f.seek(24, SEEK_SET)
+            results.append((f.read(8), 3))
+
+            f.seek(-16, SEEK_CUR)
+            results.append((f.read(8), 2))
+
+            f.seek(16, SEEK_CUR)
+            results.append((f.read(8), 5))
+
+            # Cannot seek from SEEK_END
+            with pytest.raises(ValueError):
+                f.seek(100, SEEK_END)
+
+        for data, expected in results:
+            val = np.fromstring(data, dtype=np.uint64)
+            print(data, expected, val)
+            assert val == expected
 
 
 def test_seek_and_read(testfile, nelems, niters, seed, drop):
@@ -504,26 +575,28 @@ def test_iter(drop):
 def test_import_export_index():
 
     with testdir() as td:
+        fname    = op.join(td, 'test.gz')
+        idxfname = op.join(td, 'test.gzidx')
 
         # make a test file
         data = np.arange(65536, dtype=np.uint64)
-        with gzip.open('test.gz', 'wb') as f:
+        with gzip.open(fname, 'wb') as f:
             f.write(data.tostring())
 
         # generate an index file
-        with igzip._IndexedGzipFile('test.gz') as f:
+        with igzip._IndexedGzipFile(fname) as f:
             f.build_full_index()
-            f.export_index('test.gzidx')
+            f.export_index(idxfname)
 
         # Check that index file works via __init__
-        with igzip._IndexedGzipFile('test.gz', index_file='test.gzidx') as f:
+        with igzip._IndexedGzipFile(fname, index_file=idxfname) as f:
             f.seek(65535 * 8)
             val = np.fromstring(f.read(8), dtype=np.uint64)
             assert val[0] == 65535
 
         # Check that index file works via import_index
-        with igzip._IndexedGzipFile('test.gz') as f:
-            f.import_index('test.gzidx')
+        with igzip._IndexedGzipFile(fname) as f:
+            f.import_index(idxfname)
             f.seek(65535 * 8)
             val = np.fromstring(f.read(8), dtype=np.uint64)
             assert val[0] == 65535

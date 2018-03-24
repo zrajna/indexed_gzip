@@ -56,6 +56,9 @@ def test_create_from_open_handle_drop_handles(testfile, nelems, seed):
 def test_handles_not_dropped(testfile, nelems, seed):
     ctest_indexed_gzip.test_handles_not_dropped(testfile, nelems, seed)
 
+def test_manual_build():
+    ctest_indexed_gzip.test_manual_build()
+
 def test_read_all(testfile, nelems, use_mmap):
     ctest_indexed_gzip.test_read_all(testfile, nelems, use_mmap, False)
 
@@ -64,6 +67,9 @@ def test_read_all_drop_handles(testfile, nelems, use_mmap):
 
 def test_read_beyond_end(concat):
     ctest_indexed_gzip.test_read_beyond_end(concat, False)
+
+def test_seek(concat):
+    ctest_indexed_gzip.test_seek(concat)
 
 def test_read_beyond_end_drop_handles(concat):
     ctest_indexed_gzip.test_read_beyond_end(concat, True)

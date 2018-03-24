@@ -559,8 +559,8 @@ cdef class _IndexedGzipFile:
         ``nbytes``. See :meth:`seek` and :meth:`read`.
         """
         with self.__file_handle():
-            _IndexedGzipFile.seek(self, offset)
-            return _IndexedGzipFile.read(self, nbytes)
+            self.seek(offset)
+            return self.read(nbytes)
 
 
     def readline(self, size=-1):

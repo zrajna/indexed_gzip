@@ -304,4 +304,81 @@ int64_t zran_read(
   uint64_t       len    /* Number of bytes to read   */
 );
 
+/* Magic bytes for exported index type. Value is defined in zran.c. */
+extern const char zran_magic_bytes[];
+
+/* Return codes for zran_export_index. */
+enum {
+    ZRAN_EXPORT_OK          =  0,
+    ZRAN_EXPORT_WRITE_ERROR = -1
+};
+
+/*
+ * Export current index data to given file. This exported file later can be
+ * used to rebuild index without needing to going through the file again.
+ *
+ * See zran_import_index for importing.
+ *
+ * Returns:
+ *   - ZRAN_EXPORT_OK for success.
+ *
+ *   - ZRAN_EXPORT_WRITE_ERROR to indicate an error from writing to underlying
+ *     file.
+ */
+int zran_export_index(
+  zran_index_t  *index, /* The index                  */
+  FILE          *fd     /* Open handle to export file */
+);
+
+/* Return codes for zran_import_index. */
+enum {
+    ZRAN_IMPORT_OK             =  0,
+    ZRAN_IMPORT_FAIL           = -1,
+    ZRAN_IMPORT_EOF            = -2,
+    ZRAN_IMPORT_READ_ERROR     = -3,
+    ZRAN_IMPORT_OVERFLOW       = -4,
+    ZRAN_IMPORT_INCONSISTENT   = -5,
+    ZRAN_IMPORT_MEMORY_ERROR   = -6,
+    ZRAN_IMPORT_UNKNOWN_FORMAT = -7
+};
+
+/*
+ * Import current index from the given file.  index must have been initialized
+ * by zran_init function before calling this function, as it is not supported
+ * importing into an uninitialised zran_index_t struct. Existing index will be
+ * overwritten including spacing and window_size values, whereas values of
+ * readbuf_size and flags will be kept.
+ *
+ * Updating an index file is not supported currently. To update an index file,
+ * first import it, create new checkpoints, and then export it again.
+ *
+ * See zran_export_index for exporting.
+ *
+ * Returns:
+ *   - ZRAN_IMPORT_OK for success.
+ *
+ *   - ZRAN_IMPORT_FAIL general errors.
+ *
+ *   - ZRAN_IMPORT_EOF to indicate unexpected end-of-file.
+ *
+ *   - ZRAN_IMPORT_READ_ERROR to indicate error while reading file.
+ *
+ *   - ZRAN_IMPORT_OVERFLOW to indicate overflow while reading compressed and
+ *     uncompressed size attributes. This shouldn't be a problem for x64
+ *     processors.
+ *
+ *   - ZRAN_IMPORT_INCONSISTENT to indicate compressed size, or uncompressed
+ *     size if known,   of the index file is inconsistent with the loaded
+ *     compressed file.
+ *
+ *   - ZRAN_IMPORT_MEMORY_ERROR to indicate failure to allocate memory for new
+ *     index. This typically result from out-of-memory.
+ *
+ *   - ZRAN_IMPORT_UNKNOWN_FORMAT to indicate given file is of unknown format.
+ */
+int zran_import_index(
+  zran_index_t  *index, /* The index                  */
+  FILE          *fd     /* Open handle to import file */
+);
+
 #endif /* __ZRAN_H__ */

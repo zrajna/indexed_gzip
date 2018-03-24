@@ -30,7 +30,7 @@ from libc.stdio  cimport (SEEK_SET,
                           fdopen,
                           fwrite)
 
-from libc.string cimport memset
+from libc.string cimport memset, memcmp
 
 from cpython.mem cimport (PyMem_Malloc,
                           PyMem_Realloc,
@@ -796,3 +796,74 @@ def test_readbuf_spacing_sizes(testfile, nelems, niters, seed):
 
             print()
             zran.zran_free(&index)
+
+def test_export_then_import(testfile):
+
+    cdef zran.zran_index_t  index1
+    cdef zran.zran_index_t  index2
+    cdef zran.zran_point_t *p1
+    cdef zran.zran_point_t *p2
+
+    indexSpacing = 1048576
+    windowSize   = 32768
+    readbufSize  = 131072
+    flag         = 0
+
+    with open(testfile, 'rb') as pyfid:
+        cfid = fdopen(pyfid.fileno(), 'rb')
+
+        assert not zran.zran_init(&index1,
+                                  cfid,
+                                  indexSpacing,
+                                  windowSize,
+                                  readbufSize,
+                                  flag)
+
+        assert not zran.zran_build_index(&index1, 0, 0)
+
+        with open(testfile + '.idx.tmp', 'wb') as pyexportfid:
+            cfid = fdopen(pyexportfid.fileno(), 'ab')
+            ret  = zran.zran_export_index(&index1, cfid)
+            assert not ret, str(ret)
+
+    with open(testfile, 'rb') as pyfid:
+        cfid = fdopen(pyfid.fileno(), 'rb')
+        assert not zran.zran_init(&index2,
+                                  cfid,
+                                  indexSpacing,
+                                  windowSize,
+                                  readbufSize,
+                                  flag)
+
+        with open(testfile + '.idx.tmp', 'rb') as pyexportfid:
+            cfid = fdopen(pyexportfid.fileno(), 'rb')
+            ret  = zran.zran_import_index(&index2, cfid)
+            assert not ret, str(ret)
+
+        assert index2.compressed_size   == index1.compressed_size
+        assert index2.uncompressed_size == index1.uncompressed_size
+        assert index2.spacing           == index1.spacing
+        assert index2.window_size       == index1.window_size
+        assert index2.npoints           == index1.npoints
+
+        ws = index1.window_size
+
+        for i in range(index1.npoints):
+
+            p1 = &index1.list[i]
+            p2 = &index2.list[i]
+            msg = 'Error at point %d' % i
+
+            assert p2.cmp_offset   == p1.cmp_offset, msg
+            assert p2.uncmp_offset == p1.uncmp_offset, msg
+            assert p2.bits         == p1.bits, msg
+            if i == 0:
+                assert not p2.data, msg
+                assert not p1.data, msg
+            else:
+                assert p2.data, msg
+                assert p1.data, msg
+                assert not memcmp(p2.data, p1.data, ws), msg
+
+        zran.zran_free(&index1)
+        zran.zran_free(&index2)

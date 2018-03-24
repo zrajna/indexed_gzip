@@ -1,13 +1,13 @@
 # `indexed_gzip` changelog
 
 
-## 0.8.0 (Under development)
+## 0.8.0 (March 24th 2018)
 
 Changes in this release:
 
 * Added ability to import/export the index, via new `import_index` and
   `export_index` methods on the `IndexedGzipFile` class (#7, #8) - thanks
-  @ozars!
+  @ozars !
 * Deprecated `SafeIndexedGzipFile` - the `IndexedGzipFile` is now
   thread-safe, and has a read buffer. If you don't want buffering
   or thread-safety, use the `_IndexedGzipFile` class.
@@ -56,7 +56,7 @@ Changes in this release:
 * Preliminary support for Windows platforms (#1, #3) Thanks to @mcraig-ibme
   and @Trigonometry !
 
-* Added `mode` attribute to `IndexedGzipFile`
+* Added `mode` attribute to `IndexedGzipFile`.
 
 
 ## 0.5.1 (September 12th 2017)

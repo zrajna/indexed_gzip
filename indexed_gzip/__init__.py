@@ -15,4 +15,4 @@ from .indexed_gzip import (_IndexedGzipFile,     # noqa
                            ZranError)
 
 
-__version__ = '0.8.0'
+__version__ = '0.8.1'

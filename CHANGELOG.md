@@ -1,6 +1,11 @@
 # `indexed_gzip` changelog
 
 
+## 0.8.1 (March 24th 2018)
+
+* Updated conda metadata.
+
+
 ## 0.8.0 (March 24th 2018)
 
 Changes in this release:

@@ -22,8 +22,8 @@
 #include "io.h"
 static int is_readonly(FILE *fd)
 {
-    /* Can't find a way to do this correctly under Windows and 
-       the check is not required anyway since the underlying 
+    /* Can't find a way to do this correctly under Windows and
+       the check is not required anyway since the underlying
        Python module checks it already */
     return 1;
 }
@@ -42,7 +42,7 @@ static int is_readonly(FILE *fd)
 
 #ifdef NO_C99
 static double round(double val)
-{    
+{
     return floor(val + 0.5);
 }
 #endif
@@ -927,6 +927,8 @@ int _zran_add_point(zran_index_t  *index,
 
     uint8_t      *point_data = NULL;
     zran_point_t *next       = NULL;
+
+    #ifdef ZRAN_VERBOSE
     int doff;
 
     zran_log("_zran_add_point(%i, c=%lld + %i, u=%lld, data=%u / %u)\n",
@@ -937,7 +939,6 @@ int _zran_add_point(zran_index_t  *index,
              data_offset,
              data_size);
 
-    #ifdef ZRAN_VERBOSE
     if (data_offset >= index->window_size) doff = data_offset - index->window_size;
     else                                   doff = data_size = (index->window_size - data_offset);
 

@@ -1,4 +1,14 @@
 #!/usr/bin/env python
+"""Setup script for indexed_gzip.
+
+If an environment variable called `INDEXED_GZIP_TESTING` is defined, the
+Cython modules are compiled with line-tracing enabled, via the Cython
+`linetrace` directive, and the `CYTHON_TRACE_NOGIL` macro.
+
+See
+https://cython.readthedocs.io/en/latest/src/reference/compilation.html#compiler-directives
+for more details.
+"""
 
 import sys
 import os
@@ -16,8 +26,10 @@ class Clean(Command):
 
     user_options = []
 
-    def initialize_options(self): pass
-    def finalize_options(  self): pass
+    def initialize_options(self):
+        pass
+    def finalize_options(self):
+        pass
 
     def run(self):
 
@@ -41,6 +53,7 @@ class Clean(Command):
 
         files = [
             '*.so',
+            '.coverage.*',
             op.join(igzbase, 'indexed_gzip.c'),
             op.join(igzbase, '*.pyc'),
             op.join(igzbase, '*.so'),
@@ -59,6 +72,7 @@ class Clean(Command):
 python2 = sys.version_info[0] == 2
 noc99   = python2 or (sys.version_info[0] == 3 and sys.version_info[1] <= 4)
 windows = sys.platform.startswith("win")
+testing = 'INDEXED_GZIP_TESTING' in os.environ
 
 
 # If cython is present, we'll compile
@@ -68,17 +82,24 @@ windows = sys.platform.startswith("win")
 have_cython = True
 have_numpy  = True
 
-try:    from Cython.Build import cythonize
-except: have_cython = False
+try:
+    from Cython.Build import cythonize
+except Exception:
+    have_cython = False
 
 # We need numpy to compile the test modules
-try:    import numpy as np
-except: have_numpy = False
+try:
+    import numpy as np
+except Exception:
+    have_numpy = False
 
+# compile flags
 include_dirs = ['indexed_gzip']
 lib_dirs = []
 libs = []
 extra_compile_args = []
+compiler_directives = {}
+define_macros = []
 
 # If numpy is present, we need
 # to include the headers
@@ -104,6 +125,10 @@ else:
     libs.append('z')
     extra_compile_args += ['-Wall', '-pedantic', '-Wno-unused-function']
 
+if testing:
+    compiler_directives['linetrace'] = True
+    define_macros += [('CYTHON_TRACE_NOGIL', '1')]
+
 # Compile from cython files if
 # possible, or compile from c.
 if have_cython: pyx_ext = 'pyx'
@@ -117,7 +142,8 @@ igzip_ext = Extension(
     libraries=libs,
     library_dirs=lib_dirs,
     include_dirs=include_dirs,
-    extra_compile_args=extra_compile_args)
+    extra_compile_args=extra_compile_args,
+    define_macros=define_macros)
 
 # Optional test modules
 test_exts = [
@@ -128,7 +154,8 @@ test_exts = [
         libraries=libs,
         library_dirs=lib_dirs,
         include_dirs=include_dirs,
-        extra_compile_args=extra_compile_args)
+        extra_compile_args=extra_compile_args,
+        define_macros=define_macros)
 ]
 
 if not windows:
@@ -140,7 +167,8 @@ if not windows:
         libraries=libs,
         library_dirs=lib_dirs,
         include_dirs=include_dirs,
-        extra_compile_args=extra_compile_args))
+        extra_compile_args=extra_compile_args,
+        define_macros=define_macros))
 
 # If we have numpy, we can compile the tests
 if have_numpy: extensions = [igzip_ext] + test_exts
@@ -149,7 +177,7 @@ else:          extensions = [igzip_ext]
 
 # Cythonize if we can
 if have_cython:
-    extensions = cythonize(extensions)
+    extensions = cythonize(extensions, compiler_directives=compiler_directives)
 
 
 # find the version number

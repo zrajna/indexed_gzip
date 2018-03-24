@@ -21,12 +21,14 @@ if [ "$TEST_SUITE" == "32bittest" ]; then
 
     docker run --rm \
            -e PYTHON_VERSION="$PYTHON_VERSION" \
+           -e INDEXED_GZIP_TESTING=1 \
            -v $igzip_dir:/indexed_gzip \
            32bit/ubuntu:16.04 \
            /indexed_gzip/.ci/run_32bit_test.sh
 
 # Run standard test suite
 else
+    export INDEXED_GZIP_TESTING=1
     python setup.py develop;
     python setup.py test --addopts "-v -s -m \"$TEST_SUITE\" -k \"$TEST_PATTERN\" --nelems \"$NELEMS\" --niters \"$NITERS\" $EXTRA_ARGS";
 fi

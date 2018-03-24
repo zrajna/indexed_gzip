@@ -88,6 +88,9 @@ def test_seek_and_tell(testfile, nelems, niters, seed):
 def test_seek_and_tell_drop_handles(testfile, nelems, niters, seed):
     ctest_indexed_gzip.test_seek_and_tell(testfile, nelems, niters, seed, True)
 
+def test_pread():
+    ctest_indexed_gzip.test_pread()
+
 def test_readinto():
     ctest_indexed_gzip.test_readinto(False)
 

@@ -316,7 +316,6 @@ def test_seek(concat):
 
         for data, expected in results:
             val = np.fromstring(data, dtype=np.uint64)
-            print(data, expected, val)
             assert val == expected
 
 
@@ -370,6 +369,20 @@ def test_seek_and_tell(testfile, nelems, niters, seed, drop):
         for es in eofseeks:
             assert f.seek(es) == filesize
             assert f.tell()   == filesize
+
+
+def test_pread():
+    with testdir() as td:
+        nelems = 1024
+        testfile = op.join(td, 'test.gz')
+        gen_test_data(testfile, nelems, False)
+
+        with igzip.IndexedGzipFile(testfile) as f:
+            for i in range(20):
+                off  = np.random.randint(0, nelems, 1)[0]
+                data = f.pread(8, off * 8)
+                val  = np.fromstring(data, dtype=np.uint64)
+                assert val[0] == off
 
 
 def test_readinto(drop):
@@ -597,6 +610,34 @@ def test_import_export_index():
         # Check that index file works via import_index
         with igzip._IndexedGzipFile(fname) as f:
             f.import_index(idxfname)
+            f.seek(65535 * 8)
+            val = np.fromstring(f.read(8), dtype=np.uint64)
+            assert val[0] == 65535
+
+        # generate an index file from open file handle
+        with igzip._IndexedGzipFile(fname) as f:
+            f.build_full_index()
+
+            # Should raise if wrong permissions
+            with pytest.raises(ValueError):
+                with open(idxfname, 'rb') as idxf:
+                    f.export_index(fileobj=idxf)
+
+            with open(idxfname, 'wb') as idxf:
+                f.export_index(fileobj=idxf)
+
+        # Check that it works
+        with igzip._IndexedGzipFile(fname) as f:
+
+            # Should raise if wrong permissions
+            # (append, so existing contents are
+            # not overwritten)
+            with pytest.raises(ValueError):
+                with open(idxfname, 'ab') as idxf:
+                    f.import_index(fileobj=idxf)
+
+            with open(idxfname, 'rb') as idxf:
+                f.import_index(fileobj=idxf)
             f.seek(65535 * 8)
             val = np.fromstring(f.read(8), dtype=np.uint64)
             assert val[0] == 65535

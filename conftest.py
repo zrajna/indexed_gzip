@@ -42,7 +42,7 @@ def pytest_addoption(parser):
     parser.addoption('--niters',
                      type=int,
                      action='store',
-                     default=5000,
+                     default=1000,
                      help='Number of inputs for tests which '
                           'use a random set of inputs')
 

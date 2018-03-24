@@ -7,7 +7,8 @@
 """The indexed_gzip namespace. """
 
 
-from .indexed_gzip import (IndexedGzipFile,
+from .indexed_gzip import (_IndexedGzipFile,     # noqa
+                           IndexedGzipFile,
                            SafeIndexedGzipFile,
                            NotCoveredError,
                            NoHandleError,

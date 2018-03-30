@@ -1,7 +1,16 @@
 # `indexed_gzip` changelog
 
 
+## 0.8.2 (March 30th 2018)
+
+Changes in this release:
+
+* Bugfix in deprecated `SafeIndexedGzipFile`.
+
+
 ## 0.8.1 (March 24th 2018)
+
+Changes in this release:
 
 * Updated conda metadata.
 

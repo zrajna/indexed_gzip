@@ -850,3 +850,4 @@ class SafeIndexedGzipFile(IndexedGzipFile):
         warnings.warn('SafeIndexedGzilFile is deprecated - '
                       'use IndexedGzipFile instead',
                       DeprecationWarning)
+        super(SafeIndexedGzipFile, self).__init__(*args, **kwargs)

@@ -101,18 +101,30 @@ data = myfile.read(1048576)
 ## Using with `nibabel`
 
 
-You can use `indexed_gzip` with `nibabel` 2.2.0 - `nibabel` will
+You can use `indexed_gzip` with `nibabel`. `nibabel` >= 2.3.0 will
 automatically use `indexed_gzip` if it is present:
 
 
 ```python
 import nibabel as nib
 
-image = nib.load('big_image.nii.gz', keep_file_open=True)
+image = nib.load('big_image.nii.gz')
 ```
 
 
-To use `indexed_gzip` with `nibabel` 2.1.0 or older:
+If you are using `nibabel` 2.2.x, you need to explicitly set the `keep_file_open`
+flag:
+
+
+```python
+import nibabel as nib
+
+image = nib.load('big_image.nii.gz', keep_file_open='auto')
+```
+
+
+To use `indexed_gzip` with `nibabel` 2.1.0 or older, you need to do a little
+more work:
 
 
 ```python

@@ -1,7 +1,7 @@
 # `indexed_gzip` changelog
 
 
-## 0.8.3 (June 8th 2018)
+## 0.8.3 (June 11th 2018)
 
 * Bugfix - variious methods and attributes were missing from the
   `IndexedGzipFile` wrapper class (#9).

@@ -36,7 +36,7 @@ from libc.stdio cimport (SEEK_SET,
 def read_element(gzf, element, seek=True):
 
     if seek:
-        gzf.seek(element * 8)
+        gzf.seek(int(element) * 8)
 
     bytes = gzf.read(8)
     val   = np.ndarray(1, np.uint64, buffer=bytes)
@@ -64,6 +64,9 @@ def test_open_close(testfile, nelems, seed, drop):
     f.close()
 
     assert f.closed
+
+    with pytest.raises(IOError):
+        f.close()
 
 
 def test_open_close_ctxmanager(testfile, nelems, seed, drop):
@@ -474,6 +477,9 @@ def test_readline(drop):
             # Should return empty string after EOF
             assert f.readline() == b''
 
+            f.seek(0)
+            assert f.readline(0) == b''
+
 
 def test_readline_sizelimit(drop):
 
@@ -641,3 +647,24 @@ def test_import_export_index():
             f.seek(65535 * 8)
             val = np.fromstring(f.read(8), dtype=np.uint64)
             assert val[0] == 65535
+
+
+def test_wrapper_class():
+
+    with testdir() as td:
+        fname    = op.join(td, 'test.gz')
+        idxfname = op.join(td, 'test.gzidx')
+
+        data = np.arange(65536, dtype=np.uint64)
+        with gzip.open(fname, 'wb') as f:
+            f.write(data.tostring())
+
+        with igzip.IndexedGzipFile(fname, drop_handles=False) as f:
+
+            assert f.fileno() == f.fileobj().fileno()
+            assert not f.drop_handles
+
+            f.build_full_index()
+            f.export_index(idxfname)
+
+            f.import_index(idxfname)

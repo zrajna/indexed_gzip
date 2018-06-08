@@ -1,3 +1,4 @@
+include                        LICENSE
 recursive-include indexed_gzip *.py
 recursive-include indexed_gzip *.pyx
 recursive-include indexed_gzip *.pxd

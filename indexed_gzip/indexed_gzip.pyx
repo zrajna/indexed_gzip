@@ -831,6 +831,12 @@ class IndexedGzipFile(io.BufferedReader):
         fobj            = _IndexedGzipFile(*args, **kwargs)
         self.__fileLock = threading.RLock()
 
+        self.build_full_index = fobj.build_full_index
+        self.import_index     = fobj.import_index
+        self.export_index     = fobj.export_index
+        self.fileobj          = fobj.fileobj
+        self.drop_handles     = fobj.drop_handles
+
         super(IndexedGzipFile, self).__init__(fobj, buffer_size)
 
 

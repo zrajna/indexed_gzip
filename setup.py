@@ -217,7 +217,6 @@ setup(
 
     ext_modules=extensions,
 
-    setup_requires=['pytest-runner'],
     tests_require=['pytest', 'numpy', 'coverage', 'pytest-cov'],
     test_suite='tests',
 )

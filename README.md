@@ -69,7 +69,7 @@ python setup.py develop
 To run the tests, type the following; you will need `numpy` and `pytest`
 installed:
 ```sh
-python setup.py test
+pytest
 ```
 
 ## Usage

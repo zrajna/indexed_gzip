@@ -1,10 +1,15 @@
 # `indexed_gzip` changelog
 
+## 0.8.4 (June 11th 2018)
+
+* Removed `pytest-runner` as a dependency.
+
 
 ## 0.8.3 (June 11th 2018)
 
 * Bugfix - variious methods and attributes were missing from the
   `IndexedGzipFile` wrapper class (#9).
+
 
 ## 0.8.2 (March 30th 2018)
 

@@ -11,8 +11,23 @@ source:
 requirements:
   build:
     - python
+    - numpy
     - cython
     - setuptools
     - pytest-runner
   run:
     - python
+
+
+test:
+  source_files:
+    - conftest.py
+  requires:
+    - pytest
+    - numpy
+    - coverage
+    - pytest-cov
+  imports:
+    - indexed_gzip
+  commands:
+    - python -m pytest -v -s  --pyargs  --cov=indexed_gzip --niters 500 indexed_gzip

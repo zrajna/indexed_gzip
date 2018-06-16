@@ -60,7 +60,7 @@ pip install indexed_gzip
 ```
 
 To compile `indexed_gzip`, make sure you have [cython](http://cython.org/)
-installed, and then run:
+installed (and `numpy` if you want to compile the tests), and then run:
 ```sh
 python setup.py develop
 ```

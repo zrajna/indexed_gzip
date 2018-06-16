@@ -63,7 +63,7 @@ env:
   - TEST_SUITE=indexed_gzip_test EXTRA_ARGS="--use_mmap --concat"  NITERS=1000 NELEMS=805306368
   - TEST_SUITE=32bittest
 
-install: "pip install cython numpy pytest"
+install: "pip install cython numpy pytest coverage pytest-cov"
 
 script:
   - .ci/run_tests.sh

@@ -1,5 +1,11 @@
 # `indexed_gzip` changelog
 
+
+## 0.8.5 (June 16th 2018)
+
+* Minor changes to packging.
+
+
 ## 0.8.4 (June 11th 2018)
 
 * Removed `pytest-runner` as a dependency.

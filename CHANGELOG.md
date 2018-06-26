@@ -1,5 +1,9 @@
 # `indexed_gzip` changelog
 
+## 0.8.6 (June 27th 2018)
+
+* Workaround for issues with Python 2.7 and Cython < 0.26.
+
 
 ## 0.8.5 (June 16th 2018)
 

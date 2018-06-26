@@ -929,7 +929,6 @@ int _zran_add_point(zran_index_t  *index,
     zran_point_t *next       = NULL;
 
     #ifdef ZRAN_VERBOSE
-    int doff;
 
     zran_log("_zran_add_point(%i, c=%lld + %i, u=%lld, data=%u / %u)\n",
              index->npoints,
@@ -938,9 +937,6 @@ int _zran_add_point(zran_index_t  *index,
              uncmp_offset,
              data_offset,
              data_size);
-
-    if (data_offset >= index->window_size) doff = data_offset - index->window_size;
-    else                                   doff = data_size = (index->window_size - data_offset);
 
     if (data != NULL)
         zran_log("Window data: [%02x %02x %02x %02x ...]\n",

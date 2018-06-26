@@ -245,6 +245,11 @@ cdef class _IndexedGzipFile:
         :attr:`drop_handles`).
         """
 
+        # Errors occur with Python 2.7 and
+        # Cython < 0.26 when decorating
+        # cdef-class methods. This workaround
+        # can be removed when you are happy
+        # dropping support for cython < 0.26.
         @contextlib.contextmanager
         def proxy():
 

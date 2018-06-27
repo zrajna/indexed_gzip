@@ -1,9 +1,11 @@
 # indexed_gzip
 
 
-[![Build Status](https://travis-ci.org/pauldmccarthy/indexed_gzip.svg?branch=master)](https://travis-ci.org/pauldmccarthy/indexed_gzip)
+[![Build Status](https://travis-ci.org/pauldmccarthy/indexed_gzip.svg?branch=master)](https://travis-ci.org/pauldmccarthy/indexed_gzip/)
 
 [![PyPi version](https://img.shields.io/pypi/v/indexed_gzip.svg)](https://pypi.python.org/pypi/indexed_gzip/)
+
+[![Anaconda version](https://anaconda.org/conda-forge/indexed_gzip/badges/version.svg)](https://anaconda.org/conda-forge/indexed_gzip/)
 
 
  *Fast random access of gzip files in Python*
@@ -57,6 +59,13 @@ in the file.
 install, simply type:
 ```sh
 pip install indexed_gzip
+```
+
+
+You can also install `indexed_gzip` from conda-forge:
+
+```sh
+conda install -c conda-forge indexed_gzip
 ```
 
 To compile `indexed_gzip`, make sure you have [cython](http://cython.org/)

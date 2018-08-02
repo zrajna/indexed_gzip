@@ -1,3 +1,5 @@
+os: Visual Studio 2015
+
 environment:
     matrix:
       - PYTHON_VERSION: "2.7"
@@ -6,7 +8,7 @@ environment:
         PYTHON_ARCH: "64"
       - PYTHON_VERSION: "3.6"
         PYTHON: "C:\\Miniconda36-x64"
-        MINOCONDA: "C:\\Miniconda36-x64"
+        MINICONDA: "C:\\Miniconda36-x64"
         PYTHON_ARCH: "64"
 
 build: false
@@ -17,23 +19,9 @@ install:
   - conda create  --yes -n test_env python=%PYTHON_VERSION%
   - activate test_env
   - conda install --yes cython numpy zlib pytest six
-
-build_script:
-
-  # install build dependencies
-  - conda install --yes conda-build %BUILD_DEPENDS%
   - set ZLIB_HOME=%PYTHON%\\Library
+  - python setup.py develop
 
-  # Build and install the wheel
-  - cd %REPO_DIR%
-  - git checkout %BUILD_COMMIT%
-  - python setup.py bdist_wheel
-  - pip install --no-index --find-links dist %PACKAGE_NAME%
-
-  - cd ..
-  - md testing
-  - cd testing
-  - cp ..\\%REPO_DIR%\\conftest.py .
+test_script:
   - pytest -v -s -m indexed_gzip_test          --niters 250 --pyargs indexed_gzip
   - pytest -v -s -m indexed_gzip_test --concat --niters 250 --pyargs indexed_gzip
-  - cd ..\\%REPO_DIR%

@@ -278,6 +278,7 @@ cdef class _IndexedGzipFile:
                         yield
 
                 finally:
+                    fclose(self.index.fd)
                     self.pyfid    = None
                     self.index.fd = NULL
 

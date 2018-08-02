@@ -18,7 +18,7 @@ install:
   - conda update  --yes -q conda
   - conda create  --yes -n test_env python=%PYTHON_VERSION%
   - activate test_env
-  - conda install --yes cython numpy zlib pytest six
+  - conda install --yes cython numpy zlib six pytest coverage pytest-cov
   - set ZLIB_HOME=%CONDA_PREFIX%\\Library
   - python setup.py develop
 

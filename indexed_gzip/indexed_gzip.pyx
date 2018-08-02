@@ -14,6 +14,7 @@ random access to gzip files.
 from libc.stdio     cimport (SEEK_SET,
                              SEEK_CUR,
                              FILE,
+                             fopen,
                              fdopen,
                              fclose)
 
@@ -99,6 +100,12 @@ cdef class _IndexedGzipFile:
     """
 
 
+    cdef readonly bint own_file
+    """Flag which tracks whether this ``_IndexedGzipFile`` has opened its
+    own file handle, or was given one.
+    """
+
+
     cdef readonly bint drop_handles
     """Copy of the ``drop_handles`` flag as passed to :meth:`__cinit__`. """
 
@@ -163,6 +170,8 @@ cdef class _IndexedGzipFile:
                                :meth:`import_index`.
         """
 
+        cdef FILE *fd = NULL
+
         if fid is not None:
             warnings.warn('fid is deprecated - use fileobj instead',
                           DeprecationWarning)
@@ -184,7 +193,8 @@ cdef class _IndexedGzipFile:
             raise ValueError('Invalid mode ({}), must be '
                              '\'r\' or \'rb\''.format(mode))
 
-        mode = 'rb'
+        mode     = 'rb'
+        own_file = fileobj is None
 
         # if file is specified with an open
         # file handle, drop_handles is ignored
@@ -194,15 +204,18 @@ cdef class _IndexedGzipFile:
         # if not drop_handles, we open a
         # file handle and keep it open for
         # the lifetime of this object.
-        if fileobj is None and not drop_handles:
-            fileobj = open(filename, mode)
+        if not drop_handles:
+            if fileobj is None:
+                fileobj = open(filename, mode)
+            fd = fdopen(fileobj.fileno(), mode)
 
         self.auto_build       = auto_build
         self.readall_buf_size = readall_buf_size
         self.drop_handles     = drop_handles
         self.filename         = filename
+        self.own_file         = own_file
         self.pyfid            = fileobj
-        self.index.fd         = NULL
+        self.index.fd         = fd
 
         if self.auto_build: flags = zran.ZRAN_AUTO_BUILD
         else:               flags = 0
@@ -239,10 +252,9 @@ cdef class _IndexedGzipFile:
 
     def __file_handle(self):
         """This method is used as a context manager whenever access to the
-        underlying file stream is required. It makes sure that the ``pyfid``
-        and ``index.fd`` fields are set appropriately, opening/closing
-        the file handle as necessary (depending on the value of
-        :attr:`drop_handles`).
+        underlying file stream is required. It makes sure that ``index.fd``
+        field is set appropriately, opening/closing the file handle as
+        necessary (depending on the value of :attr:`drop_handles`).
         """
 
         # Errors occur with Python 2.7 and
@@ -259,33 +271,17 @@ cdef class _IndexedGzipFile:
             if self.index.fd is not NULL:
                 yield
 
-            # if not drop_handles, then
-            # we assume that pyfid holds
-            # a ref to a python file
-            # object
-            elif not self.drop_handles:
-                if self.index.fd is NULL:
-                    self.index.fd = fdopen(self.pyfid.fileno(), 'rb')
-                    yield
-
             # otherwise we open a new
             # file handle on each access
             else:
-                pyfid = None
-                try:
-                    pyfid = open(self.filename, 'rb')
 
-                    self.pyfid    = pyfid
-                    self.index.fd = fdopen(pyfid.fileno(), 'rb')
+                try:
+                    self.index.fd = fopen(self.filename, 'rb')
                     yield
 
                 finally:
+                    fclose(self.index.fd)
                     self.index.fd = NULL
-                    self.pyfid    = None
-
-                    if pyfid is not None:
-                        pyfid.close()
-                    del pyfid
 
         return proxy()
 
@@ -322,8 +318,12 @@ cdef class _IndexedGzipFile:
         if self.closed:
             raise IOError('_IndexedGzipFile is already closed')
 
+        if   self.own_file and self.pyfid    is not None: self.pyfid.close()
+        elif self.own_file and self.index.fd is not NULL: fclose(self.index.fd)
+
         zran.zran_free(&self.index)
 
+        self.index.fd  = NULL
         self.filename  = None
         self.pyfid     = None
         self.finalized = True

@@ -1,7 +1,9 @@
 # indexed_gzip
 
 
-[![Build Status](https://travis-ci.org/pauldmccarthy/indexed_gzip.svg?branch=master)](https://travis-ci.org/pauldmccarthy/indexed_gzip/)
+[![Travis build status](https://travis-ci.org/pauldmccarthy/indexed_gzip.svg?branch=master)](https://travis-ci.org/pauldmccarthy/indexed_gzip/)
+
+[![Appveyor build status](https://ci.appveyor.com/api/projects/status/github/indexed_gzip)](https://ci.appveyor.com/project/pauldmccarthy/indexed_gzip)
 
 [![PyPi version](https://img.shields.io/pypi/v/indexed_gzip.svg)](https://pypi.python.org/pypi/indexed_gzip/)
 

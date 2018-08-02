@@ -271,16 +271,21 @@ cdef class _IndexedGzipFile:
             # otherwise we open a new
             # file handle on each access
             else:
+                pyfid = None
                 try:
-                    with open(self.filename, 'rb') as pyfid:
-                        self.pyfid    = pyfid
-                        self.index.fd = fdopen(pyfid.fileno(), 'rb')
-                        yield
+                    pyfid = open(self.filename, 'rb')
+
+                    self.pyfid    = pyfid
+                    self.index.fd = fdopen(pyfid.fileno(), 'rb')
+                    yield
 
                 finally:
-                    fclose(self.index.fd)
-                    self.pyfid    = None
                     self.index.fd = NULL
+                    self.pyfid    = None
+
+                    if pyfid is not None:
+                        pyfid.close()
+                    del pyfid
 
         return proxy()
 
@@ -459,49 +464,51 @@ cdef class _IndexedGzipFile:
         cdef void              *buffer
         cdef int64_t            ret
 
-        # Read until EOF or enough
-        # bytes have been read
-        while True:
+        with self.__file_handle():
 
-            buffer = <char *>buf.buffer + offset
+            # Read until EOF or enough
+            # bytes have been read
+            while True:
 
-            # read some bytes
-            with self.__file_handle(), nogil:
-                ret = zran.zran_read(index, buffer, bufsz)
+                # read some bytes into the correct
+                # buffer location
+                buffer = <char *>buf.buffer + offset
+                with nogil:
+                    ret = zran.zran_read(index, buffer, bufsz)
 
-            # see how the read went
-            if ret == zran.ZRAN_READ_FAIL:
-                raise ZranError('zran_read returned error ({})'.format(ret))
+                # see how the read went
+                if ret == zran.ZRAN_READ_FAIL:
+                    raise ZranError('zran_read returned error ({})'.format(ret))
 
-            # This will happen if the current
-            # seek point is not covered by the
-            # index, and auto-build is disabled
-            elif ret == zran.ZRAN_READ_NOT_COVERED:
-                raise NotCoveredError('Index does not cover current offset')
+                # This will happen if the current
+                # seek point is not covered by the
+                # index, and auto-build is disabled
+                elif ret == zran.ZRAN_READ_NOT_COVERED:
+                    raise NotCoveredError('Index does not cover current offset')
 
-            # No bytes were read, and there are
-            # no more bytes to read. This will
-            # happen when the seek point was at
-            # or beyond EOF when zran_read was
-            # called
-            elif ret == zran.ZRAN_READ_EOF:
-                break
+                # No bytes were read, and there are
+                # no more bytes to read. This will
+                # happen when the seek point was at
+                # or beyond EOF when zran_read was
+                # called
+                elif ret == zran.ZRAN_READ_EOF:
+                    break
 
-            nread  += ret
-            offset += ret
+                nread  += ret
+                offset += ret
 
-            # If we requested a specific number of
-            # bytes, zran_read will have returned
-            # them all (or all until EOF), so we're
-            # finished
-            if nbytes > 0:
-                break
+                # If we requested a specific number of
+                # bytes, zran_read will have returned
+                # them all (or all until EOF), so we're
+                # finished
+                if nbytes > 0:
+                    break
 
-            # Otherwise if reading until EOF, check
-            # and increase the buffer size if necessary
-            if (nread + self.readall_buf_size) > buf.size:
-                buf.resize(buf.size + self.readall_buf_size)
-                offset = nread
+                # Otherwise if reading until EOF, check
+                # and increase the buffer size if necessary
+                if (nread + self.readall_buf_size) > buf.size:
+                    buf.resize(buf.size + self.readall_buf_size)
+                    offset = nread
 
         buf.resize(nread)
         pybuf = <bytes>(<char *>buf.buffer)[:nread]

@@ -1,17 +1,17 @@
-os: Visual Studio 2015
+build: false
+
 
 environment:
-    matrix:
-      - PYTHON_VERSION: "2.7"
-        MINICONDA: "C:\\Miniconda-x64"
-        PYTHON: "C:\\Miniconda-x64"
-        PYTHON_ARCH: "64"
-      - PYTHON_VERSION: "3.6"
-        PYTHON: "C:\\Miniconda36-x64"
-        MINICONDA: "C:\\Miniconda36-x64"
-        PYTHON_ARCH: "64"
+  matrix:
+    - PYTHON_VERSION: "2.7"
+      MINICONDA: "C:\\Miniconda-x64"
+      PYTHON: "C:\\Miniconda-x64"
+      PYTHON_ARCH: "64"
+    - PYTHON_VERSION: "3.6"
+      PYTHON: "C:\\Miniconda36-x64"
+      MINICONDA: "C:\\Miniconda36-x64"
+      PYTHON_ARCH: "64"
 
-build: false
 
 install:
   - "set PATH=%MINICONDA%;%MINICONDA%\\Scripts;%PATH%"
@@ -19,8 +19,9 @@ install:
   - conda create  --yes -n test_env python=%PYTHON_VERSION%
   - activate test_env
   - conda install --yes cython numpy zlib pytest six
-  - set ZLIB_HOME=%PYTHON%\\Library
+  - set ZLIB_HOME=%CONDA_HOME%\\Library
   - python setup.py develop
+
 
 test_script:
   - pytest -v -s -m indexed_gzip_test          --niters 250 --pyargs indexed_gzip

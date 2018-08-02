@@ -1,0 +1,43 @@
+environment:
+    matrix:
+      - PYTHON: "C:\\Miniconda"
+        PYTHON_VERSION: "2.7"
+        PYTHON_ARCH: "32"
+      - PYTHON: "C:\\Miniconda-x64"
+        PYTHON_VERSION: "2.7"
+        PYTHON_ARCH: "64"
+      - PYTHON: "C:\\Miniconda36"
+        PYTHON_VERSION: "3.6"
+        PYTHON_ARCH: "32"
+      - PYTHON: "C:\\Miniconda36-x64"
+        PYTHON_VERSION: "3.6"
+        PYTHON_ARCH: "64"
+
+build: false
+
+install:
+  - "set PATH=%MINICONDA%;%MINICONDA%\\Scripts;%PATH%"
+  - conda update  --yes -q conda
+  - conda create  --yes -n test_env python=%PYTHON_VERSION%
+  - activate test_env
+  - conda install --yes cython numpy zlib pytest six
+
+build_script:
+
+  # install build dependencies
+  - conda install --yes conda-build %BUILD_DEPENDS%
+  - set ZLIB_HOME=%PYTHON%\\Library
+
+  # Build and install the wheel
+  - cd %REPO_DIR%
+  - git checkout %BUILD_COMMIT%
+  - python setup.py bdist_wheel
+  - pip install --no-index --find-links dist %PACKAGE_NAME%
+
+  - cd ..
+  - md testing
+  - cd testing
+  - cp ..\\%REPO_DIR%\\conftest.py .
+  - pytest -v -s -m indexed_gzip_test          --niters 250 --pyargs indexed_gzip
+  - pytest -v -s -m indexed_gzip_test --concat --niters 250 --pyargs indexed_gzip
+  - cd ..\\%REPO_DIR%

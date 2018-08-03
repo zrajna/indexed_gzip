@@ -207,7 +207,7 @@ cdef class _IndexedGzipFile:
         if not drop_handles:
             if fileobj is None:
                 fileobj = open(filename, mode)
-            fd = fdopen(fileobj.fileno(), mode)
+            fd = fdopen(fileobj.fileno(), 'rb')
 
         self.auto_build       = auto_build
         self.readall_buf_size = readall_buf_size
@@ -276,7 +276,7 @@ cdef class _IndexedGzipFile:
             else:
 
                 try:
-                    self.index.fd = fopen(self.filename, 'rb')
+                    self.index.fd = fopen(self.filename.encode(), 'rb')
                     yield
 
                 finally:

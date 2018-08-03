@@ -1,5 +1,14 @@
 # `indexed_gzip` changelog
 
+
+## 0.8.7 (August 3rd 2018)
+
+* Internal changes to how file handles are managed, to improve Windows
+  compatibility.
+* The ``_IndexedGzipFile.read`` method now acquires a single file handle, rather
+  than opening/closing multiple handles across calls to ``zran_read``.
+
+
 ## 0.8.6 (June 27th 2018)
 
 * Workaround for issues with Python 2.7 and Cython < 0.26 (#10).

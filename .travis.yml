@@ -5,60 +5,100 @@ branches:
 sudo: required
 
 language: python
-python:
-  - "2.7"
-  - "3.6"
 
 services:
   - docker
 
+matrix:
+
+  # Tests covering the zran.c library.
+  include:
+    - python: 3.6
+      env:    TEST_SUITE=zran_test                       NITERS=5000 NELEMS=50000  TEST_PATTERN="not test_readbuf_spacing_sizes and not test_seek_then_read_block"
+    - python: 3.6
+      env:    TEST_SUITE=zran_test EXTRA_ARGS="--concat" NITERS=5000 NELEMS=50000  TEST_PATTERN="not test_readbuf_spacing_sizes and not test_seek_then_read_block"
+    - python: 3.6
+      env:    TEST_SUITE=zran_test                       NITERS=1000 NELEMS=50000  TEST_PATTERN="test_readbuf_spacing_sizes"
+    - python: 3.6
+      env:    TEST_SUITE=zran_test EXTRA_ARGS="--concat" NITERS=1000 NELEMS=50000  TEST_PATTERN="test_readbuf_spacing_sizes"
+    - python: 3.6
+      env:    TEST_SUITE=zran_test                       NITERS=1000 NELEMS=50000  TEST_PATTERN="test_seek_then_read_block"
+    - python: 3.6
+      env:    TEST_SUITE=zran_test EXTRA_ARGS="--concat" NITERS=1000 NELEMS=50000  TEST_PATTERN="test_seek_then_read_block"
+    - python: 3.6
+
+      env:    TEST_SUITE=zran_test                       NITERS=5000 NELEMS=131072  TEST_PATTERN="not test_readbuf_spacing_sizes and not test_seek_then_read_block"
+    - python: 3.6
+      env:    TEST_SUITE=zran_test EXTRA_ARGS="--concat" NITERS=5000 NELEMS=131072  TEST_PATTERN="not test_readbuf_spacing_sizes and not test_seek_then_read_block"
+    - python: 3.6
+      env:    TEST_SUITE=zran_test                       NITERS=1000 NELEMS=131072  TEST_PATTERN="test_readbuf_spacing_sizes"
+    - python: 3.6
+      env:    TEST_SUITE=zran_test EXTRA_ARGS="--concat" NITERS=1000 NELEMS=131072  TEST_PATTERN="test_readbuf_spacing_sizes"
+    - python: 3.6
+      env:    TEST_SUITE=zran_test                       NITERS=1000 NELEMS=131072  TEST_PATTERN="test_seek_then_read_block"
+    - python: 3.6
+      env:    TEST_SUITE=zran_test EXTRA_ARGS="--concat" NITERS=1000 NELEMS=131072  TEST_PATTERN="test_seek_then_read_block"
+
+    - python: 3.6
+      env:    TEST_SUITE=zran_test                       NITERS=5000 NELEMS=1000000  TEST_PATTERN="not test_readbuf_spacing_sizes and not test_seek_then_read_block"
+    - python: 3.6
+      env:    TEST_SUITE=zran_test EXTRA_ARGS="--concat" NITERS=5000 NELEMS=1000000  TEST_PATTERN="not test_readbuf_spacing_sizes and not test_seek_then_read_block"
+    - python: 3.6
+      env:    TEST_SUITE=zran_test                       NITERS=1000 NELEMS=1000000  TEST_PATTERN="test_readbuf_spacing_sizes"
+    - python: 3.6
+      env:    TEST_SUITE=zran_test EXTRA_ARGS="--concat" NITERS=1000 NELEMS=1000000  TEST_PATTERN="test_readbuf_spacing_sizes"
+    - python: 3.6
+      env:    TEST_SUITE=zran_test                       NITERS=1000 NELEMS=1000000  TEST_PATTERN="test_seek_then_read_block"
+    - python: 3.6
+      env:    TEST_SUITE=zran_test EXTRA_ARGS="--concat" NITERS=1000 NELEMS=1000000  TEST_PATTERN="test_seek_then_read_block"
+
+    # NELEMS=something arbitrary that is not divisible
+    # by any of the default buffer/spacing sizes
+    - python: 3.6
+      env:    TEST_SUITE=zran_test                       NITERS=5000 NELEMS=2000000  TEST_PATTERN="not test_readbuf_spacing_sizes and not test_seek_then_read_block"
+    - python: 3.6
+      env:    TEST_SUITE=zran_test EXTRA_ARGS="--concat" NITERS=5000 NELEMS=2000000  TEST_PATTERN="not test_readbuf_spacing_sizes and not test_seek_then_read_block"
+    - python: 3.6
+      env:    TEST_SUITE=zran_test                       NITERS=500  NELEMS=2000000  TEST_PATTERN="test_readbuf_spacing_sizes"
+    - python: 3.6
+      env:    TEST_SUITE=zran_test EXTRA_ARGS="--concat" NITERS=500  NELEMS=2000000  TEST_PATTERN="test_readbuf_spacing_sizes"
+    - python: 3.6
+      env:    TEST_SUITE=zran_test                       NITERS=500  NELEMS=2000000  TEST_PATTERN="test_seek_then_read_block"
+    - python: 3.6
+      env:    TEST_SUITE=zran_test EXTRA_ARGS="--concat" NITERS=500  NELEMS=2000000  TEST_PATTERN="test_seek_then_read_block"
+
+    # NELEMS=805306368 ~ 6GB (for testing 64 bit support)
+    - python: 3.6
+      env:    TEST_SUITE=zran_test EXTRA_ARGS="--use_mmap"           NITERS=1000 NELEMS=805306368 TEST_PATTERN="not test_readbuf_spacing_sizes and not test_seek_then_read_block"
+    - python: 3.6
+      env:    TEST_SUITE=zran_test EXTRA_ARGS="--use_mmap --concat"  NITERS=1000 NELEMS=805306368 TEST_PATTERN="not test_readbuf_spacing_sizes and not test_seek_then_read_block"
+    - python: 3.6
+      env:    TEST_SUITE=zran_test EXTRA_ARGS="--use_mmap"           NITERS=50   NELEMS=805306368 TEST_PATTERN="test_readbuf_spacing_sizes"
+    - python: 3.6
+      env:    TEST_SUITE=zran_test EXTRA_ARGS="--use_mmap --concat"  NITERS=50   NELEMS=805306368 TEST_PATTERN="test_readbuf_spacing_sizes"
+    - python: 3.6
+      env:    TEST_SUITE=zran_test EXTRA_ARGS="--use_mmap"           NITERS=25   NELEMS=805306368 TEST_PATTERN="test_seek_then_read_block"
+    - python: 3.6
+      env:    TEST_SUITE=zran_test EXTRA_ARGS="--use_mmap --concat"  NITERS=25   NELEMS=805306368 TEST_PATTERN="test_seek_then_read_block"
+    - python: 3.6
+    - env:    TEST_SUITE=32bittest
+
+# Tests covering the indexed_gzip module
+python:
+  - 2.7
+  - 3.4
+  - 3.5
+  - 3.6
+
 env:
-
-  - TEST_SUITE=zran_test                               NITERS=5000 NELEMS=50000  TEST_PATTERN="not test_readbuf_spacing_sizes and not test_seek_then_read_block"
-  - TEST_SUITE=zran_test         EXTRA_ARGS="--concat" NITERS=5000 NELEMS=50000  TEST_PATTERN="not test_readbuf_spacing_sizes and not test_seek_then_read_block"
-  - TEST_SUITE=zran_test                               NITERS=1000 NELEMS=50000  TEST_PATTERN="test_readbuf_spacing_sizes"
-  - TEST_SUITE=zran_test         EXTRA_ARGS="--concat" NITERS=1000 NELEMS=50000  TEST_PATTERN="test_readbuf_spacing_sizes"
-  - TEST_SUITE=zran_test                               NITERS=1000 NELEMS=50000  TEST_PATTERN="test_seek_then_read_block"
-  - TEST_SUITE=zran_test         EXTRA_ARGS="--concat" NITERS=1000 NELEMS=50000  TEST_PATTERN="test_seek_then_read_block"
-  - TEST_SUITE=indexed_gzip_test                       NITERS=5000 NELEMS=50000
-  - TEST_SUITE=indexed_gzip_test EXTRA_ARGS="--concat" NITERS=5000 NELEMS=50000
-
-  - TEST_SUITE=zran_test                               NITERS=5000 NELEMS=131072  TEST_PATTERN="not test_readbuf_spacing_sizes and not test_seek_then_read_block"
-  - TEST_SUITE=zran_test         EXTRA_ARGS="--concat" NITERS=5000 NELEMS=131072  TEST_PATTERN="not test_readbuf_spacing_sizes and not test_seek_then_read_block"
-  - TEST_SUITE=zran_test                               NITERS=1000 NELEMS=131072  TEST_PATTERN="test_readbuf_spacing_sizes"
-  - TEST_SUITE=zran_test         EXTRA_ARGS="--concat" NITERS=1000 NELEMS=131072  TEST_PATTERN="test_readbuf_spacing_sizes"
-  - TEST_SUITE=zran_test                               NITERS=1000 NELEMS=131072  TEST_PATTERN="test_seek_then_read_block"
-  - TEST_SUITE=zran_test         EXTRA_ARGS="--concat" NITERS=1000 NELEMS=131072  TEST_PATTERN="test_seek_then_read_block"
-  - TEST_SUITE=indexed_gzip_test                       NITERS=5000 NELEMS=131072
-  - TEST_SUITE=indexed_gzip_test EXTRA_ARGS="--concat" NITERS=5000 NELEMS=131072
-
-  - TEST_SUITE=zran_test                               NITERS=5000 NELEMS=1000000  TEST_PATTERN="not test_readbuf_spacing_sizes and not test_seek_then_read_block"
-  - TEST_SUITE=zran_test         EXTRA_ARGS="--concat" NITERS=5000 NELEMS=1000000  TEST_PATTERN="not test_readbuf_spacing_sizes and not test_seek_then_read_block"
-  - TEST_SUITE=zran_test                               NITERS=1000 NELEMS=1000000  TEST_PATTERN="test_readbuf_spacing_sizes"
-  - TEST_SUITE=zran_test         EXTRA_ARGS="--concat" NITERS=1000 NELEMS=1000000  TEST_PATTERN="test_readbuf_spacing_sizes"
-  - TEST_SUITE=zran_test                               NITERS=1000 NELEMS=1000000  TEST_PATTERN="test_seek_then_read_block"
-  - TEST_SUITE=zran_test         EXTRA_ARGS="--concat" NITERS=1000 NELEMS=1000000  TEST_PATTERN="test_seek_then_read_block"
-  - TEST_SUITE=indexed_gzip_test                       NITERS=5000 NELEMS=1000000
-  - TEST_SUITE=indexed_gzip_test EXTRA_ARGS="--concat" NITERS=5000 NELEMS=1000000
-
-# NELEMS=something arbitrary that is not divisible
-# by any of the default buffer/spacing sizes
-  - TEST_SUITE=zran_test                               NITERS=5000 NELEMS=2000000  TEST_PATTERN="not test_readbuf_spacing_sizes and not test_seek_then_read_block"
-  - TEST_SUITE=zran_test         EXTRA_ARGS="--concat" NITERS=5000 NELEMS=2000000  TEST_PATTERN="not test_readbuf_spacing_sizes and not test_seek_then_read_block"
-  - TEST_SUITE=zran_test                               NITERS=500  NELEMS=2000000  TEST_PATTERN="test_readbuf_spacing_sizes"
-  - TEST_SUITE=zran_test         EXTRA_ARGS="--concat" NITERS=500  NELEMS=2000000  TEST_PATTERN="test_readbuf_spacing_sizes"
-  - TEST_SUITE=zran_test                               NITERS=500  NELEMS=2000000  TEST_PATTERN="test_seek_then_read_block"
-  - TEST_SUITE=zran_test         EXTRA_ARGS="--concat" NITERS=500  NELEMS=2000000  TEST_PATTERN="test_seek_then_read_block"
-  - TEST_SUITE=indexed_gzip_test                       NITERS=5000 NELEMS=2000000
-  - TEST_SUITE=indexed_gzip_test EXTRA_ARGS="--concat" NITERS=5000 NELEMS=2000000
-
-# NELEMS=805306368 ~ 6GB (for testing 64 bit support)
-  - TEST_SUITE=zran_test         EXTRA_ARGS="--use_mmap"           NITERS=1000 NELEMS=805306368 TEST_PATTERN="not test_readbuf_spacing_sizes and not test_seek_then_read_block"
-  - TEST_SUITE=zran_test         EXTRA_ARGS="--use_mmap --concat"  NITERS=1000 NELEMS=805306368 TEST_PATTERN="not test_readbuf_spacing_sizes and not test_seek_then_read_block"
-  - TEST_SUITE=zran_test         EXTRA_ARGS="--use_mmap"           NITERS=50   NELEMS=805306368 TEST_PATTERN="test_readbuf_spacing_sizes"
-  - TEST_SUITE=zran_test         EXTRA_ARGS="--use_mmap --concat"  NITERS=50   NELEMS=805306368 TEST_PATTERN="test_readbuf_spacing_sizes"
-  - TEST_SUITE=zran_test         EXTRA_ARGS="--use_mmap"           NITERS=25   NELEMS=805306368 TEST_PATTERN="test_seek_then_read_block"
-  - TEST_SUITE=zran_test         EXTRA_ARGS="--use_mmap --concat"  NITERS=25   NELEMS=805306368 TEST_PATTERN="test_seek_then_read_block"
+  - TEST_SUITE=indexed_gzip_test                                   NITERS=5000 NELEMS=50000
+  - TEST_SUITE=indexed_gzip_test EXTRA_ARGS="--concat"             NITERS=5000 NELEMS=50000
+  - TEST_SUITE=indexed_gzip_test                                   NITERS=5000 NELEMS=131072
+  - TEST_SUITE=indexed_gzip_test EXTRA_ARGS="--concat"             NITERS=5000 NELEMS=131072
+  - TEST_SUITE=indexed_gzip_test                                   NITERS=5000 NELEMS=1000000
+  - TEST_SUITE=indexed_gzip_test EXTRA_ARGS="--concat"             NITERS=5000 NELEMS=1000000
+  - TEST_SUITE=indexed_gzip_test                                   NITERS=5000 NELEMS=2000000
+  - TEST_SUITE=indexed_gzip_test EXTRA_ARGS="--concat"             NITERS=5000 NELEMS=2000000
   - TEST_SUITE=indexed_gzip_test EXTRA_ARGS="--use_mmap"           NITERS=1000 NELEMS=805306368
   - TEST_SUITE=indexed_gzip_test EXTRA_ARGS="--use_mmap --concat"  NITERS=1000 NELEMS=805306368
   - TEST_SUITE=32bittest

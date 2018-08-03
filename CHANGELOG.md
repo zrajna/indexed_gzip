@@ -5,8 +5,8 @@
 
 * Internal changes to how file handles are managed, to improve Windows
   compatibility.
-* The ``_IndexedGzipFile.read`` method now acquires a single file handle, rather
-  than opening/closing multiple handles across calls to ``zran_read``.
+* The `_IndexedGzipFile.read` method now acquires a single file handle, rather
+  than opening/closing multiple handles across calls to `zran_read`.
 
 
 ## 0.8.6 (June 27th 2018)

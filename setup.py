@@ -68,6 +68,10 @@ class Clean(Command):
                 except OSError: pass
 
 
+with open(op.join(op.dirname(__file__), 'README.md'), 'rt') as f:
+    readme = f.read().strip()
+
+
 # Platform information
 python2 = sys.version_info[0] == 2
 noc99   = python2 or (sys.version_info[0] == 3 and sys.version_info[1] <= 4)
@@ -199,6 +203,7 @@ setup(
     author='Paul McCarthy',
     author_email='pauldmccarthy@gmail.com',
     description='Fast random access of gzip files in Python',
+    long_description=readme,
     url='https://github.com/pauldmccarthy/indexed_gzip',
     license='zlib',
 

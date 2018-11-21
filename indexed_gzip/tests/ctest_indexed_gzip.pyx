@@ -14,7 +14,7 @@ import               sys
 import               time
 import               gzip
 import               random
-import               struct
+import               tempfile
 import               hashlib
 import               textwrap
 
@@ -668,3 +668,40 @@ def test_wrapper_class():
             f.export_index(idxfname)
 
             f.import_index(idxfname)
+
+
+def test_size_multiple_of_readbuf():
+
+    fname = 'test.gz'
+
+    with tempfile.TemporaryDirectory():
+
+        data = np.random.randint(1, 1000, 10000, dtype=np.uint32)
+
+        with gzip.open(fname, 'wb') as f:
+            f.write(data.tobytes())
+
+        fsize = op.getsize(fname)
+        bufsz = fsize
+
+        with igzip.IndexedGzipFile(fname, readbuf_size=bufsz) as f:
+            assert f.seek(fsize) == fsize
+
+        with igzip.IndexedGzipFile(fname, readbuf_size=bufsz) as f:
+            read = np.ndarray(shape=10000, dtype=np.uint32, buffer=f.read())
+            assert np.all(read == data)
+
+        # we're screwed if the
+        # file size is prime
+        for div in (2, 3, 5, 7, 11, 13, 17):
+            if div % fsize == 0:
+                break
+
+        bufsz = fsize / div
+
+        with igzip.IndexedGzipFile(fname, readbuf_size=bufsz) as f:
+            assert f.seek(fsize) == fsize
+
+        with igzip.IndexedGzipFile(fname, readbuf_size=bufsz) as f:
+            read = np.ndarray(shape=10000, dtype=np.uint32, buffer=f.read())
+            assert np.all(read == data)

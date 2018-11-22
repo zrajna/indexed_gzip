@@ -132,3 +132,6 @@ def test_import_export_index():
 
 def test_wrapper_class():
     ctest_indexed_gzip.test_wrapper_class()
+
+def test_size_multiple_of_readbuf():
+    ctest_indexed_gzip.test_size_multiple_of_readbuf()

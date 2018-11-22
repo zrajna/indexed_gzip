@@ -1403,11 +1403,6 @@ static int _zran_inflate(zran_index_t *index,
          */
         if (strm->avail_in < 2) {
 
-            if (feof(index->fd)) {
-                return_val = ZRAN_INFLATE_EOF;
-                break;
-            }
-
             /*
              * If there are any unprocessed bytes
              * left over, put them at the beginning
@@ -1432,8 +1427,27 @@ static int _zran_inflate(zran_index_t *index,
                           index->readbuf_size - strm->avail_in,
                           index->fd);
 
-            if (ferror(index->fd)) goto fail;
-            if (f_ret == 0)        goto fail;
+            if (ferror(index->fd)) {
+                goto fail;
+            }
+
+            /*
+             * No bytes read - we've reached EOF
+             */
+            if (f_ret == 0) {
+                if (feof(index->fd)) {
+                    return_val = ZRAN_INFLATE_EOF;
+                    break;
+                }
+                /*
+                 * Or something went wrong (this
+                 * should never happen if ferror
+                 * does the right thing).
+                 */
+                else {
+                    goto fail;
+                }
+            }
 
             zran_log("Read %lu bytes from file [c=%llu, u=%llu]\n",
                      f_ret, cmp_offset, uncmp_offset);
@@ -1602,8 +1616,17 @@ static int _zran_inflate(zran_index_t *index,
              * footer takes up 8 bytes, which
              * do not get processed by the
              * inflate function.
+             *
+             * We use ftell rather than feof,
+             * as the EOF indicator only gets
+             * set on attempts to read past
+             * the end of a file, and this
+             * won't happen when the file
+             * size is an exact multiple of
+             # the read buffer size.
              */
-            if (feof(index->fd) && strm->avail_in <= 8) {
+            if ((FTELL(index->fd) >= index->compressed_size) &&
+                strm->avail_in <= 8) {
 
                 zran_log("End of file, stopping inflation\n");
 

@@ -14,9 +14,11 @@ import               sys
 import               time
 import               gzip
 import               random
-import               struct
+import               tempfile
+import               shutil
 import               hashlib
 import               textwrap
+import               contextlib
 
 import numpy as np
 
@@ -31,6 +33,19 @@ from . import testdir
 from libc.stdio cimport (SEEK_SET,
                          SEEK_CUR,
                          SEEK_END)
+
+
+@contextlib.contextmanager
+def tempdir():
+    testdir = tempfile.mkdtemp()
+    prevdir = os.getcwd()
+    try:
+        os.chdir(testdir)
+        yield testdir
+
+    finally:
+        shutil.rmtree(testdir)
+        os.chdir(prevdir)
 
 
 def read_element(gzf, element, seek=True):
@@ -318,7 +333,7 @@ def test_seek(concat):
                 f.seek(100, SEEK_END)
 
         for data, expected in results:
-            val = np.fromstring(data, dtype=np.uint64)
+            val = np.frombuffer(data, dtype=np.uint64)
             assert val == expected
 
 
@@ -384,7 +399,7 @@ def test_pread():
             for i in range(20):
                 off  = np.random.randint(0, nelems, 1)[0]
                 data = f.pread(8, off * 8)
-                val  = np.fromstring(data, dtype=np.uint64)
+                val  = np.frombuffer(data, dtype=np.uint64)
                 assert val[0] == off
 
 
@@ -610,14 +625,14 @@ def test_import_export_index():
         # Check that index file works via __init__
         with igzip._IndexedGzipFile(fname, index_file=idxfname) as f:
             f.seek(65535 * 8)
-            val = np.fromstring(f.read(8), dtype=np.uint64)
+            val = np.frombuffer(f.read(8), dtype=np.uint64)
             assert val[0] == 65535
 
         # Check that index file works via import_index
         with igzip._IndexedGzipFile(fname) as f:
             f.import_index(idxfname)
             f.seek(65535 * 8)
-            val = np.fromstring(f.read(8), dtype=np.uint64)
+            val = np.frombuffer(f.read(8), dtype=np.uint64)
             assert val[0] == 65535
 
         # generate an index file from open file handle
@@ -645,7 +660,7 @@ def test_import_export_index():
             with open(idxfname, 'rb') as idxf:
                 f.import_index(fileobj=idxf)
             f.seek(65535 * 8)
-            val = np.fromstring(f.read(8), dtype=np.uint64)
+            val = np.frombuffer(f.read(8), dtype=np.uint64)
             assert val[0] == 65535
 
 
@@ -668,3 +683,40 @@ def test_wrapper_class():
             f.export_index(idxfname)
 
             f.import_index(idxfname)
+
+
+def test_size_multiple_of_readbuf():
+
+    fname = 'test.gz'
+
+    with tempdir():
+
+        data = np.random.randint(1, 1000, 10000, dtype=np.uint32)
+
+        with gzip.open(fname, 'wb') as f:
+            f.write(data.tobytes())
+
+        fsize = op.getsize(fname)
+        bufsz = fsize
+
+        with igzip.IndexedGzipFile(fname, readbuf_size=bufsz) as f:
+            assert f.seek(fsize) == fsize
+
+        with igzip.IndexedGzipFile(fname, readbuf_size=bufsz) as f:
+            read = np.ndarray(shape=10000, dtype=np.uint32, buffer=f.read())
+            assert np.all(read == data)
+
+        # we're screwed if the
+        # file size is prime
+        for div in (2, 3, 5, 7, 11, 13, 17):
+            if div % fsize == 0:
+                break
+
+        bufsz = fsize / div
+
+        with igzip.IndexedGzipFile(fname, readbuf_size=bufsz) as f:
+            assert f.seek(fsize) == fsize
+
+        with igzip.IndexedGzipFile(fname, readbuf_size=bufsz) as f:
+            read = np.ndarray(shape=10000, dtype=np.uint32, buffer=f.read())
+            assert np.all(read == data)

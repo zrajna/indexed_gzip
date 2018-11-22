@@ -35,7 +35,7 @@ from libc.stdio cimport (SEEK_SET,
 
 
 def tempdir():
-    testdir = tempfile.mkdtemp(dir=root)
+    testdir = tempfile.mkdtemp()
     prevdir = os.getcwd()
     try:
         os.chdir(testdir)

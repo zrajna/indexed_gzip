@@ -18,6 +18,7 @@ import               tempfile
 import               shutil
 import               hashlib
 import               textwrap
+import               contextlib
 
 import numpy as np
 
@@ -34,6 +35,7 @@ from libc.stdio cimport (SEEK_SET,
                          SEEK_END)
 
 
+@contextlib.contextmanager
 def tempdir():
     testdir = tempfile.mkdtemp()
     prevdir = os.getcwd()

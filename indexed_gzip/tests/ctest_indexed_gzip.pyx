@@ -18,7 +18,6 @@ import               tempfile
 import               shutil
 import               hashlib
 import               textwrap
-import               contextlib
 
 import numpy as np
 
@@ -33,19 +32,6 @@ from . import testdir
 from libc.stdio cimport (SEEK_SET,
                          SEEK_CUR,
                          SEEK_END)
-
-
-@contextlib.contextmanager
-def tempdir():
-    testdir = tempfile.mkdtemp()
-    prevdir = os.getcwd()
-    try:
-        os.chdir(testdir)
-        yield testdir
-
-    finally:
-        shutil.rmtree(testdir)
-        os.chdir(prevdir)
 
 
 def read_element(gzf, element, seek=True):
@@ -689,22 +675,31 @@ def test_size_multiple_of_readbuf():
 
     fname = 'test.gz'
 
-    with tempdir():
+    testdir = tempfile.mkdtemp()
+    prevdir = os.getcwd()
+    os.chdir(testdir)
 
+    try:
         data = np.random.randint(1, 1000, 10000, dtype=np.uint32)
 
         with gzip.open(fname, 'wb') as f:
             f.write(data.tobytes())
+        del f
+        f = None
 
         fsize = op.getsize(fname)
         bufsz = fsize
 
         with igzip.IndexedGzipFile(fname, readbuf_size=bufsz) as f:
             assert f.seek(fsize) == fsize
+        del f
+        f = None
 
         with igzip.IndexedGzipFile(fname, readbuf_size=bufsz) as f:
             read = np.ndarray(shape=10000, dtype=np.uint32, buffer=f.read())
             assert np.all(read == data)
+        del f
+        f = None
 
         # we're screwed if the
         # file size is prime
@@ -716,7 +711,14 @@ def test_size_multiple_of_readbuf():
 
         with igzip.IndexedGzipFile(fname, readbuf_size=bufsz) as f:
             assert f.seek(fsize) == fsize
+        del f
+        f = None
 
         with igzip.IndexedGzipFile(fname, readbuf_size=bufsz) as f:
             read = np.ndarray(shape=10000, dtype=np.uint32, buffer=f.read())
             assert np.all(read == data)
+        del f
+        f = None
+    finally:
+        os.chdir(prevdir)
+        shutil.rmtree(testdir)

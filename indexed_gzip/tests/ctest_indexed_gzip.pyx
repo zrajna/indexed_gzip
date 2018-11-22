@@ -18,7 +18,6 @@ import               tempfile
 import               shutil
 import               hashlib
 import               textwrap
-import               contextlib
 
 import numpy as np
 
@@ -33,19 +32,6 @@ from . import testdir
 from libc.stdio cimport (SEEK_SET,
                          SEEK_CUR,
                          SEEK_END)
-
-
-@contextlib.contextmanager
-def tempdir():
-    testdir = tempfile.mkdtemp()
-    prevdir = os.getcwd()
-    try:
-        os.chdir(testdir)
-        yield testdir
-
-    finally:
-        shutil.rmtree(testdir)
-        os.chdir(prevdir)
 
 
 def read_element(gzf, element, seek=True):
@@ -689,8 +675,11 @@ def test_size_multiple_of_readbuf():
 
     fname = 'test.gz'
 
-    with tempdir():
+    testdir = tempfile.mkdtemp()
+    prevdir = os.getcwd()
+    os.chdir(testdir)
 
+    try:
         data = np.random.randint(1, 1000, 10000, dtype=np.uint32)
 
         with gzip.open(fname, 'wb') as f:
@@ -730,3 +719,6 @@ def test_size_multiple_of_readbuf():
             assert np.all(read == data)
         del f
         f = None
+    finally:
+        os.chdir(prevdir)
+        shutil.rmtree(testdir)

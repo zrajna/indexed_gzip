@@ -720,3 +720,5 @@ def test_size_multiple_of_readbuf():
         with igzip.IndexedGzipFile(fname, readbuf_size=bufsz) as f:
             read = np.ndarray(shape=10000, dtype=np.uint32, buffer=f.read())
             assert np.all(read == data)
+
+        del f

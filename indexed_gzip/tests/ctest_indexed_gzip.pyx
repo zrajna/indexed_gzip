@@ -332,7 +332,7 @@ def test_seek(concat):
                 f.seek(100, SEEK_END)
 
         for data, expected in results:
-            val = np.fromstring(data, dtype=np.uint64)
+            val = np.frombuffer(data, dtype=np.uint64)
             assert val == expected
 
 
@@ -398,7 +398,7 @@ def test_pread():
             for i in range(20):
                 off  = np.random.randint(0, nelems, 1)[0]
                 data = f.pread(8, off * 8)
-                val  = np.fromstring(data, dtype=np.uint64)
+                val  = np.frombuffer(data, dtype=np.uint64)
                 assert val[0] == off
 
 
@@ -624,14 +624,14 @@ def test_import_export_index():
         # Check that index file works via __init__
         with igzip._IndexedGzipFile(fname, index_file=idxfname) as f:
             f.seek(65535 * 8)
-            val = np.fromstring(f.read(8), dtype=np.uint64)
+            val = np.frombuffer(f.read(8), dtype=np.uint64)
             assert val[0] == 65535
 
         # Check that index file works via import_index
         with igzip._IndexedGzipFile(fname) as f:
             f.import_index(idxfname)
             f.seek(65535 * 8)
-            val = np.fromstring(f.read(8), dtype=np.uint64)
+            val = np.frombuffer(f.read(8), dtype=np.uint64)
             assert val[0] == 65535
 
         # generate an index file from open file handle
@@ -659,7 +659,7 @@ def test_import_export_index():
             with open(idxfname, 'rb') as idxf:
                 f.import_index(fileobj=idxf)
             f.seek(65535 * 8)
-            val = np.fromstring(f.read(8), dtype=np.uint64)
+            val = np.frombuffer(f.read(8), dtype=np.uint64)
             assert val[0] == 65535
 
 

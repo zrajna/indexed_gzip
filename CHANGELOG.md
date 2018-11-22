@@ -1,6 +1,12 @@
 # `indexed_gzip` changelog
 
 
+## 0.8.8 (November 22nd 2018)
+
+* Fixed bug affecting files which were an exact multiple of the read buffer
+  size.
+
+
 ## 0.8.7 (August 3rd 2018)
 
 * Internal changes to how file handles are managed, to improve Windows

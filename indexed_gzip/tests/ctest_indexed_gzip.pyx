@@ -45,6 +45,7 @@ def tempdir():
 
     finally:
         shutil.rmtree(testdir)
+        os.chdir(prevdir)
 
 
 def read_element(gzf, element, seek=True):

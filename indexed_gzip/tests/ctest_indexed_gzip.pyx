@@ -15,6 +15,7 @@ import               time
 import               gzip
 import               random
 import               tempfile
+import               shutil
 import               hashlib
 import               textwrap
 
@@ -31,6 +32,17 @@ from . import testdir
 from libc.stdio cimport (SEEK_SET,
                          SEEK_CUR,
                          SEEK_END)
+
+
+def tempdir():
+    testdir = tempfile.mkdtemp(dir=root)
+    prevdir = os.getcwd()
+    try:
+        os.chdir(testdir)
+        yield testdir
+
+    finally:
+        shutil.rmtree(testdir)
 
 
 def read_element(gzf, element, seek=True):
@@ -674,7 +686,7 @@ def test_size_multiple_of_readbuf():
 
     fname = 'test.gz'
 
-    with tempfile.TemporaryDirectory():
+    with tempdir():
 
         data = np.random.randint(1, 1000, 10000, dtype=np.uint32)
 

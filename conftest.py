@@ -80,17 +80,15 @@ def seed(request):
 
 
 @pytest.fixture
-def testfile(request):
+def testfile(request, nelems, concat):
 
     filename = request.config.getoption('--testfile')
-    _nelems  = nelems(request)
-    _concat  = concat(request)
 
     if filename is None:
         filename = op.join(os.getcwd(),
-                           'ctest_zran_{}_{}.gz'.format(_nelems, _concat))
+                           'ctest_zran_{}_{}.gz'.format(nelems, concat))
 
     if not op.exists(filename):
-        gen_test_data(filename, _nelems, _concat)
+        gen_test_data(filename, nelems, concat)
 
     return filename

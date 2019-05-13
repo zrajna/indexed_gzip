@@ -47,6 +47,12 @@ static double round(double val)
 }
 #endif
 
+static int max(uint64_t a, uint64_t b) {
+
+  if (a > b) return a;
+  else       return b;
+}
+
 /*
  * Turn this on to make noise.
  *
@@ -2702,7 +2708,7 @@ int zran_import_index(zran_index_t *index,
      * The index file is allowed to contain 0 points, in which case we
      * initialise the point list to 8 (same as in zran_init).
      */
-    new_list = calloc(1, sizeof(zran_point_t) * fmax(npoints, 8));
+    new_list = calloc(1, sizeof(zran_point_t) * max(npoints, 8));
 
     if (new_list == NULL) goto memory_error;
 
@@ -2844,7 +2850,7 @@ int zran_import_index(zran_index_t *index,
      * If npoints is 0, the list will have been
      * initialised to allow space for 8 points.
      */
-    index->size    = fmax(npoints, 8);
+    index->size    = max(npoints, 8);
 
     zran_log("zran_import_index: done\n");
 

@@ -18,7 +18,9 @@
 #ifdef _WIN32
 #define FSEEK _fseeki64
 #define FTELL _ftelli64
+#define NOMINMAX
 #include "windows.h"
+#undef NOMINMAX
 #include "io.h"
 static int is_readonly(FILE *fd)
 {

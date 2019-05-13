@@ -416,7 +416,7 @@ uint32_t ZRAN_INFLATE_STOP_AT_BLOCK         = 64;
  * parameters are respectively updated to contain the total number of
  * compressed bytes that were read from the file, and total number of
  * decompressed bytes that were copied to the data buffer.
-
+ *
  *   - ZRAN_INFLATE_OK:             Inflation was successful and the requested
  *                                  number of bytes were copied to the provided
  *                                  data buffer.
@@ -2698,8 +2698,11 @@ int zran_import_index(zran_index_t *index,
      * At this step, the number of points is known. Allocate space for new list
      * of points. This pointer should be cleaned up before exit in case of
      * failure.
+     *
+     * The index file is allowed to contain 0 points, in which case we
+     * initialise the point list to 8 (same as in zran_init).
      */
-    new_list = calloc(1, sizeof(zran_point_t) * npoints);
+    new_list = calloc(1, sizeof(zran_point_t) * fmax(npoints, 8));
 
     if (new_list == NULL) goto memory_error;
 
@@ -2836,8 +2839,12 @@ int zran_import_index(zran_index_t *index,
     index->list    = new_list;
     index->npoints = npoints;
 
-    /* Let's not forget to update the size as well. */
-    index->size    = npoints;
+    /*
+     * Let's not forget to update the size as well.
+     * If npoints is 0, the list will have been
+     * initialised to allow space for 8 points.
+     */
+    index->size    = fmax(npoints, 8);
 
     zran_log("zran_import_index: done\n");
 

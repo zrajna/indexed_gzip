@@ -8,6 +8,10 @@
  *
  * Author: Paul McCarthy <pauldmccarthy@gmail.com>
  */
+
+// Prevent Windows from defining min/max macros
+#define NOMINMAX
+
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -18,9 +22,7 @@
 #ifdef _WIN32
 #define FSEEK _fseeki64
 #define FTELL _ftelli64
-#define NOMINMAX
 #include "windows.h"
-#undef NOMINMAX
 #include "io.h"
 static int is_readonly(FILE *fd)
 {

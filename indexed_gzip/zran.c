@@ -47,7 +47,7 @@ static double round(double val)
 }
 #endif
 
-static int max(uint64_t a, uint64_t b) {
+static uint32_t max(uint32_t a, uint32_t b) {
 
   if (a > b) return a;
   else       return b;

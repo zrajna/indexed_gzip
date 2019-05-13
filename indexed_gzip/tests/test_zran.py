@@ -36,3 +36,4 @@ if not sys.platform.startswith("win"):
     def test_build_then_read(       testfile, nelems, seed, use_mmap):         ctest_zran.test_build_then_read(       testfile, nelems, seed, use_mmap)
     def test_readbuf_spacing_sizes( testfile, nelems, niters, seed):           ctest_zran.test_readbuf_spacing_sizes( testfile, nelems, niters, seed)
     def test_export_then_import(    testfile):                                 ctest_zran.test_export_then_import(    testfile)
+    def test_export_import_no_points():                                        ctest_zran.test_export_import_no_points()

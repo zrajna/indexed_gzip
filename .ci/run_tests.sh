@@ -4,8 +4,6 @@
 # to be called in any other manner.
 #
 
-apt-get install -y libffi-dev || true
-
 # Get the path to this script
 script_dir=`dirname $0`
 pushd $script_dir > /dev/null

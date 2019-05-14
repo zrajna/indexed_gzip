@@ -83,8 +83,7 @@ matrix:
       env:    TEST_SUITE=zran_test EXTRA_ARGS="--use_mmap"           NITERS=25   NELEMS=805306368 TEST_PATTERN="test_seek_then_read_block"
     - python: 3.6
       env:    TEST_SUITE=zran_test EXTRA_ARGS="--use_mmap --concat"  NITERS=25   NELEMS=805306368 TEST_PATTERN="test_seek_then_read_block"
-    - python: 3.6
-    - env:    TEST_SUITE=32bittest
+
 
 # Tests covering the indexed_gzip module
 python:

@@ -2,6 +2,9 @@ branches:
   except:
     - /^v[0-9]\.[0-9]\.[0-9]/
 
+
+dist: xenial
+
 sudo: required
 
 language: python
@@ -80,15 +83,14 @@ matrix:
       env:    TEST_SUITE=zran_test EXTRA_ARGS="--use_mmap"           NITERS=25   NELEMS=805306368 TEST_PATTERN="test_seek_then_read_block"
     - python: 3.6
       env:    TEST_SUITE=zran_test EXTRA_ARGS="--use_mmap --concat"  NITERS=25   NELEMS=805306368 TEST_PATTERN="test_seek_then_read_block"
-    - python: 3.6
-    - env:    TEST_SUITE=32bittest
+
 
 # Tests covering the indexed_gzip module
 python:
   - 2.7
-  - 3.4
   - 3.5
   - 3.6
+  - 3.7
 
 env:
   - TEST_SUITE=indexed_gzip_test                                   NITERS=5000 NELEMS=50000

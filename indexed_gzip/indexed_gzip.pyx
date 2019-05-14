@@ -136,6 +136,9 @@ cdef class _IndexedGzipFile:
         with an open file handle (``fileobj``), or with a ``filename``. If the
         former, the file must have been opened in ``'rb'`` mode.
 
+        .. note:: The ``auto_build`` behaviour only takes place on calls to
+                  :meth:`seek`.
+
         :arg filename:         File name.
 
         :arg mode:             Opening mode. Must be either ``'r'`` or ``'rb``.
@@ -145,7 +148,7 @@ cdef class _IndexedGzipFile:
         :arg fid:              Deprecated, use ``fileobj`` instead.
 
         :arg auto_build:       If ``True`` (the default), the index is
-                               automatically built on seeks/reads.
+                               automatically built on calls to :meth:`seek`.
 
         :arg spacing:          Number of bytes between index seek points.
 

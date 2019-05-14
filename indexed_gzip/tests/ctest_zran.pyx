@@ -13,10 +13,13 @@ import itertools       as it
 import subprocess      as sp
 import                    sys
 import                    time
+import                    gzip
+import                    shutil
 import                    random
 import                    hashlib
 import                    tempfile
 import                    threading
+import                    contextlib
 
 import numpy as np
 
@@ -54,6 +57,21 @@ cdef extern from "sys/mman.h":
 cimport indexed_gzip.zran as zran
 
 np.import_array()
+
+
+@contextlib.contextmanager
+def tempdir():
+    """Returns a context manager which creates and returns a temporary
+    directory, and then deletes it on exit.
+    """
+    testdir = tempfile.mkdtemp()
+    prevdir = os.getcwd()
+    try:
+        os.chdir(testdir)
+        yield testdir
+    finally:
+        os.chdir(prevdir)
+        shutil.rmtree(testdir)
 
 
 cdef read_element(zran.zran_index_t *index, element, nelems, seek=True):
@@ -867,3 +885,55 @@ def test_export_then_import(testfile):
 
         zran.zran_free(&index1)
         zran.zran_free(&index2)
+
+
+def test_export_import_no_points():
+
+    cdef zran.zran_index_t index
+    cdef void             *buffer
+
+    data   = np.random.randint(1, 255, 100, dtype=np.uint8)
+    buf    = ReadBuffer(100)
+    buffer = buf.buffer
+
+    with tempdir():
+
+        with gzip.open('data.gz', 'wb') as f:
+            f.write(data.tostring())
+
+        with open('data.gz', 'rb')  as pyfid:
+            cfid = fdopen(pyfid.fileno(), 'rb')
+            assert zran.zran_init(&index,
+                                  cfid,
+                                  1048576,
+                                  32768,
+                                  131072,
+                                  0) == 0
+            assert zran.zran_read(&index, buffer, 100)  == 100
+
+            pybuf = <bytes>(<char *>buffer)[:100]
+            assert np.all(np.frombuffer(pybuf, dtype=np.uint8) == data)
+
+            with open('data.gz.index', 'wb') as pyidxfid:
+                cidxfid = fdopen(pyidxfid.fileno(), 'wb')
+                assert zran.zran_export_index(&index, cidxfid) == 0
+            zran.zran_free(&index)
+
+        with open('data.gz', 'rb')  as pyfid:
+            cfid = fdopen(pyfid.fileno(), 'rb')
+            assert zran.zran_init(&index,
+                                  cfid,
+                                  1048576,
+                                  32768,
+                                  131072,
+                                  0) == 0
+
+            with open('data.gz.index', 'rb') as pyidxfid:
+                cidxfid = fdopen(pyidxfid.fileno(), 'rb')
+                assert zran.zran_import_index(&index, cidxfid) == 0
+            assert index.npoints == 0
+
+            assert zran.zran_read(&index, buffer, 100)  == 100
+            pybuf = <bytes>(<char *>buffer)[:100]
+            assert np.all(np.frombuffer(pybuf, dtype=np.uint8) == data)
+            zran.zran_free(&index)

@@ -9,9 +9,6 @@
  * Author: Paul McCarthy <pauldmccarthy@gmail.com>
  */
 
-// Prevent Windows from defining min/max macros
-#define NOMINMAX
-
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -40,6 +37,13 @@ static int is_readonly(FILE *fd)
 {
     return (fcntl(fileno(fd), F_GETFL) & O_ACCMODE) == O_RDONLY;
 }
+
+
+static uint32_t max(uint32_t a, uint32_t b) {
+
+  if (a > b) return a;
+  else       return b;
+}
 #endif
 
 #include "zran.h"
@@ -50,12 +54,6 @@ static double round(double val)
     return floor(val + 0.5);
 }
 #endif
-
-static uint32_t max(uint32_t a, uint32_t b) {
-
-  if (a > b) return a;
-  else       return b;
-}
 
 /*
  * Turn this on to make noise.

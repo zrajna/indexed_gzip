@@ -4,7 +4,7 @@
 ## 0.8.9 (May 14th 2019)
 
 
-* The `IndeedGzipFile.import_index` method and `zran_import_index` function
+* The `IndexedGzipFile.import_index` method and `zran_import_index` function
   can handle index files which do not contain any index points (#18).
 
 

@@ -1,7 +1,7 @@
 # `indexed_gzip` changelog
 
 
-## 0.8.9 (May 13th 2019)
+## 0.8.9 (May 14th 2019)
 
 
 * The `IndeedGzipFile.import_index` method and `zran_import_index` function

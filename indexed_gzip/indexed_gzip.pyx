@@ -145,7 +145,7 @@ cdef class _IndexedGzipFile:
         :arg fid:              Deprecated, use ``fileobj`` instead.
 
         :arg auto_build:       If ``True`` (the default), the index is
-                               automatically built on seeks/reads.
+                               automatically built on seeks.
 
         :arg spacing:          Number of bytes between index seek points.
 

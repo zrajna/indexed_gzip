@@ -1,6 +1,12 @@
 # `indexed_gzip` changelog
 
 
+## 0.8.10 (May 15th 2019)
+
+
+* Fix to package metadata.
+
+
 ## 0.8.9 (May 14th 2019)
 
 

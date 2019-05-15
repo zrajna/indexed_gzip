@@ -204,6 +204,7 @@ setup(
     author_email='pauldmccarthy@gmail.com',
     description='Fast random access of gzip files in Python',
     long_description=readme,
+    long_description_content_type='text/markdown',
     url='https://github.com/pauldmccarthy/indexed_gzip',
     license='zlib',
 

@@ -219,15 +219,15 @@ cdef class _IndexedGzipFile:
                               flags=flags):
                 raise ZranError('zran_init returned error')
 
-        log.debug('{}.__init__({}, {}, {}, {}, {}, {}, {})'.format(
-            type(self).__name__,
-            fileobj,
-            filename,
-            auto_build,
-            spacing,
-            window_size,
-            readbuf_size,
-            drop_handles))
+        log.debug('%s.__init__(%s, %s, %s, %s, %s, %s, %s)',
+                  type(self).__name__,
+                  fileobj,
+                  filename,
+                  auto_build,
+                  spacing,
+                  window_size,
+                  readbuf_size,
+                  drop_handles)
 
         if index_file is not None:
             self.import_index(index_file)
@@ -318,7 +318,7 @@ cdef class _IndexedGzipFile:
         self.pyfid     = None
         self.finalized = True
 
-        log.debug('{}.close()'.format(type(self).__name__))
+        log.debug('%s.close()', type(self).__name__)
 
 
     @property
@@ -384,7 +384,7 @@ cdef class _IndexedGzipFile:
         if ret != 0:
             raise ZranError('zran_build_index returned error')
 
-        log.debug('{}.build_full_index()'.format(type(self).__name__))
+        log.debug('%s.build_full_index()', type(self).__name__)
 
 
     def seek(self, offset, whence=SEEK_SET):
@@ -428,7 +428,7 @@ cdef class _IndexedGzipFile:
 
         offset = self.tell()
 
-        log.debug('{}.seek({})'.format(type(self).__name__, offset))
+        log.debug('%s.seek(%s)', type(self).__name__, offset)
 
         return offset
 
@@ -503,7 +503,7 @@ cdef class _IndexedGzipFile:
         buf.resize(nread)
         pybuf = <bytes>(<char *>buf.buffer)[:nread]
 
-        log.debug('{}.read({})'.format(type(self).__name__, len(pybuf)))
+        log.debug('%s.read(%s)', type(self).__name__, len(pybuf))
 
         return pybuf
 
@@ -692,7 +692,7 @@ cdef class _IndexedGzipFile:
                 'Only one of filename or fileobj must be specified')
 
         if filename is not None:
-            fileobj = open(filename, 'wb')
+            fileobj    = open(filename, 'wb')
             close_file = True
 
         else:
@@ -711,10 +711,10 @@ cdef class _IndexedGzipFile:
             if close_file:
                 fileobj.close()
 
-        log.debug('{}.export_index({}, {})'.format(
-            type(self).__name__,
-            filename,
-            fileobj))
+        log.debug('%s.export_index(%s, %s)',
+                  type(self).__name__,
+                  filename,
+                  fileobj)
 
 
     def import_index(self, filename=None, fileobj=None):
@@ -753,10 +753,10 @@ cdef class _IndexedGzipFile:
             if close_file:
                 fileobj.close()
 
-        log.debug('{}.import_index({}, {})'.format(
-            type(self).__name__,
-            filename,
-            fileobj))
+        log.debug('%s.import_index(%s, %s)',
+                  type(self).__name__,
+                  filename,
+                  fileobj)
 
 
 cdef class ReadBuffer:
@@ -782,7 +782,7 @@ cdef class ReadBuffer:
         if not self.buffer:
             raise MemoryError('PyMem_Malloc fail')
 
-        log.debug('ReadBuffer.__cinit__({})'.format(size))
+        log.debug('ReadBuffer.__cinit__(%s)', size)
 
 
     def resize(self, size_t size):
@@ -796,7 +796,7 @@ cdef class ReadBuffer:
         if not buf:
             raise MemoryError('PyMem_Realloc fail')
 
-        log.debug('ReadBuffer.resize({})'.format(size))
+        log.debug('ReadBuffer.resize(%s)', size)
 
         self.size   = size
         self.buffer = buf

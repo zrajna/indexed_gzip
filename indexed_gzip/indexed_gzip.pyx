@@ -122,7 +122,6 @@ cdef class _IndexedGzipFile:
 
     def __cinit__(self,
                   filename=None,
-                  fid=None,
                   fileobj=None,
                   mode=None,
                   auto_build=True,
@@ -141,11 +140,9 @@ cdef class _IndexedGzipFile:
 
         :arg filename:         File name.
 
-        :arg mode:             Opening mode. Must be either ``'r'`` or ``'rb``.
-
         :arg fileobj:          Open file handle.
 
-        :arg fid:              Deprecated, use ``fileobj`` instead.
+        :arg mode:             Opening mode. Must be either ``'r'`` or ``'rb``.
 
         :arg auto_build:       If ``True`` (the default), the index is
                                automatically built on calls to :meth:`seek`.
@@ -175,16 +172,7 @@ cdef class _IndexedGzipFile:
 
         cdef FILE *fd = NULL
 
-        if fid is not None:
-            warnings.warn('fid is deprecated - use fileobj instead',
-                          DeprecationWarning)
-
-        if fid is not None and fileobj is None:
-            fileobj = fid
-            fid     = None
-
         if (fileobj is     None and filename is     None) or \
-           (fileobj is not None and fid      is not None) or \
            (fileobj is not None and filename is not None):
             raise ValueError('One of fileobj or filename must be specified')
 
@@ -842,6 +830,7 @@ class IndexedGzipFile(io.BufferedReader):
                           Passed through to ``io.BufferedReader.__init__``.
                           If not provided, a default value of 1048576 is used.
 
+        # TODO full documentation here
         All other arguments are passed through to
         ``_IndezedGzipFile.__init__``.
         """
@@ -866,13 +855,3 @@ class IndexedGzipFile(io.BufferedReader):
         with self.__fileLock:
             self.seek(offset)
             return self.read(nbytes)
-
-
-class SafeIndexedGzipFile(IndexedGzipFile):
-    """Deprecated - use :class:`IndexedGzipFile` instead. """
-    def __init__(self, *args, **kwargs):
-        """Deprecated - use :class:`IndexedGzipFile` instead. """
-        warnings.warn('SafeIndexedGzilFile is deprecated - '
-                      'use IndexedGzipFile instead',
-                      DeprecationWarning)
-        super(SafeIndexedGzipFile, self).__init__(*args, **kwargs)

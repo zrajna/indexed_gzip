@@ -91,14 +91,11 @@ python:
   - 3.5
   - 3.6
   - 3.7
+  - 3.8
 
 env:
-  - TEST_SUITE=indexed_gzip_test                                   NITERS=5000 NELEMS=50000
-  - TEST_SUITE=indexed_gzip_test EXTRA_ARGS="--concat"             NITERS=5000 NELEMS=50000
   - TEST_SUITE=indexed_gzip_test                                   NITERS=5000 NELEMS=131072
   - TEST_SUITE=indexed_gzip_test EXTRA_ARGS="--concat"             NITERS=5000 NELEMS=131072
-  - TEST_SUITE=indexed_gzip_test                                   NITERS=5000 NELEMS=1000000
-  - TEST_SUITE=indexed_gzip_test EXTRA_ARGS="--concat"             NITERS=5000 NELEMS=1000000
   - TEST_SUITE=indexed_gzip_test                                   NITERS=5000 NELEMS=2000000
   - TEST_SUITE=indexed_gzip_test EXTRA_ARGS="--concat"             NITERS=5000 NELEMS=2000000
   - TEST_SUITE=indexed_gzip_test EXTRA_ARGS="--use_mmap"           NITERS=1000 NELEMS=805306368

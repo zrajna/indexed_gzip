@@ -1,6 +1,13 @@
 # `indexed_gzip` changelog
 
 
+## 1.0.0 (February 21st 2020)
+
+
+* Removed the deprecated `fid` argument to the `IndexedGzipFile` constructor.
+* Removed the `SafeIndexedGzipFile`.
+
+
 ## 0.8.10 (May 15th 2019)
 
 

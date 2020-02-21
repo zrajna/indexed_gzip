@@ -41,7 +41,6 @@ import logging
 
 
 log = logging.getLogger(__name__)
-log.setLevel(logging.WARNING)
 
 
 class NotCoveredError(Exception):
@@ -122,7 +121,6 @@ cdef class _IndexedGzipFile:
 
     def __cinit__(self,
                   filename=None,
-                  fid=None,
                   fileobj=None,
                   mode=None,
                   auto_build=True,
@@ -141,11 +139,9 @@ cdef class _IndexedGzipFile:
 
         :arg filename:         File name.
 
-        :arg mode:             Opening mode. Must be either ``'r'`` or ``'rb``.
-
         :arg fileobj:          Open file handle.
 
-        :arg fid:              Deprecated, use ``fileobj`` instead.
+        :arg mode:             Opening mode. Must be either ``'r'`` or ``'rb``.
 
         :arg auto_build:       If ``True`` (the default), the index is
                                automatically built on calls to :meth:`seek`.
@@ -175,16 +171,7 @@ cdef class _IndexedGzipFile:
 
         cdef FILE *fd = NULL
 
-        if fid is not None:
-            warnings.warn('fid is deprecated - use fileobj instead',
-                          DeprecationWarning)
-
-        if fid is not None and fileobj is None:
-            fileobj = fid
-            fid     = None
-
         if (fileobj is     None and filename is     None) or \
-           (fileobj is not None and fid      is not None) or \
            (fileobj is not None and filename is not None):
             raise ValueError('One of fileobj or filename must be specified')
 
@@ -232,15 +219,15 @@ cdef class _IndexedGzipFile:
                               flags=flags):
                 raise ZranError('zran_init returned error')
 
-        log.debug('{}.__init__({}, {}, {}, {}, {}, {}, {})'.format(
-            type(self).__name__,
-            fileobj,
-            filename,
-            auto_build,
-            spacing,
-            window_size,
-            readbuf_size,
-            drop_handles))
+        log.debug('%s.__init__(%s, %s, %s, %s, %s, %s, %s)',
+                  type(self).__name__,
+                  fileobj,
+                  filename,
+                  auto_build,
+                  spacing,
+                  window_size,
+                  readbuf_size,
+                  drop_handles)
 
         if index_file is not None:
             self.import_index(index_file)
@@ -331,7 +318,7 @@ cdef class _IndexedGzipFile:
         self.pyfid     = None
         self.finalized = True
 
-        log.debug('{}.close()'.format(type(self).__name__))
+        log.debug('%s.close()', type(self).__name__)
 
 
     @property
@@ -397,7 +384,7 @@ cdef class _IndexedGzipFile:
         if ret != 0:
             raise ZranError('zran_build_index returned error')
 
-        log.debug('{}.build_full_index()'.format(type(self).__name__))
+        log.debug('%s.build_full_index()', type(self).__name__)
 
 
     def seek(self, offset, whence=SEEK_SET):
@@ -441,7 +428,7 @@ cdef class _IndexedGzipFile:
 
         offset = self.tell()
 
-        log.debug('{}.seek({})'.format(type(self).__name__, offset))
+        log.debug('%s.seek(%s)', type(self).__name__, offset)
 
         return offset
 
@@ -516,7 +503,7 @@ cdef class _IndexedGzipFile:
         buf.resize(nread)
         pybuf = <bytes>(<char *>buf.buffer)[:nread]
 
-        log.debug('{}.read({})'.format(type(self).__name__, len(pybuf)))
+        log.debug('%s.read(%s)', type(self).__name__, len(pybuf))
 
         return pybuf
 
@@ -705,7 +692,7 @@ cdef class _IndexedGzipFile:
                 'Only one of filename or fileobj must be specified')
 
         if filename is not None:
-            fileobj = open(filename, 'wb')
+            fileobj    = open(filename, 'wb')
             close_file = True
 
         else:
@@ -724,10 +711,10 @@ cdef class _IndexedGzipFile:
             if close_file:
                 fileobj.close()
 
-        log.debug('{}.export_index({}, {})'.format(
-            type(self).__name__,
-            filename,
-            fileobj))
+        log.debug('%s.export_index(%s, %s)',
+                  type(self).__name__,
+                  filename,
+                  fileobj)
 
 
     def import_index(self, filename=None, fileobj=None):
@@ -766,10 +753,10 @@ cdef class _IndexedGzipFile:
             if close_file:
                 fileobj.close()
 
-        log.debug('{}.import_index({}, {})'.format(
-            type(self).__name__,
-            filename,
-            fileobj))
+        log.debug('%s.import_index(%s, %s)',
+                  type(self).__name__,
+                  filename,
+                  fileobj)
 
 
 cdef class ReadBuffer:
@@ -795,7 +782,7 @@ cdef class ReadBuffer:
         if not self.buffer:
             raise MemoryError('PyMem_Malloc fail')
 
-        log.debug('ReadBuffer.__cinit__({})'.format(size))
+        log.debug('ReadBuffer.__cinit__(%s)', size)
 
 
     def resize(self, size_t size):
@@ -809,7 +796,7 @@ cdef class ReadBuffer:
         if not buf:
             raise MemoryError('PyMem_Realloc fail')
 
-        log.debug('ReadBuffer.resize({})'.format(size))
+        log.debug('ReadBuffer.resize(%s)', size)
 
         self.size   = size
         self.buffer = buf
@@ -823,11 +810,14 @@ cdef class ReadBuffer:
 
 
 class IndexedGzipFile(io.BufferedReader):
-    """The ``IndexedGzipFile`` is an ``io.BufferedReader`` which wraps
-    an :class:`_IndexedGzipFile` instance. By accessing the
-    ``_IndexedGzipFile`` instance through an ``io.BufferedReader``, read
-    performance is improved through buffering, and access to the I/O methods
-    is made thread-safe.
+    """The ``IndexedGzipFile`` class allows for fast random access of a gzip
+    file by using the ``zran`` library to build and maintain an index of seek
+    points into the file.
+
+    ``IndexedGzipFile`` is an ``io.BufferedReader`` which wraps an
+    :class:`_IndexedGzipFile` instance. By accessing the ``_IndexedGzipFile``
+    instance through an ``io.BufferedReader``, read performance is improved
+    through buffering, and access to the I/O methods is made thread-safe.
 
     A :meth:`pread` method is also implemented, as it is not implemented by
     the ``io.BufferedReader``.
@@ -835,15 +825,48 @@ class IndexedGzipFile(io.BufferedReader):
 
 
     def __init__(self, *args, **kwargs):
-        """Opens an ``_IndexedGzipFile``, and then calls
-        ``io.BufferedReader.__init__``.
+        """Create an ``IndexedGzipFile``. The file may be specified either
+        with an open file handle (``fileobj``), or with a ``filename``. If the
+        former, the file must have been opened in ``'rb'`` mode.
 
-        :arg buffer_size: Optional, must be passed as a keyword argument.
-                          Passed through to ``io.BufferedReader.__init__``.
-                          If not provided, a default value of 1048576 is used.
+        .. note:: The ``auto_build`` behaviour only takes place on calls to
+                  :meth:`seek`.
 
-        All other arguments are passed through to
-        ``_IndezedGzipFile.__init__``.
+        :arg filename:         File name.
+
+        :arg fileobj:          Open file handle.
+
+        :arg mode:             Opening mode. Must be either ``'r'`` or ``'rb``.
+
+        :arg auto_build:       If ``True`` (the default), the index is
+                               automatically built on calls to :meth:`seek`.
+
+        :arg spacing:          Number of bytes between index seek points.
+
+        :arg window_size:      Number of bytes of uncompressed data stored with
+                               each seek point.
+
+        :arg readbuf_size:     Size of buffer in bytes for storing compressed
+                               data read in from the file.
+
+        :arg readall_buf_size: Size of buffer in bytes used by :meth:`read`
+                               when reading until EOF.
+
+        :arg drop_handles:     Has no effect if an open ``fid`` is specified,
+                               rather than a ``filename``.  If ``True`` (the
+                               default), a handle to the file is opened and
+                               closed on every access. Otherwise the file is
+                               opened at ``__cinit__``, and kept open until
+                               this ``_IndexedGzipFile`` is destroyed.
+
+        :arg index_file:       Pre-generated index for this ``gz`` file -
+                               if provided, passed through to
+                               :meth:`import_index`.
+
+        :arg buffer_size:      Optional, must be passed as a keyword argument.
+                               Passed through to
+                               ``io.BufferedReader.__init__``. If not provided,
+                               a default value of 1048576 is used.
         """
 
         buffer_size     = kwargs.pop('buffer_size', 1048576)
@@ -866,13 +889,3 @@ class IndexedGzipFile(io.BufferedReader):
         with self.__fileLock:
             self.seek(offset)
             return self.read(nbytes)
-
-
-class SafeIndexedGzipFile(IndexedGzipFile):
-    """Deprecated - use :class:`IndexedGzipFile` instead. """
-    def __init__(self, *args, **kwargs):
-        """Deprecated - use :class:`IndexedGzipFile` instead. """
-        warnings.warn('SafeIndexedGzilFile is deprecated - '
-                      'use IndexedGzipFile instead',
-                      DeprecationWarning)
-        super(SafeIndexedGzipFile, self).__init__(*args, **kwargs)

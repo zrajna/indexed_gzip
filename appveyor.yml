@@ -43,6 +43,16 @@ environment:
       MINICONDA:      "C:\\Miniconda37-x64"
       PYTHON_ARCH:    "64"
 
+    - PYTHON_VERSION: "3.8"
+      PYTHON:         "C:\\Miniconda37"
+      MINICONDA:      "C:\\Miniconda37"
+      PYTHON_ARCH:    "32"
+
+    - PYTHON_VERSION: "3.8"
+      PYTHON:         "C:\\Miniconda37-x64"
+      MINICONDA:      "C:\\Miniconda37-x64"
+      PYTHON_ARCH:    "64"
+
 
 
 

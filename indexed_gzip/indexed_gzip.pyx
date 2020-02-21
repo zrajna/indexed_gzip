@@ -811,11 +811,14 @@ cdef class ReadBuffer:
 
 
 class IndexedGzipFile(io.BufferedReader):
-    """The ``IndexedGzipFile`` is an ``io.BufferedReader`` which wraps
-    an :class:`_IndexedGzipFile` instance. By accessing the
-    ``_IndexedGzipFile`` instance through an ``io.BufferedReader``, read
-    performance is improved through buffering, and access to the I/O methods
-    is made thread-safe.
+    """The ``IndexedGzipFile`` class allows for fast random access of a gzip
+    file by using the ``zran`` library to build and maintain an index of seek
+    points into the file.
+
+    ``IndexedGzipFile`` is an ``io.BufferedReader`` which wraps an
+    :class:`_IndexedGzipFile` instance. By accessing the ``_IndexedGzipFile``
+    instance through an ``io.BufferedReader``, read performance is improved
+    through buffering, and access to the I/O methods is made thread-safe.
 
     A :meth:`pread` method is also implemented, as it is not implemented by
     the ``io.BufferedReader``.
@@ -823,16 +826,48 @@ class IndexedGzipFile(io.BufferedReader):
 
 
     def __init__(self, *args, **kwargs):
-        """Opens an ``_IndexedGzipFile``, and then calls
-        ``io.BufferedReader.__init__``.
+        """Create an ``IndexedGzipFile``. The file may be specified either
+        with an open file handle (``fileobj``), or with a ``filename``. If the
+        former, the file must have been opened in ``'rb'`` mode.
 
-        :arg buffer_size: Optional, must be passed as a keyword argument.
-                          Passed through to ``io.BufferedReader.__init__``.
-                          If not provided, a default value of 1048576 is used.
+        .. note:: The ``auto_build`` behaviour only takes place on calls to
+                  :meth:`seek`.
 
-        # TODO full documentation here
-        All other arguments are passed through to
-        ``_IndezedGzipFile.__init__``.
+        :arg filename:         File name.
+
+        :arg fileobj:          Open file handle.
+
+        :arg mode:             Opening mode. Must be either ``'r'`` or ``'rb``.
+
+        :arg auto_build:       If ``True`` (the default), the index is
+                               automatically built on calls to :meth:`seek`.
+
+        :arg spacing:          Number of bytes between index seek points.
+
+        :arg window_size:      Number of bytes of uncompressed data stored with
+                               each seek point.
+
+        :arg readbuf_size:     Size of buffer in bytes for storing compressed
+                               data read in from the file.
+
+        :arg readall_buf_size: Size of buffer in bytes used by :meth:`read`
+                               when reading until EOF.
+
+        :arg drop_handles:     Has no effect if an open ``fid`` is specified,
+                               rather than a ``filename``.  If ``True`` (the
+                               default), a handle to the file is opened and
+                               closed on every access. Otherwise the file is
+                               opened at ``__cinit__``, and kept open until
+                               this ``_IndexedGzipFile`` is destroyed.
+
+        :arg index_file:       Pre-generated index for this ``gz`` file -
+                               if provided, passed through to
+                               :meth:`import_index`.
+
+        :arg buffer_size:      Optional, must be passed as a keyword argument.
+                               Passed through to
+                               ``io.BufferedReader.__init__``. If not provided,
+                               a default value of 1048576 is used.
         """
 
         buffer_size     = kwargs.pop('buffer_size', 1048576)

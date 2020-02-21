@@ -9,7 +9,6 @@
 
 from .indexed_gzip import (_IndexedGzipFile,     # noqa
                            IndexedGzipFile,
-                           SafeIndexedGzipFile,
                            NotCoveredError,
                            NoHandleError,
                            ZranError)

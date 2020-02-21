@@ -7,7 +7,7 @@
 PYV=$PYTHON_VERSION
 
 apt-get update
-apt-get install -y libssl-dev openssl wget build-essential libffi-dev
+apt-get install -y libssl-dev openssl wget build-essential libffi-dev libsqlite3-dev
 cd /
 wget https://www.python.org/ftp/python/$PYV/Python-$PYV.tar.xz
 tar xf Python-$PYV.tar.xz

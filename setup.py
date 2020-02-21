@@ -102,7 +102,7 @@ include_dirs = ['indexed_gzip']
 lib_dirs = []
 libs = []
 extra_compile_args = []
-compiler_directives = {}
+compiler_directives = {'language_level' : 2}
 define_macros = []
 
 # If numpy is present, we need

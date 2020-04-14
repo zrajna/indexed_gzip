@@ -62,7 +62,7 @@ cdef extern from "zran.h":
                           uint64_t      from_,
                           uint64_t      until) nogil;
 
-    long zran_tell(zran_index_t *index);
+    uint64_t zran_tell(zran_index_t *index);
 
     int zran_seek(zran_index_t  *index,
                   int64_t        offset,

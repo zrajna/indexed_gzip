@@ -119,17 +119,17 @@ cdef class _IndexedGzipFile:
     """
 
 
-    def __cinit__(self,
-                  filename=None,
-                  fileobj=None,
-                  mode=None,
-                  auto_build=True,
-                  spacing=4194304,
-                  window_size=32768,
-                  readbuf_size=1048576,
-                  readall_buf_size=16777216,
-                  drop_handles=True,
-                  index_file=None):
+    def __init__(self,
+                 filename=None,
+                 fileobj=None,
+                 mode=None,
+                 auto_build=True,
+                 spacing=4194304,
+                 window_size=32768,
+                 readbuf_size=1048576,
+                 readall_buf_size=16777216,
+                 drop_handles=True,
+                 index_file=None):
         """Create an ``_IndexedGzipFile``. The file may be specified either
         with an open file handle (``fileobj``), or with a ``filename``. If the
         former, the file must have been opened in ``'rb'`` mode.
@@ -231,13 +231,6 @@ cdef class _IndexedGzipFile:
 
         if index_file is not None:
             self.import_index(index_file)
-
-
-    def __init__(self, *args, **kwargs):
-        """This method does nothing. It is here to make sub-classing
-        ``_IndexedGzipFile`` easier.
-        """
-        pass
 
 
     def __file_handle(self):

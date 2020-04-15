@@ -1,6 +1,13 @@
 # `indexed_gzip` changelog
 
 
+## 1.1.0 (April 15th 2020)
+
+
+* Changed the return type of `zran_tell` from `long` to `uint64_t`, because the
+  former is not guaranteed to be 64 bit (#29, #30).
+
+
 ## 1.0.0 (February 21st 2020)
 
 

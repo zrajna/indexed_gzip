@@ -267,7 +267,7 @@ Many thanks to the following contributors (listed chronologically):
  - Martin Craig (@mcraig-ibme): porting `indexed_gzip` to Windows (#3)
  - Chris Markiewicz (@effigies): Option to drop file handles (#6)
  - Omer Ozarslan (@ozars): Index import/export (#8)
-
+ - @DarioDaF: Windows overflow bug (#30)
 
 ## License
 

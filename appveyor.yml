@@ -70,3 +70,5 @@ install:
 test_script:
   - pytest -v -s -m indexed_gzip_test          --niters 250
   - pytest -v -s -m indexed_gzip_test --concat --niters 250
+  # test >4GB files
+  - TEST_SUITE=zran_test pytest -v -s -m zran_test --use_mmap --niters 1000 --nelems 805306368 -k "not test_readbuf_spacing_sizes and not test_seek_then_read_block"

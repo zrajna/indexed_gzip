@@ -35,6 +35,7 @@ from cpython.buffer cimport (PyObject_GetBuffer,
 cimport indexed_gzip.zran as zran
 
 import io
+import pickle
 import warnings
 import contextlib
 import threading
@@ -882,9 +883,11 @@ class IndexedGzipFile(io.BufferedReader):
                                a default value of 1048576 is used.
         """
 
-        buffer_size     = kwargs.pop('buffer_size', 1048576)
-        fobj            = _IndexedGzipFile(*args, **kwargs)
-        self.__fileLock = threading.RLock()
+        buffer_size        = kwargs.pop('buffer_size', 1048576)
+        fobj               = _IndexedGzipFile(*args, **kwargs)
+        self.__file_lock   = threading.RLock()
+        self.__igz_fobj    = fobj
+        self.__buffer_size = buffer_size
 
         self.build_full_index = fobj.build_full_index
         self.import_index     = fobj.import_index
@@ -902,3 +905,33 @@ class IndexedGzipFile(io.BufferedReader):
         with self.__fileLock:
             self.seek(offset)
             return self.read(nbytes)
+
+
+    def __getstate__(self):
+        """Returns the state of this ``IndexedGzipFile`` for pickling. """
+
+        fobj = self.__igz_fobj
+
+        if (not fobj.drop_handles) or (not fobj.own_file):
+            raise pickle.PicklingError(
+                'Cannot pickle IndexedGzipFile that has been created '
+                'with an open file object, or that has been created '
+                'with drop_handles=False')
+
+        return {
+            'filename'         : fobj.filename,
+            'auto_build'       : fobj.auto_build,
+            'spacing'          : fobj.spacing,
+            'window_size'      : fobj.window_size,
+            'readbuf_size'     : fobj.readbuf_size,
+            'readall_buf_size' : fobj.readall_buf_size,
+            'buffer_size'      : self.__buffer_size,
+            'tell'             : self.tell()}
+
+
+    def __setstate__(self, state):
+        """Initialises the state of this ``IndexedGzipFile`` from ``state``.
+        """
+        tell = state.pop('tell')
+        self.__init__(**state)
+        self.seek(tell)

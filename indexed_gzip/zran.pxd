@@ -17,6 +17,7 @@ cdef extern from "zran.h":
         size_t        uncompressed_size;
         uint32_t      spacing;
         uint32_t      window_size;
+        uint32_t      readbuf_size;
         uint32_t      npoints;
         zran_point_t *list;
 

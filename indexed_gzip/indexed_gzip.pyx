@@ -19,6 +19,7 @@ from libc.stdio     cimport (SEEK_SET,
                              fclose)
 
 from libc.stdint    cimport (uint8_t,
+                             uint32_t,
                              uint64_t,
                              int64_t)
 
@@ -82,14 +83,29 @@ cdef class _IndexedGzipFile:
     """A reference to the ``zran_index`` struct. """
 
 
-    cdef readonly bint auto_build
-    """Flag which is set to ``True`` if the file index is built automatically
-    on seeks/reads.
+    cdef readonly uint32_t spacing
+    """Number of bytes between index seek points. """
+
+
+    cdef readonly uint32_t window_size
+    """Number of bytes of uncompressed data stored with each seek point."""
+
+
+    cdef readonly uint32_t readbuf_size
+    """Size of buffer in bytes for storing compressed data read in from the
+    file.
     """
 
 
     cdef readonly unsigned int readall_buf_size
-    """Used by meth:`read` as the read buffer size."""
+    """Size of buffer in bytes used by :meth:`read` when reading until EOF.
+    """
+
+
+    cdef readonly bint auto_build
+    """Flag which is set to ``True`` if the file index is built automatically
+    on seeks/reads.
+    """
 
 
     cdef readonly object filename
@@ -199,8 +215,12 @@ cdef class _IndexedGzipFile:
                 fileobj = open(filename, mode)
             fd = fdopen(fileobj.fileno(), 'rb')
 
-        self.auto_build       = auto_build
+
+        self.spacing          = spacing
+        self.window_size      = window_size
+        self.readbuf_size     = readbuf_size
         self.readall_buf_size = readall_buf_size
+        self.auto_build       = auto_build
         self.drop_handles     = drop_handles
         self.filename         = filename
         self.own_file         = own_file

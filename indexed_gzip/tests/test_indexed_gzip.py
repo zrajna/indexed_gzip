@@ -135,3 +135,6 @@ def test_wrapper_class():
 
 def test_size_multiple_of_readbuf():
     ctest_indexed_gzip.test_size_multiple_of_readbuf()
+
+def test_picklable():
+    ctest_indexed_gzip.test_picklable()

@@ -6,18 +6,21 @@
 
 from __future__ import print_function
 
-import               os
-import os.path    as op
-import itertools  as it
-import subprocess as sp
-import               sys
-import               time
-import               gzip
-import               random
-import               tempfile
-import               shutil
-import               hashlib
-import               textwrap
+import                    os
+import os.path         as op
+import itertools       as it
+import subprocess      as sp
+import multiprocessing as mp
+import                    sys
+import                    time
+import                    gzip
+import                    random
+import                    shutil
+import                    pickle
+import                    hashlib
+import                    textwrap
+import                    tempfile
+import                    contextlib
 
 import numpy as np
 
@@ -32,6 +35,19 @@ from . import testdir
 from libc.stdio cimport (SEEK_SET,
                          SEEK_CUR,
                          SEEK_END)
+
+
+@contextlib.contextmanager
+def tempdir():
+    tmpdir  = tempfile.mkdtemp()
+    prevdir = os.getcwd()
+    os.chdir(tmpdir)
+
+    try:
+        yield
+    finally:
+        os.chdir(prevdir)
+        shutil.rmtree(tmpdir)
 
 
 def read_element(gzf, element, seek=True):
@@ -675,11 +691,7 @@ def test_size_multiple_of_readbuf():
 
     fname = 'test.gz'
 
-    testdir = tempfile.mkdtemp()
-    prevdir = os.getcwd()
-    os.chdir(testdir)
-
-    try:
+    with tempdir():
         data = np.random.randint(1, 1000, 10000, dtype=np.uint32)
 
         with gzip.open(fname, 'wb') as f:
@@ -719,6 +731,31 @@ def test_size_multiple_of_readbuf():
             assert np.all(read == data)
         del f
         f = None
-    finally:
-        os.chdir(prevdir)
-        shutil.rmtree(testdir)
+
+
+def test_picklable():
+
+    # default behaviour is for drop_handles=True,
+    # which means that an IndexedGzipFile object
+    # should be picklable/serialisable
+    fname = 'test.gz'
+
+    with tempdir():
+        data = np.random.randint(1, 1000, 10000, dtype=np.uint32)
+        with gzip.open(fname, 'wb') as f:
+            f.write(data.tobytes())
+        del f
+
+        gzf      = igzip.IndexedGzipFile(fname)
+        first10  = gzf.read(10)
+        pickled  = pickle.dumps(gzf)
+        second10 = gzf.read(10)
+
+        gzf.close()
+        del gzf
+
+        gzf = pickle.loads(pickled)
+        assert gzf.tell() == 10
+        assert gzf.read(10) == second10
+        gzf.seek(0)
+        assert gzf.read(10) == first10

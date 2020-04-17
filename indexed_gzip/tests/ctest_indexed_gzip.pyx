@@ -777,7 +777,7 @@ def test_picklable():
 def _mpfunc(gzf, size, offset):
     gzf.seek(offset)
     bytes = gzf.read(size)
-    val = np.ndarray(1, np.uint32, buffer=bytes)
+    val = np.ndarray(int(size / 4), np.uint32, buffer=bytes)
     return val.sum()
 
 
@@ -792,7 +792,7 @@ def test_multiproc_serialise():
 
         gzf = igzip.IndexedGzipFile(fname)
 
-        size    = len(data) / 15
+        size    = len(data) / 16
         offsets = np.arange(0, len(data), size)
         func    = ft.partial(_mpfunc, gzf, size * 4)
 

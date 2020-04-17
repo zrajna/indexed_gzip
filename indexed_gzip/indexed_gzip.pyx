@@ -902,7 +902,7 @@ class IndexedGzipFile(io.BufferedReader):
         """Seeks to ``offset``, then reads and returns up to ``nbytes``.
         The calls to seek and read are protected by a ``threading.RLock``.
         """
-        with self.__fileLock:
+        with self.__file_lock:
             self.seek(offset)
             return self.read(nbytes)
 

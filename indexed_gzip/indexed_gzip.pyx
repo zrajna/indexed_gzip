@@ -913,8 +913,14 @@ class IndexedGzipFile(io.BufferedReader):
             return self.read(nbytes)
 
 
-    def __getstate__(self):
-        """Returns the state of this ``IndexedGzipFile`` for pickling. """
+    def __reduce__(self):
+        """Used to pickle an ``IndexedGzipFile``.
+
+        Returns a tuple containing:
+          - a reference to the ``unpickle`` function
+          - a tuple containing a "state" object, which can be passed
+            to ``unpickle``.
+        """
 
         fobj = self.__igz_fobj
 
@@ -933,7 +939,7 @@ class IndexedGzipFile(io.BufferedReader):
         else:
             index = None
 
-        return {
+        state = {
             'filename'         : fobj.filename,
             'auto_build'       : fobj.auto_build,
             'spacing'          : fobj.spacing,
@@ -944,15 +950,26 @@ class IndexedGzipFile(io.BufferedReader):
             'tell'             : self.tell(),
             'index'            : index}
 
+        return (unpickle, (state, ))
 
-    def __setstate__(self, state):
-        """Initialises the state of this ``IndexedGzipFile`` from ``state``.
-        """
-        tell  = state.pop('tell')
-        index = state.pop('index')
-        self.__init__(**state)
-        if index is not None:
-            index.seek(0)
-            self.import_index(fileobj=index)
-            index.close()
-        self.seek(tell)
+
+def unpickle(state):
+    """Create a new ``IndexedGzipFile`` from a pickled state.
+
+    :arg state: State of a pickled object, as returned by the
+                ``IndexedGzipFile.__reduce__`` method.
+
+    :returns:   A new ``IndexedGzipFile`` object.
+    """
+
+    tell  = state.pop('tell')
+    index = state.pop('index')
+    gzobj = IndexedGzipFile(**state)
+
+    if index is not None:
+        index.seek(0)
+        gzobj.import_index(fileobj=index)
+        index.close()
+    gzobj.seek(tell)
+
+    return gzobj

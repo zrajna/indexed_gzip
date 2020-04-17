@@ -138,3 +138,6 @@ def test_size_multiple_of_readbuf():
 
 def test_picklable():
     ctest_indexed_gzip.test_picklable()
+
+def test_multiproc_serialise():
+    ctest_indexed_gzip.test_multiproc_serialise()

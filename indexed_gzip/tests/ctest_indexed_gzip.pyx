@@ -9,6 +9,7 @@ from __future__ import print_function
 import                    os
 import os.path         as op
 import itertools       as it
+import functools       as ft
 import subprocess      as sp
 import multiprocessing as mp
 import                    sys
@@ -741,21 +742,63 @@ def test_picklable():
     fname = 'test.gz'
 
     with tempdir():
-        data = np.random.randint(1, 1000, 10000, dtype=np.uint32)
+        data = np.random.randint(1, 1000, (10000, 10000), dtype=np.uint32)
         with gzip.open(fname, 'wb') as f:
             f.write(data.tobytes())
         del f
 
-        gzf      = igzip.IndexedGzipFile(fname)
-        first10  = gzf.read(10)
-        pickled  = pickle.dumps(gzf)
-        second10 = gzf.read(10)
+        gzf        = igzip.IndexedGzipFile(fname)
+        first50MB  = gzf.read(1048576 * 50)
+        pickled    = pickle.dumps(gzf)
+        second50MB = gzf.read(1048576 * 50)
 
         gzf.close()
         del gzf
 
         gzf = pickle.loads(pickled)
-        assert gzf.tell() == 10
-        assert gzf.read(10) == second10
+        assert gzf.tell() == 1048576 * 50
+        assert gzf.read(1048576 * 50) == second50MB
         gzf.seek(0)
-        assert gzf.read(10) == first10
+        assert gzf.read(1048576 * 50) == first50MB
+
+    # if drop_handles=False, no pickle
+    with tempdir():
+        data = np.random.randint(1, 1000, 50000, dtype=np.uint32)
+        with gzip.open(fname, 'wb') as f:
+            f.write(data.tobytes())
+        del f
+
+        gzf = igzip.IndexedGzipFile(fname, drop_handles=False)
+
+        with pytest.raises(pickle.PicklingError):
+            pickled = pickle.dumps(gzf)
+
+
+def _mpfunc(gzf, size, offset):
+    gzf.seek(offset)
+    bytes = gzf.read(size)
+    val = np.ndarray(1, np.uint32, buffer=bytes)
+    return val.sum()
+
+
+def test_multiproc_serialise():
+    fname = 'test.gz'
+    with tempdir():
+
+        data = np.arange(10000000, dtype=np.uint32)
+        with gzip.open(fname, 'wb') as f:
+            f.write(data.tobytes())
+        del f
+
+        gzf = igzip.IndexedGzipFile(fname)
+
+        size    = len(data) / 15
+        offsets = np.arange(0, len(data), size)
+        func    = ft.partial(_mpfunc, gzf, size * 4)
+
+        with mp.Pool(8) as pool:
+            results = pool.map(func, offsets * 4)
+
+        expected = [data[off:off+size].sum() for off in offsets]
+
+        assert results == expected

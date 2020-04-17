@@ -760,6 +760,8 @@ def test_picklable():
         assert gzf.read(1048576 * 50) == second50MB
         gzf.seek(0)
         assert gzf.read(1048576 * 50) == first50MB
+        gzf.close()
+        del gzf
 
     # if drop_handles=False, no pickle
     with tempdir():
@@ -772,12 +774,16 @@ def test_picklable():
 
         with pytest.raises(pickle.PicklingError):
             pickled = pickle.dumps(gzf)
+        gzf.close()
+        del gzf
 
 
 def _mpfunc(gzf, size, offset):
     gzf.seek(offset)
     bytes = gzf.read(size)
     val = np.ndarray(int(size / 4), np.uint32, buffer=bytes)
+    gzf.close()
+    del gzf
     return val.sum()
 
 
@@ -798,7 +804,11 @@ def test_multiproc_serialise():
 
         pool = mp.Pool(8)
         results = pool.map(func, offsets * 4)
+        pool.join()
         pool.close()
+        gzf.close()
+        del gzf
+        del pool
 
         expected = [data[off:off+size].sum() for off in offsets]
 

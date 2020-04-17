@@ -796,8 +796,9 @@ def test_multiproc_serialise():
         offsets = np.arange(0, len(data), size)
         func    = ft.partial(_mpfunc, gzf, size * 4)
 
-        with mp.Pool(8) as pool:
-            results = pool.map(func, offsets * 4)
+        pool = mp.Pool(8)
+        results = pool.map(func, offsets * 4)
+        pool.close()
 
         expected = [data[off:off+size].sum() for off in offsets]
 

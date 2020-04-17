@@ -804,8 +804,8 @@ def test_multiproc_serialise():
 
         pool = mp.Pool(8)
         results = pool.map(func, offsets * 4)
-        pool.join()
         pool.close()
+        pool.join()
         gzf.close()
         del gzf
         del pool

@@ -35,5 +35,5 @@ pip install --upgrade cython numpy pytest coverage pytest-cov
 
 cd /indexed_gzip
 python setup.py develop
-pytest -v -s --niters 500
-pytest -v -s --niters 500 --concat
+pytest --no-cov -v -s --niters 500
+pytest --no-cov -v -s --niters 500 --concat

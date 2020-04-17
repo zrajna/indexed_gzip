@@ -309,6 +309,12 @@ cdef class _IndexedGzipFile:
 
 
     @property
+    def npoints(self):
+        """Returns the number of index points that have been created. """
+        return self.index.npoints
+
+
+    @property
     def mode(self):
         """Returns the mode that this file was opened in. Currently always
         returns ``'rb'``.
@@ -918,6 +924,15 @@ class IndexedGzipFile(io.BufferedReader):
                 'with an open file object, or that has been created '
                 'with drop_handles=False')
 
+        # export and serialise the
+        # index if any index points
+        # have been created
+        if fobj.npoints > 0:
+            index = io.BytesIO()
+            self.export_index(fileobj=index)
+        else:
+            index = None
+
         return {
             'filename'         : fobj.filename,
             'auto_build'       : fobj.auto_build,
@@ -926,12 +941,18 @@ class IndexedGzipFile(io.BufferedReader):
             'readbuf_size'     : fobj.readbuf_size,
             'readall_buf_size' : fobj.readall_buf_size,
             'buffer_size'      : self.__buffer_size,
-            'tell'             : self.tell()}
+            'tell'             : self.tell(),
+            'index'            : index}
 
 
     def __setstate__(self, state):
         """Initialises the state of this ``IndexedGzipFile`` from ``state``.
         """
-        tell = state.pop('tell')
+        tell  = state.pop('tell')
+        index = state.pop('index')
         self.__init__(**state)
+        if index is not None:
+            index.seek(0)
+            self.import_index(fileobj=index)
+            index.close()
         self.seek(tell)

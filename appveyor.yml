@@ -70,5 +70,3 @@ install:
 test_script:
   - pytest -v -s -m indexed_gzip_test          --niters 250
   - pytest -v -s -m indexed_gzip_test --concat --niters 250
-  # test >4GB files
-  - pytest -v -s -m indexed_gzip_test           --niters 250 --nelems 805306368 -k "test_seek_and_read"

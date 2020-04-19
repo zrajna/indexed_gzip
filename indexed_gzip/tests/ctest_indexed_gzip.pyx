@@ -813,3 +813,30 @@ def test_multiproc_serialise():
         expected = [data[off:off+size].sum() for off in offsets]
 
         assert results == expected
+
+
+def test_32bit_overflow(niters, seed):
+    with tempdir():
+
+        block  = 2 ** 24     # 128MB
+        nelems = block * 48  # 6GB
+
+        data = np.ones(block, dtype=np.uint64).tobytes()
+
+        with gzip.open('test.gz', 'wb') as f:
+            for i in range(48):
+                print('Generated to {}...'.format(block * i))
+                f.write(data)
+
+        with igzip._IndexedGzipFile(filename='test.gz') as f:
+
+            seekelems = np.random.randint(0, nelems, niters)
+
+            for i, testval in enumerate(seekelems):
+
+                readval = read_element(f, testval)
+
+                ft = f.tell()
+
+                assert ft      == (testval + 1) * 8
+                assert readval == 1

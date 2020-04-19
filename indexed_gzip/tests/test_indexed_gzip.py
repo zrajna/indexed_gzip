@@ -141,3 +141,6 @@ def test_picklable():
 
 def test_multiproc_serialise():
     ctest_indexed_gzip.test_multiproc_serialise()
+
+def test_32bit_overflow(niters, seed):
+    ctest_indexed_gzip.test_32bit_overflow(niters, seed)

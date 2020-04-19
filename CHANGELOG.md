@@ -1,7 +1,7 @@
 # `indexed_gzip` changelog
 
 
-## 1.1.0 (April 18th 2020)
+## 1.1.0 (April 19th 2020)
 
 
 * `IndexedGzipFile` objects are now picklable, as long as they are created with

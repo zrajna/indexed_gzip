@@ -838,5 +838,5 @@ def test_32bit_overflow(niters, seed):
 
                 ft = f.tell()
 
-                assert ft      == (testval + 1) * 8
+                assert ft      == int(testval + 1) * 8
                 assert readval == 1

@@ -135,3 +135,12 @@ def test_wrapper_class():
 
 def test_size_multiple_of_readbuf():
     ctest_indexed_gzip.test_size_multiple_of_readbuf()
+
+def test_picklable():
+    ctest_indexed_gzip.test_picklable()
+
+def test_multiproc_serialise():
+    ctest_indexed_gzip.test_multiproc_serialise()
+
+def test_32bit_overflow(niters, seed):
+    ctest_indexed_gzip.test_32bit_overflow(niters, seed)

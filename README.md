@@ -48,6 +48,20 @@ only have to decompress (on average) 512KB of data to read from any location
 in the file.
 
 
+## Intended use
+
+
+You may find `indexed_gzip` useful if you need to read from large GZIP files.
+A major advantage of `indexed_gzip` is that it will work with any GZIP file.
+However, if you have control over the creation of your GZIP files, you may
+wish to consider some alternatives:
+
+ * [`mgzip`](https://github.com/vinlyx/mgzip/) provides an accelerated
+   GZIP compression and decompression library.
+ * Compression formats other than GZIP, such as `bzip2` and `xz`, have better
+   support for random access.
+
+
 ## Installation
 
 
@@ -267,7 +281,7 @@ Many thanks to the following contributors (listed chronologically):
  - Martin Craig (@mcraig-ibme): porting `indexed_gzip` to Windows (#3)
  - Chris Markiewicz (@effigies): Option to drop file handles (#6)
  - Omer Ozarslan (@ozars): Index import/export (#8)
-
+ - @DarioDaF: Windows overflow bug (#30)
 
 ## License
 

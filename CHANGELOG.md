@@ -1,6 +1,17 @@
 # `indexed_gzip` changelog
 
 
+## 1.1.0 (April 20th 2020)
+
+
+* `IndexedGzipFile` objects are now picklable, as long as they are created with
+  the default setting of `drop_handles=True` (#28, 31).
+* Changed the return type of `zran_tell` from `long` to `uint64_t`, because the
+  former is not guaranteed to be 64 bit (#29, #30).
+* Changed the `zran_index_t.compressed_size` and `uncompressed_size` fields from
+  `size_t` to `uint64_t` because the former is not guaranteed to be 64 bit.
+
+
 ## 1.0.0 (February 21st 2020)
 
 

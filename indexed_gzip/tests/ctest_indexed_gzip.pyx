@@ -6,18 +6,22 @@
 
 from __future__ import print_function
 
-import               os
-import os.path    as op
-import itertools  as it
-import subprocess as sp
-import               sys
-import               time
-import               gzip
-import               random
-import               tempfile
-import               shutil
-import               hashlib
-import               textwrap
+import                    os
+import os.path         as op
+import itertools       as it
+import functools       as ft
+import subprocess      as sp
+import multiprocessing as mp
+import                    sys
+import                    time
+import                    gzip
+import                    random
+import                    shutil
+import                    pickle
+import                    hashlib
+import                    textwrap
+import                    tempfile
+import                    contextlib
 
 import numpy as np
 
@@ -32,6 +36,19 @@ from . import testdir
 from libc.stdio cimport (SEEK_SET,
                          SEEK_CUR,
                          SEEK_END)
+
+
+@contextlib.contextmanager
+def tempdir():
+    tmpdir  = tempfile.mkdtemp()
+    prevdir = os.getcwd()
+    os.chdir(tmpdir)
+
+    try:
+        yield
+    finally:
+        os.chdir(prevdir)
+        shutil.rmtree(tmpdir)
 
 
 def read_element(gzf, element, seek=True):
@@ -675,11 +692,7 @@ def test_size_multiple_of_readbuf():
 
     fname = 'test.gz'
 
-    testdir = tempfile.mkdtemp()
-    prevdir = os.getcwd()
-    os.chdir(testdir)
-
-    try:
+    with tempdir():
         data = np.random.randint(1, 1000, 10000, dtype=np.uint32)
 
         with gzip.open(fname, 'wb') as f:
@@ -719,6 +732,111 @@ def test_size_multiple_of_readbuf():
             assert np.all(read == data)
         del f
         f = None
-    finally:
-        os.chdir(prevdir)
-        shutil.rmtree(testdir)
+
+
+def test_picklable():
+
+    # default behaviour is for drop_handles=True,
+    # which means that an IndexedGzipFile object
+    # should be picklable/serialisable
+    fname = 'test.gz'
+
+    with tempdir():
+        data = np.random.randint(1, 1000, (10000, 10000), dtype=np.uint32)
+        with gzip.open(fname, 'wb') as f:
+            f.write(data.tobytes())
+        del f
+
+        gzf        = igzip.IndexedGzipFile(fname)
+        first50MB  = gzf.read(1048576 * 50)
+        pickled    = pickle.dumps(gzf)
+        second50MB = gzf.read(1048576 * 50)
+
+        gzf.close()
+        del gzf
+
+        gzf = pickle.loads(pickled)
+        assert gzf.tell() == 1048576 * 50
+        assert gzf.read(1048576 * 50) == second50MB
+        gzf.seek(0)
+        assert gzf.read(1048576 * 50) == first50MB
+        gzf.close()
+        del gzf
+
+    # if drop_handles=False, no pickle
+    with tempdir():
+        data = np.random.randint(1, 1000, 50000, dtype=np.uint32)
+        with gzip.open(fname, 'wb') as f:
+            f.write(data.tobytes())
+        del f
+
+        gzf = igzip.IndexedGzipFile(fname, drop_handles=False)
+
+        with pytest.raises(pickle.PicklingError):
+            pickled = pickle.dumps(gzf)
+        gzf.close()
+        del gzf
+
+
+def _mpfunc(gzf, size, offset):
+    gzf.seek(offset)
+    bytes = gzf.read(size)
+    val = np.ndarray(int(size / 4), np.uint32, buffer=bytes)
+    gzf.close()
+    del gzf
+    return val.sum()
+
+
+def test_multiproc_serialise():
+    fname = 'test.gz'
+    with tempdir():
+
+        data = np.arange(10000000, dtype=np.uint32)
+        with gzip.open(fname, 'wb') as f:
+            f.write(data.tobytes())
+        del f
+
+        gzf = igzip.IndexedGzipFile(fname)
+
+        size    = len(data) / 16
+        offsets = np.arange(0, len(data), size)
+        func    = ft.partial(_mpfunc, gzf, size * 4)
+
+        pool = mp.Pool(8)
+        results = pool.map(func, offsets * 4)
+        pool.close()
+        pool.join()
+        gzf.close()
+        del gzf
+        del pool
+
+        expected = [data[off:off+size].sum() for off in offsets]
+
+        assert results == expected
+
+
+def test_32bit_overflow(niters, seed):
+    with tempdir():
+
+        block  = 2 ** 24     # 128MB
+        nelems = block * 48  # 6GB
+
+        data = np.ones(block, dtype=np.uint64).tobytes()
+
+        with gzip.open('test.gz', 'wb') as f:
+            for i in range(48):
+                print('Generated to {}...'.format(block * i))
+                f.write(data)
+
+        with igzip._IndexedGzipFile(filename='test.gz') as f:
+
+            seekelems = np.random.randint(0, nelems, niters)
+
+            for i, testval in enumerate(seekelems):
+
+                readval = read_element(f, testval)
+
+                ft = f.tell()
+
+                assert ft      == int(testval + 1) * 8
+                assert readval == 1

@@ -19,6 +19,7 @@ from libc.stdio     cimport (SEEK_SET,
                              fclose)
 
 from libc.stdint    cimport (uint8_t,
+                             uint32_t,
                              uint64_t,
                              int64_t)
 
@@ -34,6 +35,7 @@ from cpython.buffer cimport (PyObject_GetBuffer,
 cimport indexed_gzip.zran as zran
 
 import io
+import pickle
 import warnings
 import contextlib
 import threading
@@ -82,14 +84,29 @@ cdef class _IndexedGzipFile:
     """A reference to the ``zran_index`` struct. """
 
 
-    cdef readonly bint auto_build
-    """Flag which is set to ``True`` if the file index is built automatically
-    on seeks/reads.
+    cdef readonly uint32_t spacing
+    """Number of bytes between index seek points. """
+
+
+    cdef readonly uint32_t window_size
+    """Number of bytes of uncompressed data stored with each seek point."""
+
+
+    cdef readonly uint32_t readbuf_size
+    """Size of buffer in bytes for storing compressed data read in from the
+    file.
     """
 
 
     cdef readonly unsigned int readall_buf_size
-    """Used by meth:`read` as the read buffer size."""
+    """Size of buffer in bytes used by :meth:`read` when reading until EOF.
+    """
+
+
+    cdef readonly bint auto_build
+    """Flag which is set to ``True`` if the file index is built automatically
+    on seeks/reads.
+    """
 
 
     cdef readonly object filename
@@ -119,17 +136,17 @@ cdef class _IndexedGzipFile:
     """
 
 
-    def __cinit__(self,
-                  filename=None,
-                  fileobj=None,
-                  mode=None,
-                  auto_build=True,
-                  spacing=4194304,
-                  window_size=32768,
-                  readbuf_size=1048576,
-                  readall_buf_size=16777216,
-                  drop_handles=True,
-                  index_file=None):
+    def __init__(self,
+                 filename=None,
+                 fileobj=None,
+                 mode=None,
+                 auto_build=True,
+                 spacing=4194304,
+                 window_size=32768,
+                 readbuf_size=1048576,
+                 readall_buf_size=16777216,
+                 drop_handles=True,
+                 index_file=None):
         """Create an ``_IndexedGzipFile``. The file may be specified either
         with an open file handle (``fileobj``), or with a ``filename``. If the
         former, the file must have been opened in ``'rb'`` mode.
@@ -199,8 +216,12 @@ cdef class _IndexedGzipFile:
                 fileobj = open(filename, mode)
             fd = fdopen(fileobj.fileno(), 'rb')
 
-        self.auto_build       = auto_build
+
+        self.spacing          = spacing
+        self.window_size      = window_size
+        self.readbuf_size     = readbuf_size
         self.readall_buf_size = readall_buf_size
+        self.auto_build       = auto_build
         self.drop_handles     = drop_handles
         self.filename         = filename
         self.own_file         = own_file
@@ -231,13 +252,6 @@ cdef class _IndexedGzipFile:
 
         if index_file is not None:
             self.import_index(index_file)
-
-
-    def __init__(self, *args, **kwargs):
-        """This method does nothing. It is here to make sub-classing
-        ``_IndexedGzipFile`` easier.
-        """
-        pass
 
 
     def __file_handle(self):
@@ -292,6 +306,12 @@ cdef class _IndexedGzipFile:
         if self.drop_handles:
             raise NoHandleError()
         return self.pyfid
+
+
+    @property
+    def npoints(self):
+        """Returns the number of index points that have been created. """
+        return self.index.npoints
 
 
     @property
@@ -869,9 +889,11 @@ class IndexedGzipFile(io.BufferedReader):
                                a default value of 1048576 is used.
         """
 
-        buffer_size     = kwargs.pop('buffer_size', 1048576)
-        fobj            = _IndexedGzipFile(*args, **kwargs)
-        self.__fileLock = threading.RLock()
+        buffer_size        = kwargs.pop('buffer_size', 1048576)
+        fobj               = _IndexedGzipFile(*args, **kwargs)
+        self.__file_lock   = threading.RLock()
+        self.__igz_fobj    = fobj
+        self.__buffer_size = buffer_size
 
         self.build_full_index = fobj.build_full_index
         self.import_index     = fobj.import_index
@@ -886,6 +908,68 @@ class IndexedGzipFile(io.BufferedReader):
         """Seeks to ``offset``, then reads and returns up to ``nbytes``.
         The calls to seek and read are protected by a ``threading.RLock``.
         """
-        with self.__fileLock:
+        with self.__file_lock:
             self.seek(offset)
             return self.read(nbytes)
+
+
+    def __reduce__(self):
+        """Used to pickle an ``IndexedGzipFile``.
+
+        Returns a tuple containing:
+          - a reference to the ``unpickle`` function
+          - a tuple containing a "state" object, which can be passed
+            to ``unpickle``.
+        """
+
+        fobj = self.__igz_fobj
+
+        if (not fobj.drop_handles) or (not fobj.own_file):
+            raise pickle.PicklingError(
+                'Cannot pickle IndexedGzipFile that has been created '
+                'with an open file object, or that has been created '
+                'with drop_handles=False')
+
+        # export and serialise the
+        # index if any index points
+        # have been created
+        if fobj.npoints > 0:
+            index = io.BytesIO()
+            self.export_index(fileobj=index)
+        else:
+            index = None
+
+        state = {
+            'filename'         : fobj.filename,
+            'auto_build'       : fobj.auto_build,
+            'spacing'          : fobj.spacing,
+            'window_size'      : fobj.window_size,
+            'readbuf_size'     : fobj.readbuf_size,
+            'readall_buf_size' : fobj.readall_buf_size,
+            'buffer_size'      : self.__buffer_size,
+            'tell'             : self.tell(),
+            'index'            : index}
+
+        return (unpickle, (state, ))
+
+
+def unpickle(state):
+    """Create a new ``IndexedGzipFile`` from a pickled state.
+
+    :arg state: State of a pickled object, as returned by the
+                ``IndexedGzipFile.__reduce__`` method.
+
+    :returns:   A new ``IndexedGzipFile`` object.
+    """
+
+    tell  = state.pop('tell')
+    index = state.pop('index')
+    gzobj = IndexedGzipFile(**state)
+
+    if index is not None:
+        index.seek(0)
+        gzobj.import_index(fileobj=index)
+        index.close()
+    gzobj.seek(tell)
+
+    return gzobj

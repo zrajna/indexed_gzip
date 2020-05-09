@@ -609,6 +609,32 @@ def test_iter(drop):
                  next(f)
 
 
+def test_get_index_seek_points():
+
+    with testdir() as td:
+        fname   = op.join(td, 'test.gz')
+        spacing = 1048576
+
+        # make a test file
+        data = np.arange(spacing, dtype=np.uint64)
+        with gzip.open(fname, 'wb') as f:
+            f.write(data.tostring())
+
+        # check points before and after index creation
+        with igzip._IndexedGzipFile(fname, spacing=spacing) as f:
+            assert not list(f.seek_points())
+            f.build_full_index()
+
+            expected_number_of_seek_points = 1 + int(data.nbytes / spacing)
+            seek_points = list(f.seek_points())
+
+            assert len(seek_points) == expected_number_of_seek_points
+
+            # check monotonic growth
+            uncmp_offsets = [point[0] for point in seek_points]
+            assert sorted(uncmp_offsets) == uncmp_offsets
+
+
 def test_import_export_index():
 
     with testdir() as td:

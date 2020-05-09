@@ -85,8 +85,8 @@ python setup.py develop
 ```
 
 
-To run the tests, type the following; you will need `numpy` and `pytest`
-installed:
+To run the tests, type the following; you will need `numpy`, `pytest`
+and `pytest-cov` installed:
 ```sh
 pytest
 ```

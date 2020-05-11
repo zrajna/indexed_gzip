@@ -289,6 +289,10 @@ cdef class _IndexedGzipFile:
 
         return proxy()
 
+    def seek_points(self):
+        for i in range(self.index.npoints):
+            point = self.index.list[i]
+            yield (point.uncmp_offset, point.cmp_offset)
 
     def fileno(self):
         """Calls ``fileno`` on the underlying file object. Raises a
@@ -900,6 +904,7 @@ class IndexedGzipFile(io.BufferedReader):
         self.export_index     = fobj.export_index
         self.fileobj          = fobj.fileobj
         self.drop_handles     = fobj.drop_handles
+        self.seek_points      = fobj.seek_points
 
         super(IndexedGzipFile, self).__init__(fobj, buffer_size)
 

@@ -14,4 +14,4 @@ from .indexed_gzip import (_IndexedGzipFile,     # noqa
                            ZranError)
 
 
-__version__ = '1.1.0'
+__version__ = '1.2.0'

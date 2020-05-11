@@ -289,10 +289,17 @@ cdef class _IndexedGzipFile:
 
         return proxy()
 
+
     def seek_points(self):
+        """Return the seek point locations that currently exist in the index.
+
+        Yields a sequence of tuples, with each tuple containing the
+        uncompressed and compressed offsets for one seek point in the index.
+        """
         for i in range(self.index.npoints):
             point = self.index.list[i]
             yield (point.uncmp_offset, point.cmp_offset)
+
 
     def fileno(self):
         """Calls ``fileno`` on the underlying file object. Raises a

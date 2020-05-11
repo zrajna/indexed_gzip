@@ -282,6 +282,9 @@ Many thanks to the following contributors (listed chronologically):
  - Chris Markiewicz (@effigies): Option to drop file handles (#6)
  - Omer Ozarslan (@ozars): Index import/export (#8)
  - @DarioDaF: Windows overflow bug (#30)
+ - Sławomir Zborowski (@szborows): `seek_points` method (#35), README fixes
+   (#34)
+
 
 ## License
 

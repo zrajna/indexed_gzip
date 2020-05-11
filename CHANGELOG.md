@@ -1,6 +1,13 @@
 # `indexed_gzip` changelog
 
 
+## 1.2.0 (May 12th 2020)
+
+
+* New `IndexedGzipFile.seek_points` method, which returns the compressed and
+  uncompressed seek point locations.
+
+
 ## 1.1.0 (April 20th 2020)
 
 

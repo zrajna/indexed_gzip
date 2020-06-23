@@ -5,7 +5,7 @@
 
 
 * The `IndexedGzipFile.seek` method now accepts seeking from the end of
-  uncompressed stream via `SEEK_END`, as long as the index has been built.
+  uncompressed stream via `SEEK_END`, as long as the index has been built (#37).
 
 
 ## 1.2.0 (May 12th 2020)

@@ -1,6 +1,13 @@
 # `indexed_gzip` changelog
 
 
+## 1.3.0 (June 23rd 2020)
+
+
+* The `IndexedGzipFile.seek` method now accepts seeking from the end of
+  uncompressed stream via `SEEK_END`, as long as the index has been built.
+
+
 ## 1.2.0 (May 12th 2020)
 
 

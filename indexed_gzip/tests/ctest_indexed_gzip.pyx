@@ -312,13 +312,13 @@ def test_read_beyond_end(concat, drop):
 
 def test_seek(concat):
     with testdir() as tdir:
-        nelems   = 65536
+        nelems   = 262144 # == 2MB
         testfile = op.join(tdir, 'test.gz')
         gen_test_data(testfile, nelems, concat)
 
         results = []
 
-        with igzip._IndexedGzipFile(testfile) as f:
+        with igzip._IndexedGzipFile(testfile, spacing=131072) as f:
 
             results.append((f.read(8), 0))
 
@@ -331,9 +331,17 @@ def test_seek(concat):
             f.seek(16, SEEK_CUR)
             results.append((f.read(8), 5))
 
-            # Cannot seek from SEEK_END
-            with pytest.raises(ValueError):
-                f.seek(100, SEEK_END)
+            # SEEK_END only works when index is built
+            with pytest.raises(igzip.NotCoveredError):
+                f.seek(-100, SEEK_END)
+
+            f.build_full_index()
+
+            f.seek(-800, SEEK_END)
+            results.append((f.read(8), 262044))
+
+            f.seek(-3200, SEEK_END)
+            results.append((f.read(8), 261744))
 
         for data, expected in results:
             val = np.frombuffer(data, dtype=np.uint64)

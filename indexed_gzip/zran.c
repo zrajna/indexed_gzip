@@ -2053,11 +2053,24 @@ int zran_seek(zran_index_t  *index,
     }
 
     /*
+     * The offset passed in is signed, so
+     * negative offsets are allowed. But
+     * here we transform the offset to
+     * positive, as _zran_get_point_with_expand
+     * requires an absolute offset from the
+     * beginning of the uncompressed stream.
+     *
+     * I am not currently taking into account
+     * the overflow potential when converting
+     * from int64 to uint64.a
+     */
+
+    /*
      * SEEK_END: seek relative to the
      * end of the uncompressed stream
      */
     if (whence == SEEK_END) {
-      offset = index->uncompressed_size - offset;
+      offset += index->uncompressed_size;
     }
 
     /*

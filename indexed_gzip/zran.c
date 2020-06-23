@@ -2031,8 +2031,7 @@ fail:
 
 /*
  * Seek to the approximate location of the specified offset into
- * the uncompressed data stream. The whence argument must be
- * SEEK_SET or SEEK_CUR.
+ * the uncompressed data stream.
  */
 int zran_seek(zran_index_t  *index,
               int64_t        offset,
@@ -2045,8 +2044,16 @@ int zran_seek(zran_index_t  *index,
 
     zran_log("zran_seek(%lld, %i)\n", offset, whence);
 
-    if (whence != SEEK_SET && whence != SEEK_CUR) {
-        goto fail;
+    if (whence == SEEK_END && index->uncompressed_size == 0) {
+      goto index_not_built;
+    }
+
+    /*
+     * SEEK_END: seek relative to the
+     * end of the uncompressed stream
+     */
+    if (whence == SEEK_END) {
+      offset = index->uncompressed_size - offset;
     }
 
     /*
@@ -2096,8 +2103,9 @@ int zran_seek(zran_index_t  *index,
 
     return ZRAN_SEEK_OK;
 
-fail:        return ZRAN_SEEK_FAIL;
-not_covered: return ZRAN_SEEK_NOT_COVERED;
+fail:            return ZRAN_SEEK_FAIL;
+index_not_built: return ZRAN_SEEK_INDEX_NOT_BUILT;
+not_covered:     return ZRAN_SEEK_NOT_COVERED;
 eof:
     index->uncmp_seek_offset = index->uncompressed_size;
     return ZRAN_SEEK_EOF;

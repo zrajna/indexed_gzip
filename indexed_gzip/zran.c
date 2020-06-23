@@ -590,19 +590,23 @@ int _zran_expand_point_list(zran_index_t *index) {
 
 /* Frees any unused memory allocated for index storage. */
 int _zran_free_unused(zran_index_t *index) {
+
     zran_point_t *new_list;
+    size_t        new_size;
 
     zran_log("_zran_free_unused\n");
 
+    if (index->npoints < 8) new_size = 8;
+    else                    new_size = index->npoints;
 
-    new_list = realloc(index->list, sizeof(zran_point_t) * index->npoints);
+    new_list = realloc(index->list, sizeof(zran_point_t) * new_size);
 
     if (new_list == NULL) {
         return -1;
     }
 
     index->list = new_list;
-    index->size = index->npoints;
+    index->size = new_size;
 
     return 0;
 }

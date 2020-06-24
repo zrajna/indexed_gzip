@@ -1,7 +1,7 @@
 # `indexed_gzip` changelog
 
 
-## 1.3.0 (June 23rd 2020)
+## 1.3.0 (June 24th 2020)
 
 
 * The `IndexedGzipFile.seek` method now accepts seeking from the end of

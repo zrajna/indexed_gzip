@@ -29,6 +29,7 @@ from posix.types cimport  off_t
 
 from libc.stdio  cimport (SEEK_SET,
                           SEEK_CUR,
+                          SEEK_END,
                           FILE,
                           fdopen,
                           fwrite)
@@ -418,6 +419,63 @@ def test_seek_cur(testfile, nelems):
             assert val == curelem
 
             assert zran.zran_seek(&index, -8, SEEK_CUR, NULL) == zran.ZRAN_SEEK_OK
+
+        zran.zran_free(&index)
+
+
+def test_seek_end(testfile, nelems):
+    cdef zran.zran_index_t index
+
+    filesize     = nelems * 8
+    indexSpacing = max(131072, filesize // 1500)
+    seekstep     = max(1, (nelems - 1) // 500)
+    curelem      = 0
+
+    with open(testfile, 'rb') as pyfid:
+        cfid = fdopen(pyfid.fileno(), 'rb')
+
+        assert not zran.zran_init(&index,
+                                  cfid,
+                                  indexSpacing,
+                                  32768,
+                                  131072,
+                                  zran.ZRAN_AUTO_BUILD)
+
+        assert zran.zran_seek(&index, -10, SEEK_END, NULL) == zran.ZRAN_SEEK_INDEX_NOT_BUILT
+        assert zran.zran_seek(&index,  20, SEEK_SET, NULL) == zran.ZRAN_SEEK_OK
+        assert zran.zran_tell(&index)                      == 20
+        assert zran.zran_seek(&index, -10, SEEK_END, NULL) == zran.ZRAN_SEEK_INDEX_NOT_BUILT
+
+        assert zran.zran_build_index(&index, 0, 0)         == 0
+
+        assert zran.zran_seek(&index,  0, SEEK_END, NULL) == zran.ZRAN_SEEK_EOF
+        assert zran.zran_tell(&index)                     == filesize
+        assert zran.zran_seek(&index, -1, SEEK_END, NULL) == zran.ZRAN_SEEK_OK
+        assert zran.zran_tell(&index)                     == filesize - 1
+
+        assert zran.zran_seek(&index,  1,             SEEK_END, NULL) == zran.ZRAN_SEEK_EOF
+        assert zran.zran_tell(&index)                                 == filesize
+        assert zran.zran_seek(&index,  -filesize - 1, SEEK_END, NULL) == zran.ZRAN_SEEK_FAIL
+        assert zran.zran_seek(&index,  -filesize,     SEEK_END, NULL) == zran.ZRAN_SEEK_OK
+        assert zran.zran_tell(&index)                                 == 0
+
+        while curelem < nelems:
+            seekloc = filesize - ((nelems + curelem - 1) * 8)
+
+            if seekloc >= 0: exp = zran.ZRAN_SEEK_EOF
+            else:            exp = zran.ZRAN_SEEK_OK
+
+            assert zran.zran_seek(&index, seekloc, SEEK_END, NULL) == exp
+
+            if exp == zran.ZRAN_SEEK_EOF:
+                break
+
+            curelem += seekstep
+            zt = zran.zran_tell(&index)
+            val = read_element(&index, curelem, nelems, False)
+
+            assert zt  == curelem * 8
+            assert val == curelem
 
         zran.zran_free(&index)
 

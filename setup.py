@@ -13,6 +13,7 @@ for more details.
 import sys
 import os
 import glob
+import functools as ft
 import os.path as op
 import shutil
 
@@ -68,16 +69,21 @@ class Clean(Command):
                 except OSError: pass
 
 
-with open(op.join(op.dirname(__file__), 'README.md'), 'rt') as f:
-    readme = f.read().strip()
-
-
 # Platform information
 python2 = sys.version_info[0] == 2
 noc99   = python2 or (sys.version_info[0] == 3 and sys.version_info[1] <= 4)
 windows = sys.platform.startswith("win")
 testing = 'INDEXED_GZIP_TESTING' in os.environ
 
+readme = op.join(op.dirname(__file__), 'README.md')
+
+if python2:
+    openreadme = ft.partial(open, readme, 'rt')
+else:
+    openreadme = ft.partial(open, readme, 'rt', encoding='utf-8')
+
+with openreadme() as f:
+    readme = f.read().strip()
 
 # If cython is present, we'll compile
 # the pyx files from scratch. Otherwise,

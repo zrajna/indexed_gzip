@@ -13,6 +13,7 @@ random access to gzip files.
 
 from libc.stdio     cimport (SEEK_SET,
                              SEEK_CUR,
+                             SEEK_END,
                              FILE,
                              fopen,
                              fdopen,
@@ -48,8 +49,9 @@ log = logging.getLogger(__name__)
 class NotCoveredError(Exception):
     """Exception raised by the :class:`_IndexedGzipFile` when an attempt is
     made to seek to/read from a location that is not covered by the
-    index. This exception will never be raised if the ``_IndexedGzipFile`` was
-    created with ``auto_build=True``.
+    index. If the ``_IndexedGzipFile`` was created with ``auto_build=True``,
+    this error will only occur on attempts to call the ``seek`` method
+    with ``whence=SEEK_END``, where the index has not been completely built.
     """
     pass
 
@@ -427,8 +429,8 @@ cdef class _IndexedGzipFile:
 
         :arg offset: Desired seek offset into the uncompressed data
 
-        :arg whence: Either  ``SEEK_SET`` or ``SEEK_CUR``. If not one of these,
-                     a :exc:`ValueError` is raised.
+        :arg whence: Either  ``SEEK_SET``, ``SEEK_CUR``, or ``SEEK_END``. If
+                     not one of these, a :exc:`ValueError` is raised.
 
         :returns:    The final seek location into the uncompressed stream.
 
@@ -441,8 +443,8 @@ cdef class _IndexedGzipFile:
         cdef uint8_t            c_whence = whence
         cdef zran.zran_index_t *index    = &self.index
 
-        if whence not in (SEEK_SET, SEEK_CUR):
-            raise ValueError('Seek from end not supported')
+        if whence not in (SEEK_SET, SEEK_CUR, SEEK_END):
+            raise ValueError('Invalid value for whence: {}'.format(whence))
 
         with self.__file_handle(), nogil:
             ret = zran.zran_seek(index, off, c_whence, NULL)
@@ -453,6 +455,10 @@ cdef class _IndexedGzipFile:
         elif ret == zran.ZRAN_SEEK_NOT_COVERED:
             raise NotCoveredError('Index does not cover '
                                   'offset {}'.format(offset))
+
+        elif ret == zran.ZRAN_SEEK_INDEX_NOT_BUILT:
+            raise NotCoveredError('Index must be completely built '
+                                  'in order to seek from SEEK_END')
 
         elif ret not in (zran.ZRAN_SEEK_OK, zran.ZRAN_SEEK_EOF):
             raise ZranError('zran_seek returned unknown code: {}'.format(ret))

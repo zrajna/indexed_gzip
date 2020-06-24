@@ -28,11 +28,13 @@ cdef extern from "zran.h":
         uint8_t  *data;
 
     enum:
-        ZRAN_AUTO_BUILD       =  1,
-        ZRAN_SEEK_FAIL        = -1,
-        ZRAN_SEEK_OK          =  0,
-        ZRAN_SEEK_NOT_COVERED =  1,
-        ZRAN_SEEK_EOF         =  2,
+        ZRAN_AUTO_BUILD           =  1,
+
+        ZRAN_SEEK_FAIL            = -1,
+        ZRAN_SEEK_OK              =  0,
+        ZRAN_SEEK_NOT_COVERED     =  1,
+        ZRAN_SEEK_EOF             =  2,
+        ZRAN_SEEK_INDEX_NOT_BUILT =  3,
 
         ZRAN_READ_NOT_COVERED = -1,
         ZRAN_READ_EOF         = -2,

@@ -427,7 +427,7 @@ def test_seek_end(testfile, nelems):
     cdef zran.zran_index_t index
 
     filesize     = nelems * 8
-    indexSpacing = max(524288, filesize // 1500)
+    indexSpacing = max(131072, filesize // 1500)
     seekstep     = max(1, (nelems - 1) // 500)
     curelem      = 0
 

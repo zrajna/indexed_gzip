@@ -68,7 +68,8 @@ class Clean(Command):
                 except OSError: pass
 
 
-with open(op.join(op.dirname(__file__), 'README.md'), 'rt') as f:
+readme = op.join(op.dirname(__file__), 'README.md')
+with open(readme, 'rt', encoding='utf-8') as f:
     readme = f.read().strip()
 
 

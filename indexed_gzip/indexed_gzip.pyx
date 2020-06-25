@@ -457,8 +457,8 @@ cdef class _IndexedGzipFile:
                                   'offset {}'.format(offset))
 
         elif ret == zran.ZRAN_SEEK_INDEX_NOT_BUILT:
-            raise NotCoveredError('Index must be completely built '
-                                  'in order to seek from SEEK_END')
+            raise ValueError('Index must be completely built '
+                             'in order to seek from SEEK_END')
 
         elif ret not in (zran.ZRAN_SEEK_OK, zran.ZRAN_SEEK_EOF):
             raise ZranError('zran_seek returned unknown code: {}'.format(ret))

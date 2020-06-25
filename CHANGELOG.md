@@ -1,6 +1,14 @@
 # `indexed_gzip` changelog
 
 
+## 1.3.1 (June 25th 2020)
+
+
+* Reverted the error type raised by the `IndexedGzipFile.seek` to `ValueError`,
+  as `nibabel` assumes that the `seek` method of file objects raise a
+  `ValueError` if `SEEK_END` is not supported.
+
+
 ## 1.3.0 (June 24th 2020)
 
 

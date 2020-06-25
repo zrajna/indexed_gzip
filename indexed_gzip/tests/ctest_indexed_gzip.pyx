@@ -332,7 +332,7 @@ def test_seek(concat):
             results.append((f.read(8), 5))
 
             # SEEK_END only works when index is built
-            with pytest.raises(igzip.NotCoveredError):
+            with pytest.raises(ValueError):
                 f.seek(-100, SEEK_END)
 
             f.build_full_index()

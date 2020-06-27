@@ -31,24 +31,11 @@ import indexed_gzip as igzip
 
 from . import gen_test_data
 from . import check_data_valid
-from . import testdir
+from . import tempdir
 
 from libc.stdio cimport (SEEK_SET,
                          SEEK_CUR,
                          SEEK_END)
-
-
-@contextlib.contextmanager
-def tempdir():
-    tmpdir  = tempfile.mkdtemp()
-    prevdir = os.getcwd()
-    os.chdir(tmpdir)
-
-    try:
-        yield
-    finally:
-        os.chdir(prevdir)
-        shutil.rmtree(tmpdir)
 
 
 def read_element(gzf, element, seek=True):
@@ -125,7 +112,7 @@ def test_atts(testfile, drop):
 
 def test_init_failure_cases(concat, drop):
 
-    with testdir() as td:
+    with tempdir() as td:
         testfile = op.join(td, 'test.gz')
         gen_test_data(testfile, 65536, concat)
 
@@ -164,7 +151,7 @@ def test_init_failure_cases(concat, drop):
 
 
 def test_init_success_cases(concat, drop):
-    with testdir() as td:
+    with tempdir() as td:
         testfile = op.join(td, 'test.gz')
         gen_test_data(testfile, 65536, concat)
 
@@ -237,7 +224,7 @@ def test_handles_not_dropped(testfile, nelems, seed):
 
 
 def test_manual_build():
-    with testdir() as td:
+    with tempdir() as td:
         nelems = 65536
         fname = op.join(td, 'test.gz')
 
@@ -288,7 +275,7 @@ def test_read_all(testfile, nelems, use_mmap, drop):
 
 
 def test_read_beyond_end(concat, drop):
-    with testdir() as tdir:
+    with tempdir() as tdir:
         nelems   = 65536
         testfile = op.join(tdir, 'test.gz')
 
@@ -311,7 +298,7 @@ def test_read_beyond_end(concat, drop):
 
 
 def test_seek(concat):
-    with testdir() as tdir:
+    with tempdir() as tdir:
         nelems   = 262144 # == 2MB
         testfile = op.join(tdir, 'test.gz')
         gen_test_data(testfile, nelems, concat)
@@ -401,7 +388,7 @@ def test_seek_and_tell(testfile, nelems, niters, seed, drop):
 
 
 def test_pread():
-    with testdir() as td:
+    with tempdir() as td:
         nelems = 1024
         testfile = op.join(td, 'test.gz')
         gen_test_data(testfile, nelems, False)
@@ -428,7 +415,7 @@ def test_readinto(drop):
         return sum([len(l) for l in lines[:idx]]) + idx
 
 
-    with testdir() as td:
+    with tempdir() as td:
         testfile = op.join(td, 'test.gz')
         write_text_to_gzip_file(testfile, lines)
         with igzip._IndexedGzipFile(filename=testfile, drop_handles=drop) as f:
@@ -488,7 +475,7 @@ def test_readline(drop):
     how creative
     """).strip().split('\n')
 
-    with testdir() as td:
+    with tempdir() as td:
         fname = op.join(td, 'test.gz')
         write_text_to_gzip_file(fname, lines)
 
@@ -511,7 +498,7 @@ def test_readline_sizelimit(drop):
 
     lines = ['line one', 'line two']
 
-    with testdir() as td:
+    with tempdir() as td:
         fname = op.join(td, 'test.gz')
         write_text_to_gzip_file(fname, lines)
 
@@ -547,7 +534,7 @@ def test_readlines(drop):
     test data
     """).strip().split('\n')
 
-    with testdir() as td:
+    with tempdir() as td:
         fname = op.join(td, 'test.gz')
         write_text_to_gzip_file(fname, lines)
 
@@ -568,7 +555,7 @@ def test_readlines_sizelimit(drop):
     lines = ['line one', 'line two']
     data  = '\n'.join(lines) + '\n'
 
-    with testdir() as td:
+    with tempdir() as td:
         fname = op.join(td, 'test.gz')
         write_text_to_gzip_file(fname, lines)
 
@@ -605,7 +592,7 @@ def test_iter(drop):
     unparalleled
     """).strip().split('\n')
 
-    with testdir() as td:
+    with tempdir() as td:
         fname = op.join(td, 'test.gz')
         write_text_to_gzip_file(fname, lines)
 
@@ -619,7 +606,7 @@ def test_iter(drop):
 
 def test_get_index_seek_points():
 
-    with testdir() as td:
+    with tempdir() as td:
         fname   = op.join(td, 'test.gz')
         spacing = 1048576
 
@@ -645,7 +632,7 @@ def test_get_index_seek_points():
 
 def test_import_export_index():
 
-    with testdir() as td:
+    with tempdir() as td:
         fname    = op.join(td, 'test.gz')
         idxfname = op.join(td, 'test.gzidx')
 
@@ -703,7 +690,7 @@ def test_import_export_index():
 
 def test_wrapper_class():
 
-    with testdir() as td:
+    with tempdir() as td:
         fname    = op.join(td, 'test.gz')
         idxfname = op.join(td, 'test.gzidx')
 

@@ -48,7 +48,7 @@ from posix.mman cimport (mmap,
                          MAP_SHARED)
 
 
-from . import poll, check_data_valid
+from . import poll, check_data_valid, tempdir
 
 
 cdef extern from "sys/mman.h":
@@ -58,21 +58,6 @@ cdef extern from "sys/mman.h":
 cimport indexed_gzip.zran as zran
 
 np.import_array()
-
-
-@contextlib.contextmanager
-def tempdir():
-    """Returns a context manager which creates and returns a temporary
-    directory, and then deletes it on exit.
-    """
-    testdir = tempfile.mkdtemp()
-    prevdir = os.getcwd()
-    try:
-        os.chdir(testdir)
-        yield testdir
-    finally:
-        os.chdir(prevdir)
-        shutil.rmtree(testdir)
 
 
 cdef read_element(zran.zran_index_t *index, element, nelems, seek=True):

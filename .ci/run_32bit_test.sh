@@ -31,7 +31,7 @@ fi
 
 export PATH=/mypython/bin:$PATH
 
-pip install --upgrade cython numpy pytest coverage pytest-cov
+pip install --upgrade cython numpy nibabel pytest coverage pytest-cov
 
 cd /indexed_gzip
 python setup.py develop

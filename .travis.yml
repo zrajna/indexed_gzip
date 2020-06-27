@@ -84,14 +84,14 @@ env:
   - TEST_SUITE=indexed_gzip_test                         NITERS=5000 NELEMS=rnd_131072
   - TEST_SUITE=indexed_gzip_test                         NITERS=5000 NELEMS=rnd_2000000
   - TEST_SUITE=indexed_gzip_test EXTRA_ARGS="--use_mmap" NITERS=1000 NELEMS=805306368
-  - TEST_SUITE=nibabel_test NIBABEL=2.0.* NUMPY=1.17.*
-  - TEST_SUITE=nibabel_test NIBABEL=2.1.* NUMPY=1.17.*
-  - TEST_SUITE=nibabel_test NIBABEL=2.2.* NUMPY=1.17.*
-  - TEST_SUITE=nibabel_test NIBABEL=2.3.*
-  - TEST_SUITE=nibabel_test NIBABEL=2.4.*
-  - TEST_SUITE=nibabel_test NIBABEL=2.5.*
-  - TEST_SUITE=nibabel_test NIBABEL=3.0.*
-  - TEST_SUITE=nibabel_test NIBABEL=3.1.*
+  - TEST_SUITE=nibabel_test NIBABEL="=2.0.*" NUMPY="=1.17.*"
+  - TEST_SUITE=nibabel_test NIBABEL="=2.1.*" NUMPY="=1.17.*"
+  - TEST_SUITE=nibabel_test NIBABEL="=2.2.*" NUMPY="=1.17.*"
+  - TEST_SUITE=nibabel_test NIBABEL="=2.3.*"
+  - TEST_SUITE=nibabel_test NIBABEL="=2.4.*"
+  - TEST_SUITE=nibabel_test NIBABEL="=2.5.*"
+  - TEST_SUITE=nibabel_test NIBABEL="=3.0.*"
+  - TEST_SUITE=nibabel_test NIBABEL="=3.1.*"
   - TEST_SUITE=32bittest
 
 install: "pip install --upgrade cython numpy$NUMPY nibabel$NIBABEL pytest coverage pytest-cov"

@@ -229,6 +229,6 @@ setup(
 
     ext_modules=extensions,
 
-    tests_require=['pytest', 'numpy', 'coverage', 'pytest-cov'],
+    tests_require=['pytest', 'numpy', 'nibabel', 'coverage', 'pytest-cov'],
     test_suite='tests',
 )

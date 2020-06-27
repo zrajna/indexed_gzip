@@ -59,7 +59,7 @@ environment:
 install:
   - "set PATH=%MINICONDA%;%MINICONDA%\\Scripts;%PATH%"
   - conda update  --yes -q conda
-  - conda create  --yes -n test_env python=%PYTHON_VERSION%
+  - conda create  --yes -n test_env --strict-channel-priority -c conda-forge python=%PYTHON_VERSION%
   - activate test_env
   - conda install --yes --strict-channel-priority -c conda-forge cython numpy nibabel zlib six pytest coverage pytest-cov
   - set ZLIB_HOME=%CONDA_PREFIX%\\Library

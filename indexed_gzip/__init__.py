@@ -14,4 +14,10 @@ from .indexed_gzip import (_IndexedGzipFile,     # noqa
                            ZranError)
 
 
+SafeIndexedGzipFile = IndexedGzipFile
+"""Alias for ``IndexedGzipFile``, to preserve compatibility with older
+versions of ``nibabel``.
+"""
+
+
 __version__ = '1.3.1'

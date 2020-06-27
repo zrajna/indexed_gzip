@@ -62,6 +62,7 @@ install:
   - conda create  --yes -n test_env --strict-channel-priority -c conda-forge python=%PYTHON_VERSION%
   - activate test_env
   - conda install --yes --strict-channel-priority -c conda-forge cython numpy nibabel zlib six pytest coverage pytest-cov
+  - conda update  --yes --strict-channel-priority -c conda-forge pytest
   - set ZLIB_HOME=%CONDA_PREFIX%\\Library
   - python setup.py develop
 

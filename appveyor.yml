@@ -59,13 +59,14 @@ environment:
 install:
   - "set PATH=%MINICONDA%;%MINICONDA%\\Scripts;%PATH%"
   - conda update  --yes -q conda
-  - conda create  --yes -n test_env --strict-channel-priority -c conda-forge python=%PYTHON_VERSION%
+  - conda create  --yes -n test_env -c conda-forge python=%PYTHON_VERSION%
   - activate test_env
-  - conda install --yes --strict-channel-priority -c conda-forge cython numpy nibabel zlib six pytest==3.5 coverage pytest-cov==2.4
+  - conda install --yes -c conda-forge pytest==3.5
+  - conda install --yes -c conda-forge cython numpy nibabel zlib six coverage pytest-cov
   - set ZLIB_HOME=%CONDA_PREFIX%\\Library
   - python setup.py develop
 
 
 test_script:
-  - pytest -v -s -m indexed_gzip_test          --niters 250 --nelems=rnd_16777217
-  - pytest -v -s -m indexed_gzip_test --concat --niters 250 --nelems=rnd_16777217
+  - pytest -v -s -m indexed_gzip_test          --niters 250 --nelems=rnd_1048576
+  - pytest -v -s -m indexed_gzip_test --concat --niters 250 --nelems=rnd_1048576

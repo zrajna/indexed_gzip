@@ -59,10 +59,13 @@ environment:
 install:
   - "set PATH=%MINICONDA%;%MINICONDA%\\Scripts;%PATH%"
   - conda update  --yes -q conda
-  - conda create  --yes -n test_env -c conda-forge python=%PYTHON_VERSION%
+  - conda create  --yes -n test_env python=%PYTHON_VERSION%
   - activate test_env
-  - conda install --yes -c conda-forge pytest==3.5
-  - conda install --yes -c conda-forge cython numpy nibabel zlib six coverage pytest-cov
+  # win32 conda-forge/pytest is old, so install
+  # as much as we can from anaconda
+  - conda install --yes pytest pytest-cov coverage cython numpy zlib six
+  # nibabel not available on anaconda channel
+  - conda install --yes -c conda-forge nibabel
   - set ZLIB_HOME=%CONDA_PREFIX%\\Library
   - python setup.py develop
 

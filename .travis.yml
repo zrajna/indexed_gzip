@@ -73,21 +73,21 @@ matrix:
 
     # test different versions of nibabel
     - python: 3.7
-      env:    TEST_SUITE=nibabel_test NIBABEL="==2.0.*" NUMPY="==1.17.*"
+      env:    TEST_SUITE=nibabel_test NIBABEL="==2.0.*" NUMPY="==1.17.*" NITERS=1 NELEMS=1
     - python: 3.7
-      env:    TEST_SUITE=nibabel_test NIBABEL="==2.1.*" NUMPY="==1.17.*"
+      env:    TEST_SUITE=nibabel_test NIBABEL="==2.1.*" NUMPY="==1.17.*" NITERS=1 NELEMS=1
     - python: 3.7
-      env:    TEST_SUITE=nibabel_test NIBABEL="==2.2.*" NUMPY="==1.17.*"
+      env:    TEST_SUITE=nibabel_test NIBABEL="==2.2.*" NUMPY="==1.17.*" NITERS=1 NELEMS=1
     - python: 3.7
-      env:    TEST_SUITE=nibabel_test NIBABEL="==2.3.*"
+      env:    TEST_SUITE=nibabel_test NIBABEL="==2.3.*"                  NITERS=1 NELEMS=1
     - python: 3.7
-      env:    TEST_SUITE=nibabel_test NIBABEL="==2.4.*"
+      env:    TEST_SUITE=nibabel_test NIBABEL="==2.4.*"                  NITERS=1 NELEMS=1
     - python: 3.7
-      env:    TEST_SUITE=nibabel_test NIBABEL="==2.5.*"
+      env:    TEST_SUITE=nibabel_test NIBABEL="==2.5.*"                  NITERS=1 NELEMS=1
     - python: 3.7
-      env:    TEST_SUITE=nibabel_test NIBABEL="==3.0.*"
+      env:    TEST_SUITE=nibabel_test NIBABEL="==3.0.*"                  NITERS=1 NELEMS=1
     - python: 3.7
-      env:    TEST_SUITE=nibabel_test NIBABEL="==3.1.*"
+      env:    TEST_SUITE=nibabel_test NIBABEL="==3.1.*"                  NITERS=1 NELEMS=1
 
 
 # Tests covering the indexed_gzip module

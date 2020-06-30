@@ -18,7 +18,7 @@ import multiprocessing as mp
 import numpy as np
 
 
-def testdir():
+def tempdir():
     """Returnsa context manager which creates and returns a temporary
     directory, and then deletes it on exit.
     """
@@ -27,11 +27,11 @@ def testdir():
 
         def __enter__(self):
 
-            self.testdir = tempfile.mkdtemp()
-            return self.testdir
+            self.tempdir = tempfile.mkdtemp()
+            return self.tempdir
 
         def __exit__(self, *a, **kwa):
-            shutil.rmtree(self.testdir)
+            shutil.rmtree(self.tempdir)
 
     return ctx()
 

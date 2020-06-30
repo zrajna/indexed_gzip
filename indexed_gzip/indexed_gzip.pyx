@@ -46,7 +46,7 @@ import logging
 log = logging.getLogger(__name__)
 
 
-class NotCoveredError(Exception):
+class NotCoveredError(ValueError):
     """Exception raised by the :class:`_IndexedGzipFile` when an attempt is
     made to seek to/read from a location that is not covered by the
     index. If the ``_IndexedGzipFile`` was created with ``auto_build=True``,
@@ -63,7 +63,7 @@ class ZranError(Exception):
     pass
 
 
-class NoHandleError(Exception):
+class NoHandleError(ValueError):
     """Exception raised by the :class:`_IndexedGzipFile` when
     ``drop_handles is True`` and an attempt is made to access the underlying
     file object.
@@ -457,8 +457,8 @@ cdef class _IndexedGzipFile:
                                   'offset {}'.format(offset))
 
         elif ret == zran.ZRAN_SEEK_INDEX_NOT_BUILT:
-            raise ValueError('Index must be completely built '
-                             'in order to seek from SEEK_END')
+            raise NotCoveredError('Index must be completely built '
+                                  'in order to seek from SEEK_END')
 
         elif ret not in (zran.ZRAN_SEEK_OK, zran.ZRAN_SEEK_EOF):
             raise ZranError('zran_seek returned unknown code: {}'.format(ret))

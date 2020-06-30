@@ -61,12 +61,15 @@ install:
   - conda update  --yes -q conda
   - conda create  --yes -n test_env python=%PYTHON_VERSION%
   - activate test_env
-  - conda install --yes cython numpy zlib six pytest coverage pytest-cov
-  - conda update --yes pytest
+  # win32 conda-forge/pytest is old, so install
+  # as much as we can from anaconda
+  - conda install --yes pytest pytest-cov coverage cython numpy zlib six
+  # nibabel not available on anaconda channel
+  - conda install --yes -c conda-forge nibabel
   - set ZLIB_HOME=%CONDA_PREFIX%\\Library
   - python setup.py develop
 
 
 test_script:
-  - pytest -v -s -m indexed_gzip_test          --niters 250
-  - pytest -v -s -m indexed_gzip_test --concat --niters 250
+  - pytest -v -s -m indexed_gzip_test          --niters 250 --nelems=rnd_1048576
+  - pytest -v -s -m indexed_gzip_test --concat --niters 250 --nelems=rnd_1048576

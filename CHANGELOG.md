@@ -1,6 +1,14 @@
 # `indexed_gzip` changelog
 
 
+## 1.3.2 (June 30th 2020)
+
+
+* Adjusted the `NoHandleError` and `NotCoveredError` types to sub-class from
+  `ValueError`, to preserve backwards compatibility with older versions of
+  `nibabel`.
+
+
 ## 1.3.1 (June 25th 2020)
 
 

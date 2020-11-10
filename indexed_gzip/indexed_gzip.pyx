@@ -56,7 +56,7 @@ class NotCoveredError(ValueError):
     pass
 
 
-class ZranError(Exception):
+class ZranError(IOError):
     """Exception raised by the :class:`_IndexedGzipFile` when the ``zran``
     library signals an error.
     """

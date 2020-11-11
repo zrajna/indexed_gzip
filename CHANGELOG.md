@@ -1,6 +1,13 @@
 # `indexed_gzip` changelog
 
 
+## 1.3.3 (November 11th 2020)
+
+
+* Adjusted the `ZranError` exception type to sub-class from `IOError`, to
+  ease support for `nibabel`.
+
+
 ## 1.3.2 (June 30th 2020)
 
 

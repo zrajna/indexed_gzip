@@ -742,7 +742,7 @@ cdef class _IndexedGzipFile:
             fd  = fdopen(fileobj.fileno(), 'ab')
             ret = zran.zran_export_index(&self.index, fd)
             if ret != zran.ZRAN_EXPORT_OK:
-                raise ZranError('export_index returned error: {}', ret)
+                raise ZranError('export_index returned error: {}'.format(ret))
 
         finally:
             if close_file:
@@ -784,7 +784,7 @@ cdef class _IndexedGzipFile:
             fd  = fdopen(fileobj.fileno(), 'rb')
             ret = zran.zran_import_index(&self.index, fd)
             if ret != zran.ZRAN_IMPORT_OK:
-                raise ZranError('import_index returned error: {}', ret)
+                raise ZranError('import_index returned error: {}'.format(ret))
 
         finally:
             if close_file:

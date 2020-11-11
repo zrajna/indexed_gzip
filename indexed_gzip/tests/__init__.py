@@ -26,11 +26,13 @@ def tempdir():
     class ctx(object):
 
         def __enter__(self):
-
+            self.prevdir = os.getcwd()
             self.tempdir = tempfile.mkdtemp()
+            os.chdir(self.tempdir)
             return self.tempdir
 
         def __exit__(self, *a, **kwa):
+            os.chdir(self.prevdir)
             shutil.rmtree(self.tempdir)
 
     return ctx()

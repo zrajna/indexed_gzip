@@ -3,12 +3,14 @@
 
 import os.path as op
 import functools as ft
+import shutil
 
 import pytest
 
-import nibabel      as nib
-import numpy        as np
-import indexed_gzip as igzip
+import nibabel                 as     nib
+from   nibabel.filebasedimages import ImageFileError
+import numpy                   as     np
+import indexed_gzip            as     igzip
 
 from indexed_gzip.tests import tempdir
 
@@ -93,3 +95,20 @@ def test_readdata_twice():
 
         assert np.all(np.isclose(data, d1))
         assert np.all(np.isclose(data, d2))
+
+
+# https://github.com/pauldmccarthy/indexed_gzip/pull/45
+def test_bad_image_error():
+
+    if nibver < Version('2.3.0'):
+        return
+
+    with tempdir():
+        create_random_image((10, 10, 10, 10), 'image.nii.gz')
+        shutil.move('image.nii.gz', 'image.nii')
+        with pytest.raises(ImageFileError):
+            nib.load('image.nii')
+        create_random_image((10, 10, 10, 10), 'image.nii')
+        shutil.move('image.nii', 'image.nii.gz')
+        with pytest.raises(ImageFileError):
+            nib.load('image.nii.gz')

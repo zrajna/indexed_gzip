@@ -7,10 +7,9 @@ import shutil
 
 import pytest
 
-import nibabel                 as     nib
-from   nibabel.filebasedimages import ImageFileError
-import numpy                   as     np
-import indexed_gzip            as     igzip
+import nibabel      as nib
+import numpy        as np
+import indexed_gzip as igzip
 
 from indexed_gzip.tests import tempdir
 
@@ -32,6 +31,12 @@ class Version(object):
 
 
 nibver = Version(nib.__version__)
+
+
+if nibver > Version('2.0.0'):
+    from nibabel.filebasedimages import ImageFileError
+else:
+    from nibabel.spatialimages import ImageFileError
 
 
 def create_random_image(shape, fname):

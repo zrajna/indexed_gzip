@@ -13,16 +13,6 @@ environment:
       MINICONDA:      "C:\\Miniconda-x64"
       PYTHON_ARCH:    "64"
 
-    - PYTHON_VERSION: "3.5"
-      PYTHON:         "C:\\Miniconda35"
-      MINICONDA:      "C:\\Miniconda35"
-      PYTHON_ARCH:    "32"
-
-    - PYTHON_VERSION: "3.5"
-      PYTHON:         "C:\\Miniconda35-x64"
-      MINICONDA:      "C:\\Miniconda35-x64"
-      PYTHON_ARCH:    "64"
-
     - PYTHON_VERSION: "3.6"
       PYTHON:         "C:\\Miniconda36"
       MINICONDA:      "C:\\Miniconda36"
@@ -49,6 +39,16 @@ environment:
       PYTHON_ARCH:    "32"
 
     - PYTHON_VERSION: "3.8"
+      PYTHON:         "C:\\Miniconda37-x64"
+      MINICONDA:      "C:\\Miniconda37-x64"
+      PYTHON_ARCH:    "64"
+
+    - PYTHON_VERSION: "3.9"
+      PYTHON:         "C:\\Miniconda37"
+      MINICONDA:      "C:\\Miniconda37"
+      PYTHON_ARCH:    "32"
+
+    - PYTHON_VERSION: "3.9"
       PYTHON:         "C:\\Miniconda37-x64"
       MINICONDA:      "C:\\Miniconda37-x64"
       PYTHON_ARCH:    "64"

@@ -19,7 +19,7 @@ def pytest_addoption(parser):
     parser.addoption('--nelems',
                      type=str,
                      action='store',
-                     default='16777217',
+                     default='rnd_16777217',
                      help='Number of uint64 elements for test data')
 
     parser.addoption('--concat',
@@ -50,14 +50,16 @@ def pytest_addoption(parser):
 def nelems(request):
     val = request.config.getoption('--nelems')
     if val.startswith('rnd_'):
-
-        # val +/- 20%
-        val = int(val.split('_')[1])
-        var = (np.random.random() - 0.5) * val * 0.4
-        val = round(val + var)
+        if hasattr(nelems, 'val'):
+            val = nelems.val
+        else:
+            # val +/- 20%
+            val        = int(val.split('_')[1])
+            var        = (np.random.random() - 0.5) * val * 0.4
+            val        = round(val + var)
+            nelems.val = val
 
     return int(val)
-
 
 
 @pytest.fixture

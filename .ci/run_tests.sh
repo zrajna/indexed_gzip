@@ -13,6 +13,14 @@ igzip_dir=`pwd`
 popd     > /dev/null
 popd     > /dev/null
 
+if [[ -n "$NITERS" ]]; then
+  NITERS="--niters $NITERS"
+fi
+
+if [[ -n "$NELEMS" ]]; then
+  NELEMS="--nelems $NELEMS"
+fi
+
 # 32 bit platform test has to be run in a docker container
 if [ "$TEST_SUITE" == "32bittest" ]; then
 
@@ -30,5 +38,5 @@ if [ "$TEST_SUITE" == "32bittest" ]; then
 else
     export INDEXED_GZIP_TESTING=1
     python setup.py develop;
-    pytest --no-cov -v -s -m "$TEST_SUITE" -k "$TEST_PATTERN" --nelems "$NELEMS" --niters "$NITERS" $EXTRA_ARGS;
+    pytest --no-cov -v -s -m "$TEST_SUITE" -k "$TEST_PATTERN" "$NELEMS" "$NITERS" $EXTRA_ARGS;
 fi

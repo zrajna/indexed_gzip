@@ -35,5 +35,5 @@ pip install --upgrade cython numpy nibabel pytest coverage pytest-cov
 
 cd /indexed_gzip
 python setup.py develop
-pytest --no-cov -v -s --niters 500
-pytest --no-cov -v -s --niters 500 --concat
+pytest --no-cov -v -s
+pytest --no-cov -v -s --concat

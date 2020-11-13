@@ -127,6 +127,7 @@ def test_iter():
 def test_iter_drop_handles():
     ctest_indexed_gzip.test_iter(True)
 
+@pytest.mark.slow_test
 def test_get_index_seek_points():
     ctest_indexed_gzip.test_get_index_seek_points()
 
@@ -139,11 +140,14 @@ def test_wrapper_class():
 def test_size_multiple_of_readbuf():
     ctest_indexed_gzip.test_size_multiple_of_readbuf()
 
+@pytest.mark.slow_test
 def test_picklable():
     ctest_indexed_gzip.test_picklable()
 
+@pytest.mark.slow_test
 def test_multiproc_serialise():
     ctest_indexed_gzip.test_multiproc_serialise()
 
+@pytest.mark.slow_test
 def test_32bit_overflow(niters, seed):
     ctest_indexed_gzip.test_32bit_overflow(niters, seed)

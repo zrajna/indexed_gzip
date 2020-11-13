@@ -13,11 +13,11 @@ igzip_dir=`pwd`
 popd     > /dev/null
 popd     > /dev/null
 
-if [[ -z "$NITERS" ]]; then
+if [[ -n "$NITERS" ]]; then
   NITERS="--niters $NITERS"
 fi
 
-if [[ -z "$NELEMS" ]]; then
+if [[ -n "$NELEMS" ]]; then
   NELEMS="--nelems $NELEMS"
 fi
 

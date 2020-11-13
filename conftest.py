@@ -50,14 +50,16 @@ def pytest_addoption(parser):
 def nelems(request):
     val = request.config.getoption('--nelems')
     if val.startswith('rnd_'):
-
-        # val +/- 20%
-        val = int(val.split('_')[1])
-        var = (np.random.random() - 0.5) * val * 0.4
-        val = round(val + var)
+        if hasattr(nelems, 'val'):
+            val = nelems.val
+        else:
+            # val +/- 20%
+            val        = int(val.split('_')[1])
+            var        = (np.random.random() - 0.5) * val * 0.4
+            val        = round(val + var)
+            nelems.val = val
 
     return int(val)
-
 
 
 @pytest.fixture

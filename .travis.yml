@@ -1,96 +1,142 @@
+# don't run on tags
 branches:
   except:
     - /^v[0-9]\.[0-9]\.[0-9]/
 
-
-dist: xenial
-
-sudo: required
-
+os:       linux
+dist:     xenial
 language: python
 
 services:
   - docker
 
-matrix:
+# These jobs are only run on the master branch.
+jobs:
 
   # Tests covering the zran.c library.
   include:
-    - python: 3.6
+    - if:     branch = master
+      python: 3.6
       env:    TEST_SUITE=zran_test                       NITERS=1000 NELEMS=rnd_50000 TEST_PATTERN="not test_readbuf_spacing_sizes and not test_seek_then_read_block"
-    - python: 3.6
+    - if:     branch = master
+      python: 3.6
       env:    TEST_SUITE=zran_test EXTRA_ARGS="--concat" NITERS=1000 NELEMS=rnd_50000 TEST_PATTERN="not test_readbuf_spacing_sizes and not test_seek_then_read_block"
-    - python: 3.6
+    - if:     branch = master
+      python: 3.6
       env:    TEST_SUITE=zran_test                       NITERS=1000 NELEMS=rnd_50000 TEST_PATTERN="test_readbuf_spacing_sizes"
-    - python: 3.6
+    - if:     branch = master
+      python: 3.6
       env:    TEST_SUITE=zran_test EXTRA_ARGS="--concat" NITERS=1000 NELEMS=rnd_50000 TEST_PATTERN="test_readbuf_spacing_sizes"
-    - python: 3.6
+    - if:     branch = master
+      python: 3.6
       env:    TEST_SUITE=zran_test                       NITERS=1000 NELEMS=rnd_50000 TEST_PATTERN="test_seek_then_read_block"
-    - python: 3.6
+    - if:     branch = master
+      python: 3.6
       env:    TEST_SUITE=zran_test EXTRA_ARGS="--concat" NITERS=1000 NELEMS=rnd_50000 TEST_PATTERN="test_seek_then_read_block"
 
-    - python: 3.6
+    - if:     branch = master
+      python: 3.6
       env:    TEST_SUITE=zran_test                       NITERS=5000 NELEMS=rnd_1000000  TEST_PATTERN="not test_readbuf_spacing_sizes and not test_seek_then_read_block"
-    - python: 3.6
+    - if:     branch = master
+      python: 3.6
       env:    TEST_SUITE=zran_test EXTRA_ARGS="--concat" NITERS=5000 NELEMS=rnd_1000000  TEST_PATTERN="not test_readbuf_spacing_sizes and not test_seek_then_read_block"
-    - python: 3.6
+    - if:     branch = master
+      python: 3.6
       env:    TEST_SUITE=zran_test                       NITERS=1000 NELEMS=rnd_1000000  TEST_PATTERN="test_readbuf_spacing_sizes"
-    - python: 3.6
+    - if:     branch = master
+      python: 3.6
       env:    TEST_SUITE=zran_test EXTRA_ARGS="--concat" NITERS=1000 NELEMS=rnd_1000000  TEST_PATTERN="test_readbuf_spacing_sizes"
-    - python: 3.6
+    - if:     branch = master
+      python: 3.6
       env:    TEST_SUITE=zran_test                       NITERS=1000 NELEMS=rnd_1000000  TEST_PATTERN="test_seek_then_read_block"
-    - python: 3.6
+    - if:     branch = master
+      python: 3.6
       env:    TEST_SUITE=zran_test EXTRA_ARGS="--concat" NITERS=1000 NELEMS=rnd_1000000  TEST_PATTERN="test_seek_then_read_block"
 
     # NELEMS=something arbitrary that is not divisible
     # by any of the default buffer/spacing sizes
-    - python: 3.6
+    - if:     branch = master
+      python: 3.6
       env:    TEST_SUITE=zran_test                       NITERS=5000 NELEMS=2000000  TEST_PATTERN="not test_readbuf_spacing_sizes and not test_seek_then_read_block"
-    - python: 3.6
+    - if:     branch = master
+      python: 3.6
       env:    TEST_SUITE=zran_test EXTRA_ARGS="--concat" NITERS=5000 NELEMS=2000000  TEST_PATTERN="not test_readbuf_spacing_sizes and not test_seek_then_read_block"
-    - python: 3.6
+    - if:     branch = master
+      python: 3.6
       env:    TEST_SUITE=zran_test                       NITERS=500  NELEMS=2000000  TEST_PATTERN="test_readbuf_spacing_sizes"
-    - python: 3.6
+    - if:     branch = master
+      python: 3.6
       env:    TEST_SUITE=zran_test EXTRA_ARGS="--concat" NITERS=500  NELEMS=2000000  TEST_PATTERN="test_readbuf_spacing_sizes"
-    - python: 3.6
+    - if:     branch = master
+      python: 3.6
       env:    TEST_SUITE=zran_test                       NITERS=500  NELEMS=2000000  TEST_PATTERN="test_seek_then_read_block"
-    - python: 3.6
+    - if:     branch = master
+      python: 3.6
       env:    TEST_SUITE=zran_test EXTRA_ARGS="--concat" NITERS=500  NELEMS=2000000  TEST_PATTERN="test_seek_then_read_block"
 
     # NELEMS=805306368 ~ 6GB (for testing 64 bit support)
-    - python: 3.6
+    - if:     branch = master
+      python: 3.6
       env:    TEST_SUITE=zran_test EXTRA_ARGS="--use_mmap"           NITERS=1000 NELEMS=805306368 TEST_PATTERN="not test_readbuf_spacing_sizes and not test_seek_then_read_block"
-    - python: 3.6
+    - if:     branch = master
+      python: 3.6
       env:    TEST_SUITE=zran_test EXTRA_ARGS="--use_mmap --concat"  NITERS=1000 NELEMS=805306368 TEST_PATTERN="not test_readbuf_spacing_sizes and not test_seek_then_read_block"
-    - python: 3.6
+    - if:     branch = master
+      python: 3.6
       env:    TEST_SUITE=zran_test EXTRA_ARGS="--use_mmap"           NITERS=50   NELEMS=805306368 TEST_PATTERN="test_readbuf_spacing_sizes"
-    - python: 3.6
+    - if:     branch = master
+      python: 3.6
       env:    TEST_SUITE=zran_test EXTRA_ARGS="--use_mmap --concat"  NITERS=50   NELEMS=805306368 TEST_PATTERN="test_readbuf_spacing_sizes"
-    - python: 3.6
+    - if:     branch = master
+      python: 3.6
       env:    TEST_SUITE=zran_test EXTRA_ARGS="--use_mmap"           NITERS=25   NELEMS=805306368 TEST_PATTERN="test_seek_then_read_block"
-    - python: 3.6
+    - if:     branch = master
+      python: 3.6
       env:    TEST_SUITE=zran_test EXTRA_ARGS="--use_mmap --concat"  NITERS=25   NELEMS=805306368 TEST_PATTERN="test_seek_then_read_block"
 
     # test different versions of nibabel
-    - python: 3.7
-      env:    TEST_SUITE=nibabel_test NIBABEL="==2.0.*" NUMPY="==1.17.*" NITERS=1 NELEMS=1
-    - python: 3.7
-      env:    TEST_SUITE=nibabel_test NIBABEL="==2.1.*" NUMPY="==1.17.*" NITERS=1 NELEMS=1
-    - python: 3.7
-      env:    TEST_SUITE=nibabel_test NIBABEL="==2.2.*" NUMPY="==1.17.*" NITERS=1 NELEMS=1
-    - python: 3.7
-      env:    TEST_SUITE=nibabel_test NIBABEL="==2.3.*" NUMPY="==1.17.*" NITERS=1 NELEMS=1
-    - python: 3.7
-      env:    TEST_SUITE=nibabel_test NIBABEL="==2.4.*"                  NITERS=1 NELEMS=1
-    - python: 3.7
-      env:    TEST_SUITE=nibabel_test NIBABEL="==2.5.*"                  NITERS=1 NELEMS=1
-    - python: 3.7
-      env:    TEST_SUITE=nibabel_test NIBABEL="==3.0.*"                  NITERS=1 NELEMS=1
-    - python: 3.7
-      env:    TEST_SUITE=nibabel_test NIBABEL="==3.1.*"                  NITERS=1 NELEMS=1
+    - if:     branch = master
+      python: 3.7
+      env:    TEST_SUITE=nibabel_test NIBABEL="==2.0.*" NUMPY="==1.17.*"
+    - if:     branch = master
+      python: 3.7
+      env:    TEST_SUITE=nibabel_test NIBABEL="==2.1.*" NUMPY="==1.17.*"
+    - if:     branch = master
+      python: 3.7
+      env:    TEST_SUITE=nibabel_test NIBABEL="==2.2.*" NUMPY="==1.17.*"
+    - if:     branch = master
+      python: 3.7
+      env:    TEST_SUITE=nibabel_test NIBABEL="==2.3.*" NUMPY="==1.17.*"
+    - if:     branch = master
+      python: 3.7
+      env:    TEST_SUITE=nibabel_test NIBABEL="==2.4.*"
+    - if:     branch = master
+      python: 3.7
+      env:    TEST_SUITE=nibabel_test NIBABEL="==2.5.*"
+    - if:     branch = master
+      python: 3.7
+      env:    TEST_SUITE=nibabel_test NIBABEL="==3.0.*"
+    - if:     branch = master
+      python: 3.7
+      env:    TEST_SUITE=nibabel_test NIBABEL="==3.1.*"
+
+    # indexed_gzip tests
+    - if:     branch = master
+      python: 3.7
+      env:    TEST_SUITE=32bittest
+    - if:     branch = master
+      python: 3.7
+      env:    TEST_SUITE="indexed_gzip_test and slow_test"
+    - if:     branch = master
+      python: 3.7
+      env:    TEST_SUITE="indexed_gzip_test and slow_test"  EXTRA_ARGS="--concat"
+    - if:     branch = master
+      python: 3.7
+      env:    TEST_SUITE=indexed_gzip_test                  EXTRA_ARGS="--use_mmap" NELEMS=805306368
 
 
-# Tests covering the indexed_gzip module
+# Tests covering the indexed_gzip module -
+# these jobs are run on all branches.
 python:
   - 2.7
   - 3.6
@@ -99,10 +145,7 @@ python:
   - 3.9
 
 env:
-  - TEST_SUITE=indexed_gzip_test                         NITERS=5000 NELEMS=rnd_131072
-  - TEST_SUITE=indexed_gzip_test                         NITERS=5000 NELEMS=rnd_2000000
-  - TEST_SUITE=indexed_gzip_test EXTRA_ARGS="--use_mmap" NITERS=1000 NELEMS=805306368
-  - TEST_SUITE=32bittest
+  - TEST_SUITE="indexed_gzip_test and not slow_test"
 
 install: "pip install --upgrade cython numpy$NUMPY nibabel$NIBABEL pytest coverage pytest-cov"
 

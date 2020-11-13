@@ -71,6 +71,9 @@ install:
   - python setup.py develop
 
 
+# Run slow tests only on master branch.
+# Tests marked with zran_test can only
+# be run on POSIX systems.
 for:
 -
   branches:
@@ -79,7 +82,6 @@ for:
   environment:
     matrix:
       - TEST_ARGS: "-m \"not zran_test\""
-
       - TEST_ARGS: "-m \"not zran_test\" --concat"
 -
   branches:

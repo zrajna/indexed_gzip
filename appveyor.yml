@@ -65,7 +65,7 @@ install:
   - conda update  --yes -q conda
   - conda create  --yes -n test_env python=%PYTHON_VERSION%
   - activate test_env
-  - conda install --yes                %ANACONDA_DEPS
+  - conda install --yes                %ANACONDA_DEPS%
   - conda install --yes -c conda-forge %CONDA_FORGE_DEPS%
   - set ZLIB_HOME=%CONDA_PREFIX%\\Library
   - python setup.py develop
@@ -76,16 +76,17 @@ for:
   branches:
     only:
       - master
-    environment:
-      matrix:
-       - TEST_ARGS"-m 'not zran_test'"
-       - TEST_ARGS"-m 'not zran_test' --concat"
+  environment:
+    matrix:
+      - TEST_ARGS: "-m \"not zran_test\""
+
+      - TEST_ARGS: "-m \"not zran_test\" --concat"
 -
   branches:
     except:
       - master
-    environment:
-       - TEST_ARGS"-m 'not (zran_test or slow_test)'"
+  environment:
+    TEST_ARGS: "-m \"not (zran_test or slow_test)\""
 
 test_script:
   - pytest -v -s %TEST_ARGS%

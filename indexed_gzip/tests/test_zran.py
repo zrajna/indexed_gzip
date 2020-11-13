@@ -31,10 +31,14 @@ if not sys.platform.startswith("win"):
     def test_sequential_seek_to_end(testfile, nelems, niters):                 ctest_zran.test_sequential_seek_to_end(testfile, nelems, niters)
     def test_random_seek(           testfile, nelems, niters, seed):           ctest_zran.test_random_seek(           testfile, nelems, niters, seed)
     def test_read_all(              testfile, nelems, use_mmap):               ctest_zran.test_read_all(              testfile, nelems, use_mmap)
+    @pytest.mark.slow_test
     def test_seek_then_read_block(  testfile, nelems, niters, seed, use_mmap): ctest_zran.test_seek_then_read_block(  testfile, nelems, niters, seed, use_mmap)
     def test_random_seek_and_read(  testfile, nelems, niters, seed):           ctest_zran.test_random_seek_and_read(  testfile, nelems, niters, seed)
+    @pytest.mark.slow_test
     def test_read_all_sequential(   testfile, nelems):                         ctest_zran.test_read_all_sequential(   testfile, nelems)
+    @pytest.mark.slow_test
     def test_build_then_read(       testfile, nelems, seed, use_mmap):         ctest_zran.test_build_then_read(       testfile, nelems, seed, use_mmap)
+    @pytest.mark.slow_test
     def test_readbuf_spacing_sizes( testfile, nelems, niters, seed):           ctest_zran.test_readbuf_spacing_sizes( testfile, nelems, niters, seed)
     def test_export_then_import(    testfile):                                 ctest_zran.test_export_then_import(    testfile)
     def test_export_import_no_points():                                        ctest_zran.test_export_import_no_points()

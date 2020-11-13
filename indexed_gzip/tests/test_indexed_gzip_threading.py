@@ -29,9 +29,11 @@ def test_IndexedGzipFile_open_close(testfile, nelems, concat):
 def test_IndexedGzipFile_open_close_drop_handles(testfile, nelems, concat):
     _test_IndexedGzipFile_open_close(testfile, True)
 
+@pytest.mark.slow_test
 def test_IndexedGzipFile_pread_threaded(testfile, nelems, concat):
     _test_IndexedGzipFile_pread_threaded(testfile, nelems, False)
 
+@pytest.mark.slow_test
 def test_IndexedGzipFile_pread_threaded_drop_handles(testfile, nelems, concat):
     _test_IndexedGzipFile_pread_threaded(testfile, nelems, True)
 

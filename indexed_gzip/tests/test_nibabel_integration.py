@@ -33,7 +33,7 @@ class Version(object):
 nibver = Version(nib.__version__)
 
 
-if nibver > Version('2.0.0'):
+if nibver >= Version('2.1.0'):
     from nibabel.filebasedimages import ImageFileError
 else:
     from nibabel.spatialimages import ImageFileError

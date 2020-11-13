@@ -1,7 +1,7 @@
 # `indexed_gzip` changelog
 
 
-## 1.3.3 (November 12th 2020)
+## 1.3.3 (November 13th 2020)
 
 
 * Adjusted the `ZranError` exception type to sub-class from `IOError`, to

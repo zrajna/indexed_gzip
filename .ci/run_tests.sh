@@ -38,5 +38,5 @@ if [ "$TEST_SUITE" == "32bittest" ]; then
 else
     export INDEXED_GZIP_TESTING=1
     python setup.py develop;
-    pytest --no-cov -v -s -m "$TEST_SUITE" -k "$TEST_PATTERN" "$NELEMS" "$NITERS" $EXTRA_ARGS;
+    pytest --no-cov -v -s -m "$TEST_SUITE" -k "$TEST_PATTERN" $NELEMS $NITERS $EXTRA_ARGS;
 fi

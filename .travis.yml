@@ -145,7 +145,7 @@ python:
   - 3.9
 
 env:
-  - TEST_SUITE="indexed_gzip_test and not slow_test"
+  - TEST_SUITE="not slow_test"
 
 install: "pip install --upgrade cython numpy$NUMPY nibabel$NIBABEL pytest coverage pytest-cov"
 

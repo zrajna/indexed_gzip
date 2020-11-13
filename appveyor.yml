@@ -91,4 +91,5 @@ for:
     TEST_ARGS: "-m \"not (zran_test or slow_test)\""
 
 test_script:
+  - echo %TEST_ARGS%
   - pytest -v -s %TEST_ARGS%

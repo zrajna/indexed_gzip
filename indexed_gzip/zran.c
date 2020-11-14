@@ -284,8 +284,8 @@ int ZRAN_FIND_STREAM_NOT_FOUND = -1;
  *
  * Otherwise (if a compressed stream was not found), this function returns
  * ZRAN_FIND_STREAM_NOT_FOUND.
- * 
- * The number of bytes that were read before the new stream was found is 
+ *
+ * The number of bytes that were read before the new stream was found is
  * stored in the provided offset pointer.
  *
  * If an error occurs, ZRAN_FIND_STREAM_ERROR is returned.
@@ -1155,8 +1155,8 @@ int _zran_find_next_stream(zran_index_t *index,
      * the next stream. GZIP files
      * start with 0x1f8b.
      */
-    *offset   = 0;
     int found = 0;
+    *offset   = 0;
 
     while (stream->avail_in >= 2) {
 
@@ -1219,7 +1219,7 @@ static int _zran_inflate(zran_index_t *index,
      * Used to store and check return
      * values. f_ret is for fread,
      * z_ret is for zlib/zran functions.
-     * off is for storing offset of new 
+     * off is for storing offset of new
      * stream (from _zran_find_next_stream).
      * return_val is the return value for
      * this function.
@@ -1506,10 +1506,10 @@ static int _zran_inflate(zran_index_t *index,
                 z_ret = _zran_find_next_stream(index, strm, &off);
 
                 /*
-                 * _zran_find_next_stream will skip over 
+                 * _zran_find_next_stream will skip over
                  * bytes in the input data while searching
                  * for the next stream (e.g. the CRC32
-                 * and ISIZE fields at the end of a gzip 
+                 * and ISIZE fields at the end of a gzip
                  * stream). It stores the number of skipped
                  * bytes in the offset parameter.
                  */

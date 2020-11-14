@@ -1,11 +1,14 @@
 # `indexed_gzip` changelog
 
 
-## 1.3.3 (November 13th 2020)
+## 1.3.3 (November 14th 2020)
 
 
 * Adjusted the `ZranError` exception type to sub-class from `IOError`, to
   ease support for `nibabel`.
+* Fixed a bug related to concatenated GZIP files which would occur when
+  the read buffer ran out of space at the point where a stream boundary
+  occurred.
 
 
 ## 1.3.2 (June 30th 2020)

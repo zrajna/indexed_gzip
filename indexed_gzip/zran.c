@@ -280,18 +280,20 @@ int ZRAN_FIND_STREAM_NOT_FOUND = -1;
  * find the location of the next compressed stream.
  *
  * If a new stream was found, the z_stream struct is re-initialised to
- * decompress data from the new stream. In this case, this function returns
- * the number of bytes in the compressed data that were read before the stream
- * was found.
+ * decompress data from the new stream. In this case, the function returns 0.
  *
  * Otherwise (if a compressed stream was not found), this function returns
  * ZRAN_FIND_STREAM_NOT_FOUND.
  *
+ * The number of bytes that were read before the new stream was found is
+ * stored in the provided offset pointer.
+ *
  * If an error occurs, ZRAN_FIND_STREAM_ERROR is returned.
  */
 static int _zran_find_next_stream(
-    zran_index_t *index, /* The index           */
-    z_stream     *stream /* The z_stream struct */
+    zran_index_t *index,  /* The index                                      */
+    z_stream     *stream, /* The z_stream struct                            */
+    int          *offset  /* Used to store the number of bytes skipped over */
 );
 
 
@@ -1144,15 +1146,17 @@ fail:
  * Identify the location of the next compressed stream (if the file
  * contains concatenated streams).
  */
-int _zran_find_next_stream(zran_index_t *index, z_stream *stream) {
+int _zran_find_next_stream(zran_index_t *index,
+                           z_stream     *stream,
+                           int          *offset) {
 
     /*
      * Search for the beginning of
      * the next stream. GZIP files
      * start with 0x1f8b.
      */
-    int offset = 0;
-    int found  = 0;
+    int found = 0;
+    *offset   = 0;
 
     while (stream->avail_in >= 2) {
 
@@ -1162,7 +1166,7 @@ int _zran_find_next_stream(zran_index_t *index, z_stream *stream) {
             break;
         }
 
-        offset           += 2;
+        *offset          += 2;
         stream->next_in  += 2;
         stream->avail_in -= 2;
     }
@@ -1174,7 +1178,8 @@ int _zran_find_next_stream(zran_index_t *index, z_stream *stream) {
     if (found == 0)
         goto not_found;
 
-    zran_log("New stream found, re-initialising inflation\n");
+    zran_log("New stream found, re-initialising "
+             "inflation (offset: %u)\n", offset);
 
     /*
      * Re-configure for inflation
@@ -1190,7 +1195,7 @@ int _zran_find_next_stream(zran_index_t *index, z_stream *stream) {
     if (inflateInit2(stream, index->log_window_size + 32) != Z_OK)
         goto fail;
 
-    return offset;
+    return 0;
 
 fail:
     return ZRAN_FIND_STREAM_ERROR;
@@ -1214,11 +1219,14 @@ static int _zran_inflate(zran_index_t *index,
      * Used to store and check return
      * values. f_ret is for fread,
      * z_ret is for zlib/zran functions.
+     * off is for storing offset of new
+     * stream (from _zran_find_next_stream).
      * return_val is the return value for
      * this function.
      */
     size_t f_ret;
     int    z_ret;
+    int    off;
     int    return_val = ZRAN_INFLATE_OK;
 
     /*
@@ -1424,8 +1432,9 @@ static int _zran_inflate(zran_index_t *index,
                 memcpy(index->readbuf, strm->next_in, strm->avail_in);
             }
 
-            zran_log("Reading from file %llu [ == %llu?]\n",
-                     FTELL(index->fd), cmp_offset);
+            zran_log("Reading from file %llu [== %llu?] "
+                     "[into readbuf offset %u]\n",
+                     FTELL(index->fd), cmp_offset, strm->avail_in);
 
             /*
              * Read a block of compressed data
@@ -1461,8 +1470,13 @@ static int _zran_inflate(zran_index_t *index,
                 }
             }
 
-            zran_log("Read %lu bytes from file [c=%llu, u=%llu]\n",
-                     f_ret, cmp_offset, uncmp_offset);
+            zran_log("Read %lu bytes from file [c=%llu, u=%llu] "
+                     "[%02x %02x %02x %02x ...]\n",
+                     f_ret, cmp_offset, uncmp_offset,
+                     index->readbuf[strm->avail_in],
+                     index->readbuf[strm->avail_in + 1],
+                     index->readbuf[strm->avail_in + 2],
+                     index->readbuf[strm->avail_in + 3]);
 
             /*
              * Tell zlib about the block
@@ -1489,7 +1503,18 @@ static int _zran_inflate(zran_index_t *index,
 
                 zran_log("End of stream - searching for another stream\n");
 
-                z_ret = _zran_find_next_stream(index, strm);
+                z_ret = _zran_find_next_stream(index, strm, &off);
+
+                /*
+                 * _zran_find_next_stream will skip over
+                 * bytes in the input data while searching
+                 * for the next stream (e.g. the CRC32
+                 * and ISIZE fields at the end of a gzip
+                 * stream). It stores the number of skipped
+                 * bytes in the offset parameter.
+                 */
+                cmp_offset      += off;
+                _total_consumed += off;
 
                 /*
                  * If _zran_find_next_stream can't find
@@ -1499,16 +1524,7 @@ static int _zran_inflate(zran_index_t *index,
                  * loop deal with it.
                  */
                 if      (z_ret == ZRAN_FIND_STREAM_NOT_FOUND) break;
-                else if (z_ret == ZRAN_FIND_STREAM_ERROR)     goto fail;
-
-                /*
-                 * _zran_find_next_stream has found a
-                 * new stream, and has told us how many
-                 * bytes it skipped over before finding
-                 * it.
-                 */
-                cmp_offset      += z_ret;
-                _total_consumed += z_ret;
+                else if (z_ret != 0)                          goto fail;
             }
 
             /*

@@ -772,8 +772,10 @@ def test_picklable():
 
         gzf        = igzip.IndexedGzipFile(fname)
         first50MB  = gzf.read(1048576 * 50)
+        gzf.seek(gzf.tell())
         pickled    = pickle.dumps(gzf)
         second50MB = gzf.read(1048576 * 50)
+        gzf.seek(gzf.tell())
 
         gzf.close()
         del gzf
@@ -802,30 +804,31 @@ def test_picklable():
 
 
 def test_copyable():
-    # IndexedGzipFile should be copyable whether it retains or drops filehandles
     fname = 'test.gz'
 
     with tempdir():
-        data = np.random.randint(1, 1000, (1000, 1000), dtype=np.uint32)
+        data = np.random.randint(1, 1000, (10000, 10000), dtype=np.uint32)
         with gzip.open(fname, 'wb') as f:
             f.write(data.tobytes())
         del f
 
-        gzf       = igzip.IndexedGzipFile(fname)
-        gzf_copy  = cp.deepcopy(gzf)
-        first2MB  = gzf.read(1048576 * 2)
-        gzf_copy2 = cp.deepcopy(gzf)
-        second2MB = gzf.read(1048576 * 2)
+        gzf        = igzip.IndexedGzipFile(fname)
+        gzf_copy   = cp.deepcopy(gzf)
+        first50MB  = gzf.read(1048576 * 50)
+        gzf.seek(gzf.tell())
+        gzf_copy2  = cp.deepcopy(gzf)
+        second50MB = gzf.read(1048576 * 50)
+        gzf.seek(gzf.tell())
 
         gzf.close()
         del gzf
 
         assert gzf_copy.tell() == 0
-        assert gzf_copy2.tell() == 1048576 * 2
-        assert gzf_copy.read(1048576 * 2) == first2MB
-        assert gzf_copy2.read(1048576 * 2) == second2MB
+        assert gzf_copy2.tell() == 1048576 * 50
+        assert gzf_copy.read(1048576 * 50) == first50MB
+        assert gzf_copy2.read(1048576 * 50) == second50MB
         gzf_copy2.seek(0)
-        assert gzf_copy2.read(1048576 * 2) == first2MB
+        assert gzf_copy2.read(1048576 * 50) == first50MB
         gzf_copy.close()
         gzf_copy2.close()
         del gzf_copy

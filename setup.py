@@ -70,10 +70,11 @@ class Clean(Command):
 
 
 # Platform information
-python2 = sys.version_info[0] == 2
-noc99   = python2 or (sys.version_info[0] == 3 and sys.version_info[1] <= 4)
-windows = sys.platform.startswith("win")
-testing = 'INDEXED_GZIP_TESTING' in os.environ
+python2   = sys.version_info[0] == 2
+noc99     = python2 or (sys.version_info[0] == 3 and sys.version_info[1] <= 4)
+windows   = sys.platform.startswith("win")
+testing   = 'INDEXED_GZIP_TESTING' in os.environ
+ZLIB_HOME = os.environ.get("ZLIB_HOME", None)
 
 readme = op.join(op.dirname(__file__), 'README.md')
 
@@ -117,10 +118,14 @@ if have_numpy:
     include_dirs.append(np.get_include())
 
 if windows:
-    ZLIB_HOME = os.environ.get("ZLIB_HOME", "c:/Program Files (x86)/GnuWin32")
-    include_dirs.append(os.path.join(ZLIB_HOME, "include"))
-    libs.append('zlib')
-    lib_dirs.append(os.path.join(ZLIB_HOME, "lib"))
+    if ZLIB_HOME is None:
+        raise RuntimeError('ZLIB_HOME is not set - you must set ZLIB_HOME '
+                           'to a directory which contains a compiled copy '
+                           'of zlib.')
+
+    include_dirs.append(ZLIB_HOME)
+    lib_dirs    .append(ZLIB_HOME)
+    libs        .append('zlib')
 
     # For stdint.h which is not included in the old Visual C
     # compiler used for Python 2
@@ -131,7 +136,14 @@ if windows:
     # older versions of python
     if noc99:
         extra_compile_args += ['-DNO_C99']
+
+# linux / macOS
 else:
+    # if ZLIB_HOME is set, compile against it,
+    # rather than any system-provided libz
+    if ZLIB_HOME is not None:
+        lib_dirs    .append(ZLIB_HOME)
+        include_dirs.append(ZLIB_HOME)
     libs.append('z')
     extra_compile_args += ['-Wall', '-pedantic', '-Wno-unused-function']
 

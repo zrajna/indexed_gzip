@@ -22,8 +22,13 @@ else
   NIBABEL="nibabel"
 fi
 
-python -m pip install --upgrade pip virtualenv
-python -m venv "$envdir"
+python -m pip install --upgrade pip wheel virtualenv
+
+if [[ "$PYTHON_VERSION" == "2.7" ]]; then
+  virtualenv "$envdir"
+else
+  python -m venv "$envdir"
+fi
 
 source "$envdir"/bin/activate
 

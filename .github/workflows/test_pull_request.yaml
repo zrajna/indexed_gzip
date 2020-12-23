@@ -17,9 +17,10 @@ jobs:
         extra-args: ["", "--concat"]
 
     env:
-      TEST_SUITE: "not slow_test"
-      EXTRA_ARGS: ${{ matrix.extra-args }}
-      ENV_DIR:    ./test.env
+      PYTHON_VERSION: ${{ matrix.python-version }}
+      TEST_SUITE:     "not slow_test"
+      EXTRA_ARGS:     ${{ matrix.extra-args }}
+      ENV_DIR:        ./test.env
 
     steps:
       - uses: actions/checkout@v2

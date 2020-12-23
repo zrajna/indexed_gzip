@@ -1,9 +1,8 @@
 # This workflow runs a small set of indexed_gzip unit
 # tests on a range of different versions of Python.
-# It is run on all branches and pull requests.
+# It is run on pull requests.
 
-
-on: [push, pull_request]
+on: pull_request
 
 defaults:
   run:
@@ -20,6 +19,7 @@ jobs:
     env:
       TEST_SUITE: "not slow_test"
       EXTRA_ARGS: ${{ matrix.extra-args }}
+      ENV_DIR:    ./test.env
 
     steps:
       - uses: actions/checkout@v2
@@ -28,5 +28,14 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           architecture: x64
+      - name: Create test environment
+        run: ./.ci/create_test_env.sh "$ENV_DIR"
+      - name: Log test environment
+        run: |
+          source "$ENV_DIR"/bin/activate
+          python -V
+          pip freeze
+      - name: Build indexed_gzip
+        run: ./.ci/build_test_indexed_gzip.sh "$ENV_DIR"
       - name: Run tests
-        run: ./.ci/run_tests.sh
+        run: ./.ci/run_tests.sh "$ENV_DIR"

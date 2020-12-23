@@ -29,13 +29,13 @@ jobs:
           python-version: ${{ matrix.python-version }}
           architecture: x64
       - name: Create test environment
-        run: ./.ci/create_test_env.sh "$ENV_DIR"
+        run:  bash ./.ci/create_test_env.sh "$ENV_DIR"
       - name: Log test environment
         run: |
           source "$ENV_DIR"/bin/activate
           python -V
           pip freeze
       - name: Build indexed_gzip
-        run: ./.ci/build_test_indexed_gzip.sh "$ENV_DIR"
+        run:  bash ./.ci/build_test_indexed_gzip.sh "$ENV_DIR"
       - name: Run tests
-        run: ./.ci/run_tests.sh "$ENV_DIR"
+        run:  bash  ./.ci/run_tests.sh "$ENV_DIR"

@@ -12,7 +12,7 @@ else
 fi
 
 # NIBABEL=<some nibabel version>
-if[ [ -n "$NIBABEL" ]]; then
+if [[ -n "$NIBABEL" ]]; then
   NIBABEL="nibabel=$NIBABEL"
 else
   NIBABEL="nibabel"

@@ -9,6 +9,9 @@ thisdir=$(cd $(dirname "$0") && pwd)
 
 source $thisdir/activate_env.sh "$envdir"
 
+# compile a local copy of zlib
+source $thisdir/build_zlib.sh
+
 # enable line tracing for cython
 # modules - see setup.py
 export INDEXED_GZIP_TESTING=1

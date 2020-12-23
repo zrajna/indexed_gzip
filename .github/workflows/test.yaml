@@ -15,9 +15,11 @@ jobs:
     strategy:
       matrix:
         python-version: [2.7, 3.6, 3.7, 3.8, 3.9]
+        extra-args: ["", "--concat"]
 
     env:
       TEST_SUITE: "not slow_test"
+      EXTRA_ARGS: ${{ matrix.extra-args }}
 
     steps:
       - uses: actions/checkout@v2
@@ -27,4 +29,4 @@ jobs:
           python-version: ${{ matrix.python-version }}
           architecture: x64
       - name: Run tests
-        run: ./.ci/run_test.sh
+        run: ./.ci/run_tests.sh

@@ -30,6 +30,6 @@ else
   python -m venv "$envdir"
 fi
 
-source "$envdir"/bin/activate | source "$envdir"/Scripts/activate
+source "$envdir"/bin/activate || source "$envdir"/Scripts/activate
 
 pip install cython pytest coverage pytest-cov "$NUMPY" "$NIBABEL"

@@ -6,7 +6,7 @@ set -e
 
 envdir="$1"
 
-source "$envdir"/bin/activate
+source "$envdir"/bin/activate || source "$envdir"/Scripts/activate
 
 # enable line tracing for cython
 # modules - see setup.py

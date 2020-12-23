@@ -59,9 +59,9 @@ jobs:
     strategy:
       matrix:
         os:             ["ubuntu-latest", "macos-latest", "windows-latest"]
-        python-version: "3.7"
-        extra-args:     ""
-        nelems:         ""
+        python-version: ["3.7"]
+        extra-args:     [""]
+        nelems:         [""]
         include:
          - test-suite: "indexed_gzip_test and slow_test"
          - test-suite: "indexed_gzip_test and slow_test"
@@ -103,8 +103,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        python-version: "3.7"
-        numpy:          ""
+        python-version: ["3.7"]
+        numpy:          [""]
         os:             ["ubuntu-latest", "macos-latest", "windows-latest"]
         include:
           # earlier versions of nibabel require
@@ -153,8 +153,8 @@ jobs:
     runs-on: "ubuntu-latest"
     strategy:
       matrix:
-        python-version: "3.7"
-        test-suite:     "zran-test"
+        python-version: ["3.7"]
+        test-suite:     ["zran-test"]
         extra-args:     ["", "--concat"]
         include:
           - niters:       "5000"

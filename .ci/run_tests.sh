@@ -1,42 +1,52 @@
 #!/bin/bash
 #
-# This script is called via .travis.yml. It is not intended
-# to be called in any other manner.
+# Set up a virtual environment with dependencies,
+# then build indexed_gzip and run its unit tests.
 #
 
-# Get the path to this script
-script_dir=`dirname $0`
-pushd $script_dir > /dev/null
-script_dir=`pwd`
-pushd .. > /dev/null
-igzip_dir=`pwd`
-popd     > /dev/null
-popd     > /dev/null
+# NUMPY=<some numpy version>
+if [[ -n "$NUMPY" ]]; then
+  NUMPY="numpy=$NUMPY"
+else
+  NUMPY="numpy"
+fi
 
+# NIBABEL=<some nibabel version>
+if[ [ -n "$NIBABEL" ]]; then
+  NIBABEL="nibabel=$NIBABEL"
+else
+  NIBABEL="nibabel"
+fi
+
+# NITERS=<number of iterations for some tests>
+# (see conftest.py)
 if [[ -n "$NITERS" ]]; then
   NITERS="--niters $NITERS"
 fi
 
+# NELEMS=<number of elements/size of
+#         test file, for some tests>
+# (see conftest.py)
 if [[ -n "$NELEMS" ]]; then
   NELEMS="--nelems $NELEMS"
 fi
 
-# 32 bit platform test has to be run in a docker container
-if [ "$TEST_SUITE" == "32bittest" ]; then
+python -m pip install --upgrade pip virtualenv
+python -m venv test.venv
 
-    PYTHON_VERSION=$(python --version 2>&1)
-    PYTHON_VERSION=${PYTHON_VERSION#* }
+source ./test.venv/bin/activate
 
-    docker run --rm \
-           -e PYTHON_VERSION="$PYTHON_VERSION" \
-           -e INDEXED_GZIP_TESTING=1 \
-           -v $igzip_dir:/indexed_gzip \
-           32bit/ubuntu:16.04 \
-           /indexed_gzip/.ci/run_32bit_test.sh
+pip install cython pytest coverage pytest-cov "$NUMPY" "$NIBABEL"
 
-# Run standard test suite
-else
-    export INDEXED_GZIP_TESTING=1
-    python setup.py develop;
-    pytest --no-cov -v -s -m "$TEST_SUITE" -k "$TEST_PATTERN" $NELEMS $NITERS $EXTRA_ARGS;
-fi
+# enable line tracing for cython
+# modules - see setup.py
+export INDEXED_GZIP_TESTING=1
+
+python setup.py develop
+
+pytest -v -s              \
+       -m "$TEST_SUITE"   \
+       -k "$TEST_PATTERN" \
+       $NELEMS            \
+       $NITERS            \
+       $EXTRA_ARGS

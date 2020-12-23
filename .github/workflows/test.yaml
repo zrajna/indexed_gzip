@@ -1,0 +1,30 @@
+# This workflow runs a small set of indexed_gzip unit
+# tests on a range of different versions of Python.
+# It is run on all branches and pull requests.
+
+
+on: [push, pull_request]
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  test:
+    runs-on: 'ubuntu-latest'
+    strategy:
+      matrix:
+        python-version: [2.7, 3.6, 3.7, 3.8, 3.9]
+
+    env:
+      TEST_SUITE: "not slow_test"
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+          architecture: x64
+      - name: Run tests
+        run: ./.ci/run_test.sh

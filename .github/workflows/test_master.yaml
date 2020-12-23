@@ -58,32 +58,32 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os:             ["ubuntu-latest", "macos-latest", "windows-latest"]
-        python-version: ["3.7"]
-        extra-args:     [""]
-        nelems:         [""]
+        os: ["ubuntu-latest", "macos-latest", "windows-latest"]
         include:
          - test-suite: "indexed_gzip_test and slow_test"
+           extra-args: ""
+           nelems:     ""
          - test-suite: "indexed_gzip_test and slow_test"
            extra-args: "--concat"
+           nelems:     ""
          - test-suite: "indexed_gzip_test"
            extra-args: "--use_mmap"
            nelems:     "805306368"
 
     env:
       ENV_DIR:        ./test.env
-      PYTHON_VERSION: ${{ matrix.python-version }}
+      PYTHON_VERSION: 3.7
       TEST_SUITE:     ${{ matrix.test-suite }}
       EXTRA_ARGS:     ${{ matrix.extra-args }}
       NELEMS:         ${{ matrix.nelems }}
 
     steps:
       - uses: actions/checkout@v2
-      - name: Set up Python ${{ matrix.python-version }}
+      - name: Set up Python
         uses: actions/setup-python@v2
         with:
-          python-version: ${{ matrix.python-version }}
-          architecture: x64
+          python-version: 3.7
+          architecture:   x64
       - name: Create test environment
         run:  bash ./.ci/create_test_env.sh "$ENV_DIR"
       - name: Log test environment
@@ -103,39 +103,41 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        python-version: ["3.7"]
-        numpy:          [""]
-        os:             ["ubuntu-latest", "macos-latest", "windows-latest"]
+        os: ["ubuntu-latest", "macos-latest", "windows-latest"]
         include:
           # earlier versions of nibabel require
           # an older version of numpy
-          - nibabel: 2.0.*
-            numpy:   1.17.*
-          - nibabel: 2.1.*
-            numpy:   1.17.*
-          - nibabel: 2.2.*
-            numpy:   1.17.*
-          - nibabel: 2.3.*
-            numpy:   1.17.*
-          - nibabel: 2.4.*
-          - nibabel: 2.5.*
-          - nibabel: 3.0.*
-          - nibabel: 3.1.*
+          - nibabel: "2.0.*"
+            numpy:   "1.17.*"
+          - nibabel: "2.1.*"
+            numpy:   "1.17.*"
+          - nibabel: "2.2.*"
+            numpy:   "1.17.*"
+          - nibabel: "2.3.*"
+            numpy:   "1.17.*"
+          - nibabel: "2.4.*"
+            numpy:   ""
+          - nibabel: "2.5.*"
+            numpy:   ""
+          - nibabel: "3.0.*"
+            numpy:   ""
+          - nibabel: "3.1.*"
+            numpy:   ""
 
     env:
       ENV_DIR:        ./test.env
       TEST_SUITE:     nibabel_test
-      PYTHON_VERSION: ${{ matrix.python-version }}
+      PYTHON_VERSION: 3.7
       NIBABEL:        ${{ matrix.nibabel }}
       NUMPY:          ${{ matrix.numpy }}
 
     steps:
       - uses: actions/checkout@v2
-      - name: Set up Python ${{ matrix.python-version }}
+      - name: Set up Python
         uses: actions/setup-python@v2
         with:
-          python-version: ${{ matrix.python-version }}
-          architecture: x64
+          python-version: 3.7
+          architecture:   x64
       - name: Create test environment
         run:  bash ./.ci/create_test_env.sh "$ENV_DIR"
       - name: Log test environment
@@ -153,9 +155,7 @@ jobs:
     runs-on: "ubuntu-latest"
     strategy:
       matrix:
-        python-version: ["3.7"]
-        test-suite:     ["zran-test"]
-        extra-args:     ["", "--concat"]
+        extra-args: ["", "--concat"]
         include:
           - niters:       "5000"
             nelems:       "rnd_1000000"
@@ -202,8 +202,8 @@ jobs:
 
     env:
       ENV_DIR:        ./test.env
-      PYTHON_VERSION: ${{ matrix.python-version }}
-      TEST_SUITE:     ${{ matrix.test-suite }}
+      PYTHON_VERSION: "3.7"
+      TEST_SUITE:     "zran_test"
       TEST_PATTERN:   ${{ matrix.test-pattern }}
       EXTRA_ARGS:     ${{ matrix.extra-args }}
       NELEMS:         ${{ matrix.nelems }}
@@ -211,11 +211,11 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
-      - name: Set up Python ${{ matrix.python-version }}
+      - name: Set up Python
         uses: actions/setup-python@v2
         with:
-          python-version: ${{ matrix.python-version }}
-          architecture: x64
+          python-version: 3.7
+          architecture:   x64
       - name: Create test environment
         run:  bash ./.ci/create_test_env.sh "$ENV_DIR"
       - name: Log test environment

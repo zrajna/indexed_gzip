@@ -33,7 +33,7 @@ jobs:
         run:  bash ./.ci/create_test_env.sh "$ENV_DIR"
       - name: Log test environment
         run: |
-          source "$ENV_DIR"/bin/activate
+          source ./.ci/activate_env.sh "$ENV_DIR"
           python -V
           pip freeze
       - name: Build indexed_gzip

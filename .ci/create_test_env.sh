@@ -7,6 +7,7 @@
 set -e
 
 envdir="$1"
+thisdir=$(cd $(dirname "$0") && pwd)
 
 # NUMPY=<some numpy version>
 if [[ -n "$NUMPY" ]]; then
@@ -30,6 +31,6 @@ else
   python -m venv "$envdir"
 fi
 
-source "$envdir"/bin/activate || source "$envdir"/Scripts/activate
+source $thisdir/activate_env.sh "$envdir"
 
-pip install cython pytest coverage pytest-cov "$NUMPY" "$NIBABEL"
+pip install wheel cython pytest coverage pytest-cov "$NUMPY" "$NIBABEL"

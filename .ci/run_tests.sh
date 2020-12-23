@@ -5,8 +5,9 @@
 set -e
 
 envdir="$1"
+thisdir=$(cd $(dirname "$0") && pwd)
 
-source "$envdir"/bin/activate || source "$envdir"/Scripts/activate
+source $thisdir/activate_env.sh "$envdir"
 
 # NITERS=<number of iterations for some tests>
 # (see conftest.py)

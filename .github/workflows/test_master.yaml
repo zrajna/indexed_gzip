@@ -59,7 +59,7 @@ jobs:
     strategy:
       matrix:
         os:             ["ubuntu-latest", "macos-latest", "windows-latest"]
-        python-version: 3.7
+        python-version: "3.7"
         extra-args:     ""
         nelems:         ""
         include:
@@ -103,7 +103,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        python-version: 3.7
+        python-version: "3.7"
         numpy:          ""
         os:             ["ubuntu-latest", "macos-latest", "windows-latest"]
         include:
@@ -153,7 +153,7 @@ jobs:
     runs-on: "ubuntu-latest"
     strategy:
       matrix:
-        python-version: 3.7
+        python-version: "3.7"
         test-suite:     "zran-test"
         extra-args:     ["", "--concat"]
         include:

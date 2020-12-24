@@ -9,13 +9,14 @@ See
 https://cython.readthedocs.io/en/latest/src/reference/compilation.html#compiler-directives
 for more details.
 
-The ZLIB_HOME environment variable may be used to specify a custom ZLIB
-installation directory which contains both the ZLIB headers and compiled
-library file.
+The ZLIB_INCLUDE_DIR and ZLIB_LIBRARY_DIR environment variables may be used to
+specify custom ZLIB installation directories.
 
-If ZLIB_HOME is specified, ZLIB is statically compiled into the compiled
-indexed_gzip python extension. If ZLIB_HOME is not specified, the
-system-provided shared ZLIB library is used.
+If the ZLIB_STATIC environment variable is set to "1", ZLIB is statically
+compiled into the compiled indexed_gzip python extension. ZLIB_STATIC has no
+effect if ZLIB_LIBRARY_DIR is not set, and no effect on Windows. In order to
+statically link against zlib on Windows, you must ensure that only a
+statically compiled zlib library file is present in ZLIB_LIBRARY_DIR.
 """
 
 import sys
@@ -82,8 +83,11 @@ python2   = sys.version_info[0] == 2
 noc99     = python2 or (sys.version_info[0] == 3 and sys.version_info[1] <= 4)
 windows   = sys.platform.startswith("win")
 testing   = 'INDEXED_GZIP_TESTING' in os.environ
-ZLIB_HOME = os.environ.get("ZLIB_HOME", None)
 
+# ZLIB control
+ZLIB_INCLUDE_DIR = os.environ.get("ZLIB_INCLUDE_DIR", None)
+ZLIB_LIBRARY_DIR = os.environ.get("ZLIB_LIBRARY_DIR", None)
+ZLIB_STATIC      = os.environ.get("ZLIB_STATIC",      None)
 
 # Load README description
 readme = op.join(op.dirname(__file__), 'README.md')
@@ -121,8 +125,8 @@ extra_objects       = []
 compiler_directives = {'language_level' : 2}
 define_macros       = []
 
-if ZLIB_HOME is not None:
-    include_dirs.append(ZLIB_HOME)
+if ZLIB_INCLUDE_DIR is not None:
+    include_dirs.append(ZLIB_INCLUDE_DIR)
 
 # If numpy is present, we need
 # to include the headers
@@ -131,8 +135,8 @@ if have_numpy:
 
 if windows:
     libs.append('zlib')
-    if ZLIB_HOME is not None:
-        lib_dirs.append(ZLIB_HOME)
+    if ZLIB_LIBRARY_DIR is not None:
+        lib_dirs.append(ZLIB_LIBRARY_DIR)
 
     # For stdint.h which is not included in the old Visual C
     # compiler used for Python 2
@@ -148,8 +152,12 @@ if windows:
 else:
     # if ZLIB_HOME is set, statically link,
     # rather than use system-provided zlib
-    if ZLIB_HOME is not None:
-        extra_objects.append(op.join(ZLIB_HOME, 'libz.a'))
+    if ZLIB_LIBRARY_DIR is not None:
+        if ZLIB_STATIC == '1':
+            extra_objects.append(op.join(ZLIB_LIBRARY_DIR, 'libz.a'))
+        else:
+            lib_dirs.append(ZLIB_LIBRARY_DIR)
+            libs    .append('z')
     else:
         libs.append('z')
     extra_compile_args += ['-Wall', '-pedantic', '-Wno-unused-function']

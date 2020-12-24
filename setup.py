@@ -9,15 +9,10 @@ See
 https://cython.readthedocs.io/en/latest/src/reference/compilation.html#compiler-directives
 for more details.
 
-The ZLIB_INCLUDE_DIR and ZLIB_LIBRARY_DIR environment variables may be used to
-specify custom ZLIB installation directories. ZLIB_INCLUDE_DIR may be a
-semi-colon separated list of directories.
-
-If the ZLIB_STATIC environment variable is set to "1", ZLIB is statically
-compiled into the compiled indexed_gzip python extension. ZLIB_STATIC has no
-effect if ZLIB_LIBRARY_DIR is not set, and no effect on Windows. In order to
-statically link against zlib on Windows, you must ensure that only a
-statically compiled zlib library file is present in ZLIB_LIBRARY_DIR.
+The ZLIB_HOME environment variable can be used to compile and statically link
+ZLIB into the indexed_gzip shared library file. It should point to a directory
+which contains the ZLIB source code. If not provided, the ZLIB header and
+library files are assumed to be provided by the system.
 """
 
 import sys
@@ -85,10 +80,8 @@ noc99     = python2 or (sys.version_info[0] == 3 and sys.version_info[1] <= 4)
 windows   = sys.platform.startswith("win")
 testing   = 'INDEXED_GZIP_TESTING' in os.environ
 
-# ZLIB control
-ZLIB_INCLUDE_DIR = os.environ.get("ZLIB_INCLUDE_DIR", None)
-ZLIB_LIBRARY_DIR = os.environ.get("ZLIB_LIBRARY_DIR", None)
-ZLIB_STATIC      = os.environ.get("ZLIB_STATIC",      None)
+# compile ZLIB source?
+ZLIB_HOME = os.environ.get("ZLIB_HOME", None)
 
 # Load README description
 readme = op.join(op.dirname(__file__), 'README.md')
@@ -121,14 +114,14 @@ except Exception:
 include_dirs        = ['indexed_gzip']
 lib_dirs            = []
 libs                = []
+extra_srcs          = []
 extra_compile_args  = []
-extra_objects       = []
 compiler_directives = {'language_level' : 2}
 define_macros       = []
 
-if ZLIB_INCLUDE_DIR is not None:
-    zldirs = [op.abspath(d) for d in ZLIB_INCLUDE_DIR.split(';')]
-    include_dirs.extend(zldirs)
+if ZLIB_HOME is not None:
+    include_dirs.append(ZLIB_HOME)
+    extra_srcs.extend(glob.glob(op.join(ZLIB_HOME, '*.c')))
 
 # If numpy is present, we need
 # to include the headers
@@ -136,12 +129,8 @@ if have_numpy:
     include_dirs.append(np.get_include())
 
 if windows:
-    if ZLIB_STATIC == '1':
-        libs.append('zlibstaticd')
-    else:
+    if ZLIB_HOME is None:
         libs.append('zlib')
-    if ZLIB_LIBRARY_DIR is not None:
-        lib_dirs.append(ZLIB_LIBRARY_DIR)
 
     # For stdint.h which is not included in the old Visual C
     # compiler used for Python 2
@@ -157,13 +146,7 @@ if windows:
 else:
     # if ZLIB_HOME is set, statically link,
     # rather than use system-provided zlib
-    if ZLIB_LIBRARY_DIR is not None:
-        if ZLIB_STATIC == '1':
-            extra_objects.append(op.join(ZLIB_LIBRARY_DIR, 'libz.a'))
-        else:
-            lib_dirs.append(ZLIB_LIBRARY_DIR)
-            libs    .append('z')
-    else:
+    if ZLIB_HOME is None:
         libs.append('z')
     extra_compile_args += ['-Wall', '-pedantic', '-Wno-unused-function']
 
@@ -180,12 +163,11 @@ else:           pyx_ext = 'c'
 igzip_ext = Extension(
     'indexed_gzip.indexed_gzip',
     [op.join('indexed_gzip', 'indexed_gzip.{}'.format(pyx_ext)),
-     op.join('indexed_gzip', 'zran.c')],
+     op.join('indexed_gzip', 'zran.c')] + extra_srcs,
     libraries=libs,
     library_dirs=lib_dirs,
     include_dirs=include_dirs,
     extra_compile_args=extra_compile_args,
-    extra_objects=extra_objects,
     define_macros=define_macros)
 
 # Optional test modules
@@ -206,7 +188,7 @@ if not windows:
     test_exts.append(Extension(
         'indexed_gzip.tests.ctest_zran',
         [op.join('indexed_gzip', 'tests', 'ctest_zran.{}'.format(pyx_ext)),
-         op.join('indexed_gzip', 'zran.c')],
+         op.join('indexed_gzip', 'zran.c')] + extra_srcs,
         libraries=libs,
         library_dirs=lib_dirs,
         include_dirs=include_dirs,

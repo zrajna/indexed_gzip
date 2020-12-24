@@ -27,6 +27,7 @@ fi
 
 mkdir build
 pushd build
+cmake --help
 CFLAGS=$CFLAGS cmake $CMAKE_FLAGS ..
 cmake --build . --target zlibstatic
 cp zconf.h ..

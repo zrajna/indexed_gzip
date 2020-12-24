@@ -10,22 +10,26 @@ tar -xzf zlib.tar.gz
 pushd zlib-1.2.11
 
 if [[ "$PLATFORM" == "windows"* ]]; then
-  ZLIB_LIBRARY_DIR=$(pwd)/build/zlibstatic.dir/Debug
+  ZLIB_LIBRARY_DIR=$(pwd)/build/
   CFLAGS=""
 else
   ZLIB_LIBRARY_DIR=$(pwd)/build/
   CFLAGS="-fPIC"
 fi
 
-ZLIB_INCLUDE_DIR="$(pwd);$(pwd)/build"
+ZLIB_INCLUDE_DIR="$(pwd)"
 
 mkdir build
 pushd build
 CFLAGS=$CFLAGS cmake ..
 cmake --build . --target zlibstatic
+cp zconf.h ..
 popd
 
-ls -l $ZLIB_LIBRARY_DIR
+ls -l
+ls -l build/
+ls -l build/zlibstatic.dir/
+ls -l build/zlibstatic.dir/Debug
 
 # used by setup.py
 echo "ZLIB_INCLUDE_DIR=$ZLIB_INCLUDE_DIR" >> "$GITHUB_ENV"

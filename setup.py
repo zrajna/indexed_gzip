@@ -136,7 +136,10 @@ if have_numpy:
     include_dirs.append(np.get_include())
 
 if windows:
-    libs.append('zlib')
+    if ZLIB_STATIC == '1':
+        libs.append('zlibstaticd')
+    else:
+        libs.append('zlib')
     if ZLIB_LIBRARY_DIR is not None:
         lib_dirs.append(ZLIB_LIBRARY_DIR)
 

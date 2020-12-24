@@ -8,6 +8,14 @@ Cython modules are compiled with line-tracing enabled, via the Cython
 See
 https://cython.readthedocs.io/en/latest/src/reference/compilation.html#compiler-directives
 for more details.
+
+The ZLIB_HOME environment variable may be used to specify a custom ZLIB
+installation directory which contains both the ZLIB headers and compiled
+library file.
+
+If ZLIB_HOME is specified, ZLIB is statically compiled into the compiled
+indexed_gzip python extension. If ZLIB_HOME is not specified, the
+system-provided shared ZLIB library is used.
 """
 
 import sys
@@ -76,13 +84,13 @@ windows   = sys.platform.startswith("win")
 testing   = 'INDEXED_GZIP_TESTING' in os.environ
 ZLIB_HOME = os.environ.get("ZLIB_HOME", None)
 
-readme = op.join(op.dirname(__file__), 'README.md')
 
+# Load README description
+readme = op.join(op.dirname(__file__), 'README.md')
 if python2:
     openreadme = ft.partial(open, readme, 'rt')
 else:
     openreadme = ft.partial(open, readme, 'rt', encoding='utf-8')
-
 with openreadme() as f:
     readme = f.read().strip()
 
@@ -105,12 +113,16 @@ except Exception:
     have_numpy = False
 
 # compile flags
-include_dirs = ['indexed_gzip']
-lib_dirs = []
-libs = []
-extra_compile_args = []
+include_dirs        = ['indexed_gzip']
+lib_dirs            = []
+libs                = []
+extra_compile_args  = []
+extra_objects       = []
 compiler_directives = {'language_level' : 2}
-define_macros = []
+define_macros       = []
+
+if ZLIB_HOME is not None:
+    include_dirs.append(ZLIB_HOME)
 
 # If numpy is present, we need
 # to include the headers
@@ -118,14 +130,9 @@ if have_numpy:
     include_dirs.append(np.get_include())
 
 if windows:
-    if ZLIB_HOME is None:
-        raise RuntimeError('ZLIB_HOME is not set - you must set ZLIB_HOME '
-                           'to a directory which contains a compiled copy '
-                           'of zlib.')
-
-    include_dirs.append(ZLIB_HOME)
-    lib_dirs    .append(ZLIB_HOME)
-    libs        .append('zlib')
+    libs.append('zlib')
+    if ZLIB_HOME is not None:
+        lib_dirs.append(ZLIB_HOME)
 
     # For stdint.h which is not included in the old Visual C
     # compiler used for Python 2
@@ -139,12 +146,12 @@ if windows:
 
 # linux / macOS
 else:
-    # if ZLIB_HOME is set, compile against it,
-    # rather than any system-provided libz
+    # if ZLIB_HOME is set, statically link,
+    # rather than use system-provided zlib
     if ZLIB_HOME is not None:
-        lib_dirs    .append(ZLIB_HOME)
-        include_dirs.append(ZLIB_HOME)
-    libs.append('z')
+        extra_objects.append(op.join(ZLIB_HOME, 'libz.a'))
+    else:
+        libs.append('z')
     extra_compile_args += ['-Wall', '-pedantic', '-Wno-unused-function']
 
 if testing:
@@ -165,6 +172,7 @@ igzip_ext = Extension(
     library_dirs=lib_dirs,
     include_dirs=include_dirs,
     extra_compile_args=extra_compile_args,
+    extra_objects=extra_objects,
     define_macros=define_macros)
 
 # Optional test modules

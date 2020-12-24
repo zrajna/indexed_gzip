@@ -26,10 +26,8 @@ cmake --build . --target zlibstatic
 cp zconf.h ..
 popd
 
-ls -l
-ls -l build/
-ls -l build/zlibstatic.dir/
-ls -l build/zlibstatic.dir/Debug
+find . -name "*.a"
+find . -name "*.lib"
 
 # used by setup.py
 echo "ZLIB_INCLUDE_DIR=$ZLIB_INCLUDE_DIR" >> "$GITHUB_ENV"

@@ -7,18 +7,26 @@ curl -o zlib.tar.gz https://www.zlib.net/zlib-1.2.11.tar.gz
 tar -xzf zlib.tar.gz
 pushd zlib-1.2.11
 
+ZLIB_INCLUDE_DIR=$(pwd)
+
 if [[ "$PLATFORM" == "windows"* ]]; then
-  mkdir build
-  pushd build
-  cmake ..
-  cmake --build .
-  ls -l zlibstatic.dir
-  export ZLIB_HOME=$(pwd)/zlibstatic.dir
-  popd
+  ZLIB_LIBRARY_DIR=$(pwd)/build/zlibstatic.dir
+  CFLAGS=""
 else
-  CFLAGS=-fPIC ./configure --static
-  export ZLIB_HOME=$(pwd)
-  ls -l
+  ZLIB_LIBRARY_DIR=$(pwd)/build/
+  CFLAGS="-fPIC"
 fi
+
+mkdir build
+pushd build
+CFLAGS=$CFLAGS cmake ..
+cmake --build . --target zlibstatic
+popd
+
+ls -l $ZLIB_INCLUDE_DIR
+ls -l $ZLIB_LIBRARY_DIR
+
+echo "ZLIB_INCLUDE_DIR=$ZLIB_INCLUDE_DIR" >> "$GITHUB_ENV"
+echo "ZLIB_LIBRARY_DIR=$ZLIB_LIBRARY_DIR" >> "$GITHUB_ENV"
 
 popd

@@ -21,7 +21,6 @@ ZLIB_INCLUDE_DIR="$(pwd)"
 
 if [[ "$PYTHON_VERSION" == "2.7" ]]; then
   CMAKE_FLAGS='-G "Microsoft Visual C++ Compiler for Python 2.7"'
-fi
 else
   CMAKE_FLAGS=""
 fi

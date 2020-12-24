@@ -22,7 +22,7 @@ ZLIB_INCLUDE_DIR="$(pwd)"
 mkdir build
 pushd build
 CFLAGS=$CFLAGS cmake ..
-cmake --build . --target zlibstatic
+VERBOSE=1 cmake --build . --target zlibstatic
 cp zconf.h ..
 popd
 

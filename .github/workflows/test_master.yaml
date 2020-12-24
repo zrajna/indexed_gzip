@@ -49,7 +49,7 @@ jobs:
           python -V
           pip freeze
       - name: Build zlib
-        if:   ${{ matrix.os == "windows-latest" }}
+        if:   ${{ matrix.os == 'windows-latest' }}
         run:  bash ./.ci/build_zlib.sh
       - name: Build indexed_gzip
         run:  bash ./.ci/build_test_indexed_gzip.sh "$ENV_DIR"
@@ -97,7 +97,7 @@ jobs:
           python -V
           pip freeze
       - name: Build zlib
-        if:   ${{ matrix.os == "windows-latest" }}
+        if:   ${{ matrix.os == 'windows-latest' }}
         run:  bash ./.ci/build_zlib.sh
       - name: Build indexed_gzip
         run:  bash ./.ci/build_test_indexed_gzip.sh "$ENV_DIR"
@@ -155,7 +155,7 @@ jobs:
           python -V
           pip freeze
       - name: Build zlib
-        if:   ${{ matrix.os == "windows-latest" }}
+        if:   ${{ matrix.os == 'windows-latest' }}
         run:  bash ./.ci/build_zlib.sh
       - name: Build indexed_gzip
         run:  bash ./.ci/build_test_indexed_gzip.sh "$ENV_DIR"

@@ -19,10 +19,18 @@ fi
 
 ZLIB_INCLUDE_DIR="$(pwd)"
 
+if [[ "$PYTHON_VERSION" == "2.7" ]]; then
+  CMAKE_FLAGS='-G "Microsoft Visual C++ Compiler for Python 2.7"'
+fi
+else
+  CMAKE_FLAGS=""
+fi
+
 mkdir build
 pushd build
-CFLAGS=$CFLAGS cmake ..
-VERBOSE=1 cmake --build . --target zlibstatic
+cmake --help
+CFLAGS=$CFLAGS cmake $CMAKE_FLAGS ..
+cmake --build . --target zlibstatic
 cp zconf.h ..
 popd
 

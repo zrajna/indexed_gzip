@@ -10,7 +10,8 @@ https://cython.readthedocs.io/en/latest/src/reference/compilation.html#compiler-
 for more details.
 
 The ZLIB_INCLUDE_DIR and ZLIB_LIBRARY_DIR environment variables may be used to
-specify custom ZLIB installation directories.
+specify custom ZLIB installation directories. ZLIB_INCLUDE_DIR may be a
+semi-colon separated list of directories.
 
 If the ZLIB_STATIC environment variable is set to "1", ZLIB is statically
 compiled into the compiled indexed_gzip python extension. ZLIB_STATIC has no
@@ -126,7 +127,7 @@ compiler_directives = {'language_level' : 2}
 define_macros       = []
 
 if ZLIB_INCLUDE_DIR is not None:
-    include_dirs.append(ZLIB_INCLUDE_DIR)
+    include_dirs.extend(ZLIB_INCLUDE_DIR.split(';'))
 
 # If numpy is present, we need
 # to include the headers

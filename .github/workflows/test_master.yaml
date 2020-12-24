@@ -51,9 +51,9 @@ jobs:
           source ./.ci/activate_env.sh "$ENV_DIR"
           python -V
           pip freeze
-      - name: Build zlib
+      - name: Download zlib
         if:   ${{ matrix.os == 'windows-latest' }}
-        run:  bash ./.ci/build_zlib.sh
+        run:  bash ./.ci/download_zlib.sh
       - name: Build indexed_gzip
         run:  bash ./.ci/build_test_indexed_gzip.sh "$ENV_DIR"
       - name: Run tests
@@ -99,9 +99,9 @@ jobs:
           source ./.ci/activate_env.sh "$ENV_DIR"
           python -V
           pip freeze
-      - name: Build zlib
+      - name: Download zlib
         if:   ${{ matrix.os == 'windows-latest' }}
-        run:  bash ./.ci/build_zlib.sh
+        run:  bash ./.ci/download_zlib.sh
       - name: Build indexed_gzip
         run:  bash ./.ci/build_test_indexed_gzip.sh "$ENV_DIR"
       - name: Run tests
@@ -157,9 +157,9 @@ jobs:
           source ./.ci/activate_env.sh "$ENV_DIR"
           python -V
           pip freeze
-      - name: Build zlib
+      - name: Download zlib
         if:   ${{ matrix.os == 'windows-latest' }}
-        run:  bash ./.ci/build_zlib.sh
+        run:  bash ./.ci/download_zlib.sh
       - name: Build indexed_gzip
         run:  bash ./.ci/build_test_indexed_gzip.sh "$ENV_DIR"
       - name: Run tests

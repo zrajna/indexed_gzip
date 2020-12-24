@@ -8,15 +8,17 @@ tar -xzf zlib.tar.gz
 pushd zlib-1.2.11
 
 if [[ "$PLATFORM" == "windows"* ]]; then
-  cmake -DCMAKE_BUILD_TYPE=Release .
+  mkdir build
+  pushd build
+  cmake ..
   cmake --build .
+  ls -l zlibstatic.dir
+  export ZLIB_HOME=$(pwd)/zlibstatic.dir
+  popd
 else
   CFLAGS=-fPIC ./configure --static
-  make
+  export ZLIB_HOME=$(pwd)
+  ls -l
 fi
 
-ls -l
-
-
-export ZLIB_HOME=$(pwd)
 popd

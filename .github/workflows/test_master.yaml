@@ -28,6 +28,7 @@ jobs:
         extra-args:     ["", "--concat"]
 
     env:
+      PLATFORM:       ${{ matrix.os }}
       PYTHON_VERSION: ${{ matrix.python-version }}
       TEST_SUITE:     "not (slow_test or zran_test)"
       EXTRA_ARGS:     ${{ matrix.extra-args }}
@@ -71,11 +72,12 @@ jobs:
            nelems:     "805306368"
 
     env:
-      ENV_DIR:        ./test.env
+      PLATFORM:       ${{ matrix.os }}
       PYTHON_VERSION: 3.7
       TEST_SUITE:     ${{ matrix.test-suite }}
       EXTRA_ARGS:     ${{ matrix.extra-args }}
       NELEMS:         ${{ matrix.nelems }}
+      ENV_DIR:        ./test.env
 
     steps:
       - uses: actions/checkout@v2
@@ -125,11 +127,12 @@ jobs:
             numpy:   ""
 
     env:
-      ENV_DIR:        ./test.env
-      TEST_SUITE:     nibabel_test
+      PLATFORM:       ${{ matrix.os }}
       PYTHON_VERSION: 3.7
+      TEST_SUITE:     nibabel_test
       NIBABEL:        ${{ matrix.nibabel }}
       NUMPY:          ${{ matrix.numpy }}
+      ENV_DIR:        ./test.env
 
     steps:
       - uses: actions/checkout@v2
@@ -201,13 +204,14 @@ jobs:
             test-pattern: "test_seek_then_read_block"
 
     env:
-      ENV_DIR:        ./test.env
+      PLATFORM:       ${{ matrix.os }}
       PYTHON_VERSION: "3.7"
       TEST_SUITE:     "zran_test"
       TEST_PATTERN:   ${{ matrix.test-pattern }}
       EXTRA_ARGS:     ${{ matrix.extra-args }}
       NELEMS:         ${{ matrix.nelems }}
       NITERS:         ${{ matrix.niters }}
+      ENV_DIR:        ./test.env
 
     steps:
       - uses: actions/checkout@v2

@@ -127,7 +127,8 @@ compiler_directives = {'language_level' : 2}
 define_macros       = []
 
 if ZLIB_INCLUDE_DIR is not None:
-    include_dirs.extend(ZLIB_INCLUDE_DIR.split(';'))
+    zldirs = [op.abspath(d) for d in ZLIB_INCLUDE_DIR.split(';')]
+    include_dirs.extend(zldirs)
 
 # If numpy is present, we need
 # to include the headers

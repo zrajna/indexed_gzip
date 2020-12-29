@@ -11,8 +11,6 @@ import numpy   as np
 
 import pytest
 
-from indexed_gzip.tests import gen_test_data
-
 
 def pytest_addoption(parser):
 
@@ -92,6 +90,8 @@ def seed(request):
 
 @pytest.fixture
 def testfile(request, nelems, concat):
+
+    from indexed_gzip.tests import gen_test_data
 
     filename = request.config.getoption('--testfile')
 

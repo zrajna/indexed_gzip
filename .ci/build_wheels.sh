@@ -10,6 +10,6 @@ export CIBW_ENVIRONMENT="ZLIB_HOME='$ZLIB_HOME'"
 
 # Run quick test suite on built wheels
 export CIBW_TEST_REQUIRES="pytest pytest-cov coverage numpy nibabel"
-export CIBW_TEST_COMMAND="cp {project}/setup.cfg {project}/conftest.py .; pytest {project}/indexed_gzip/tests -m 'not slow_test'"
+export CIBW_TEST_COMMAND="cp {project}/setup.cfg {project}/conftest.py .; pytest -m 'not slow_test' --pyargs indexed_gzip"
 
 python -m cibuildwheel --output-dir ./dist

@@ -15,8 +15,9 @@ export CIBW_ENVIRONMENT_WINDOWS="ZLIB_HOME='$ZLIB_HOME'"
 # Run quick test suite on built wheels. We need
 # cython for the Crthon.Coverage plugin.
 export CIBW_TEST_REQUIRES="cython pytest pytest-cov coverage numpy nibabel"
-PREP="cp {project}/.coveragerc cp {project}/setup.cfg {project}/conftest.py ."
-RUN="pytest -m 'not slow_test' --pyargs indexed_gzip"
-export CIBW_TEST_COMMAND="$PREP; $RUN"
+PREP="cp {project}/.coveragerc {project}/setup.cfg {project}/conftest.py ."
+DBG="ls; python -c 'import indexed_gzip.tests as t; import os; import os.path as op; print(os.listdir(op.dirname(t.__file__)))'"
+RUN="pytest -m 'not slow_test' --pyargs indexed_gzip --import-mode=append"
+export CIBW_TEST_COMMAND="$PREP; $DBG; $RUN"
 
 python -m cibuildwheel --output-dir ./dist

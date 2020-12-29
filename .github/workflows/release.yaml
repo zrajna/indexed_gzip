@@ -1,0 +1,56 @@
+ # This workflow builds binary wheels for indexed_gzip,
+# for different platforms and different Python versions,
+# using cibuildwheel. It is run on tags.
+
+on: push
+#on:
+#  push:
+#    tags:
+#      - '*'
+
+jobs:
+
+  build_sdist:
+    name:    Build source distribution
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        name: Install Python
+        with:
+          python-version: '3.7'
+      - name: Build sdist
+        run:  python setup.py sdist
+      - uses: actions/upload-artifact@v2
+        with:
+          path: ./dist/*.tar.gz
+
+  build_wheels:
+    name: Build ${{ matrix.os }} wheels
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: ["ubuntu-18.04", "macos-latest", "windows-latest"]
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        name: Install Python
+        with:
+          python-version: '3.7'
+
+      - name: Install Visual C++ for Python 2.7
+        if: runner.os == 'Windows'
+        run: |
+          choco install vcpython27 -f -y
+
+      - name: Download zlib
+        if:   ${{ matrix.os == 'windows-latest' }}
+        run:  bash ./.ci/download_zlib.sh
+
+      - name: Build wheels
+        run:  bash ./.ci/build_wheels.sh
+
+      - uses: actions/upload-artifact@v2
+        with:
+          path: ./dist/*.whl

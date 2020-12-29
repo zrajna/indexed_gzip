@@ -1,6 +1,7 @@
 #!/bin/bash
 #
-# Run indexed_gzip unit tests
+# Run indexed_gzip unit tests. Assumes that
+# python setup.py develop has been run.
 
 set -e
 

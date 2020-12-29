@@ -45,6 +45,6 @@ jobs:
         if:   ${{ matrix.os == 'windows-latest' }}
         run:  bash ./.ci/download_zlib.sh
       - name: Build indexed_gzip
-        run:  bash ./.ci/build_test_indexed_gzip.sh "$ENV_DIR"
+        run:  bash ./.ci/build_dev_indexed_gzip.sh "$ENV_DIR"
       - name: Run tests
         run:  bash  ./.ci/run_tests.sh "$ENV_DIR"

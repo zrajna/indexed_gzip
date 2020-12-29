@@ -110,6 +110,18 @@ try:
 except Exception:
     have_numpy = False
 
+print('indexed_gzip setup')
+print('  have_cython: {} (if True, modules will be cythonized, '
+      'otherwise pre-cythonized C files are assumed to be '
+      'present)'.format(have_cython))
+print('  have_numpy:  {} (if True, test modules will '
+      'be compiled)'.format(have_numpy))
+print('  ZLIB_HOME:   {} (if set, ZLIB sources are compiled into '
+      'the indexed_gzip extension)'.format(ZLIB_HOME))
+print('  testing:     {} (if True, code will be compiled with line '
+      'tracing enabled)'.format(testing))
+
+
 # compile flags
 include_dirs        = ['indexed_gzip']
 lib_dirs            = []

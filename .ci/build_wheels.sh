@@ -12,8 +12,11 @@ export CIBW_BEFORE_ALL_LINUX="yum install -y zlib-devel"
 # see .ci/download_zlib.sh and setup.py
 export CIBW_ENVIRONMENT_WINDOWS="ZLIB_HOME='$ZLIB_HOME'"
 
-# Run quick test suite on built wheels
-export CIBW_TEST_REQUIRES="pytest pytest-cov coverage numpy nibabel"
-export CIBW_TEST_COMMAND="cp {project}/setup.cfg {project}/conftest.py .; pytest -m 'not slow_test' --pyargs indexed_gzip"
+# Run quick test suite on built wheels. We need
+# cython for the Crthon.Coverage plugin.
+export CIBW_TEST_REQUIRES="cython pytest pytest-cov coverage numpy nibabel"
+PREP="cp {project}/.coveragerc cp {project}/setup.cfg {project}/conftest.py ."
+RUN="pytest -m 'not slow_test' --pyargs indexed_gzip"
+export CIBW_TEST_COMMAND="$PREP; $RUN"
 
 python -m cibuildwheel --output-dir ./dist

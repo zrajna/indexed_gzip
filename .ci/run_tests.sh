@@ -23,9 +23,10 @@ if [[ -n "$NELEMS" ]]; then
   NELEMS="--nelems $NELEMS"
 fi
 
-pytest -v -s              \
-       -m "$TEST_SUITE"   \
-       -k "$TEST_PATTERN" \
-       $NELEMS            \
-       $NITERS            \
+python -m indexed_gzip.tests \
+       -v -s                 \
+       -m "$TEST_SUITE"      \
+       -k "$TEST_PATTERN"    \
+       $NELEMS               \
+       $NITERS               \
        $EXTRA_ARGS

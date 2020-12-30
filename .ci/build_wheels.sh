@@ -14,9 +14,13 @@ export CIBW_ENVIRONMENT_WINDOWS="ZLIB_HOME='$ZLIB_HOME'"
 # Run quick test suite on built wheels. We need
 # cython for the Cython.Coverage plugin.
 export CIBW_TEST_REQUIRES="cython pytest pytest-cov coverage numpy nibabel"
-PREP="cp {project}/.coveragerc {project}/setup.cfg {project}/conftest.py ."
-RUN="pytest -m 'not slow_test' --pyargs indexed_gzip"
-export CIBW_TEST_COMMAND="$PREP && $RUN"
+
+echo "#!/usr/bin/env bash"                              > testcmd
+echo "cp $1/.coveragerc $1/setup.cfg $1/conftest.py ." >> testcmd
+echo "pytest -m 'not slow_test' --pyargs indexed_gzip" >> testcmd
+chmod a+x testcmd
+
+export CIBW_TEST_COMMAND="./testcmd {project}"
 
 python -m pip install cibuildwheel==1.7.2
 

@@ -17,7 +17,9 @@ export CIBW_TEST_REQUIRES="cython pytest pytest-cov coverage numpy nibabel"
 
 echo '#!/usr/bin/env bash'                              > testcmd
 echo 'cp $1/.coveragerc $1/setup.cfg $1/conftest.py .' >> testcmd
-echo 'pytest -m "not slow_test" --pyargs indexed_gzip' >> testcmd
+echo 'pwd' >> testcmd
+echo 'ls -l' >> testcmd
+echo 'pytest -vvv -m "not slow_test" --pyargs indexed_gzip' >> testcmd
 chmod a+x testcmd
 
 export CIBW_TEST_COMMAND="bash {project}/testcmd {project}"

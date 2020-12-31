@@ -1,0 +1,67 @@
+# This workflow does a test build of binary wheels for
+# indexed_gzip, for different platforms, and for python
+# 2.7 and 3.7. It is run on new tags.
+
+on: push
+#on:
+#  push:
+#    tags:
+#      - '*'
+
+defaults:
+  run:
+    shell: bash
+
+
+jobs:
+  build_sdist:
+    name:    Build source distribution
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions/setup-python@v2
+        name: Install Python
+        with:
+          python-version: '3.7'
+
+      - name: Build sdist
+        run: |
+          pip install twine
+          python setup.py sdist
+          twine check dist/*
+
+  build_wheels:
+    name: Build ${{ matrix.os }} wheels
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os:             ["ubuntu-18.04", "macos-latest", "windows-latest"]
+        python-version: ["2.7", "3.7"]
+
+    env:
+      PLATFORM:       ${{ matrix.os }}
+      PYTHON_VERSION: ${{ matrix.python-version }}
+      ENV_DIR:        ./test.env
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+          architecture: x64
+      - name: Install Visual C++ for Python 2.7
+        if:   ${{ matrix.os == 'windows-latest' && matrix.python-version == '2.7' }}
+        run:  ./.ci/install_vcpython27.sh
+      - name: Create test environment
+        run:  bash ./.ci/create_test_env.sh "$ENV_DIR"
+      - name: Log test environment
+        run: |
+          source ./.ci/activate_env.sh "$ENV_DIR"
+          python -V
+          pip freeze
+      - name: Download zlib
+        if:   ${{ matrix.os == 'windows-latest' }}
+        run:  bash ./.ci/download_zlib.sh
+      - name: Build indexed_gzip
+        run:  bash ./.ci/build_test_wheel.sh "$ENV_DIR"

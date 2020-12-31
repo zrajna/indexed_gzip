@@ -1,7 +1,7 @@
 # indexed_gzip
 
 
-[![Travis build status](https://travis-ci.org/pauldmccarthy/indexed_gzip.svg?branch=master)](https://travis-ci.org/pauldmccarthy/indexed_gzip/) [![Appveyor build status](https://ci.appveyor.com/api/projects/status/github/indexed_gzip)](https://ci.appveyor.com/project/pauldmccarthy/indexed-gzip) [![PyPi version](https://img.shields.io/pypi/v/indexed_gzip.svg)](https://pypi.python.org/pypi/indexed_gzip/) [![Anaconda version](https://anaconda.org/conda-forge/indexed_gzip/badges/version.svg)](https://anaconda.org/conda-forge/indexed_gzip/)
+[![PyPi version](https://img.shields.io/pypi/v/indexed_gzip.svg)](https://pypi.python.org/pypi/indexed_gzip/) [![Anaconda version](https://anaconda.org/conda-forge/indexed_gzip/badges/version.svg)](https://anaconda.org/conda-forge/indexed_gzip/)![Test status](https://github.com/pauldmccarthy/indexed_gzip/workflows/master.yaml/badge.svg)
 
 
  *Fast random access of gzip files in Python*
@@ -85,10 +85,11 @@ python setup.py develop
 ```
 
 
-To run the tests, type the following; you will need `numpy`, `pytest`
-and `pytest-cov` installed:
+To run the tests, type the following; you will need `numpy`, `nibabel`,
+`pytest`, `pytest-cov`, and `coverage` installed:
+
 ```sh
-pytest
+python -m indexed_gzip.tests
 ```
 
 ## Usage

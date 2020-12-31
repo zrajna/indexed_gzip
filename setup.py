@@ -8,6 +8,11 @@ Cython modules are compiled with line-tracing enabled, via the Cython
 See
 https://cython.readthedocs.io/en/latest/src/reference/compilation.html#compiler-directives
 for more details.
+
+The ZLIB_HOME environment variable can be used to compile and statically link
+ZLIB into the indexed_gzip shared library file. It should point to a directory
+which contains the ZLIB source code. If not provided, the ZLIB header and
+library files are assumed to be provided by the system.
 """
 
 import sys
@@ -70,18 +75,20 @@ class Clean(Command):
 
 
 # Platform information
-python2 = sys.version_info[0] == 2
-noc99   = python2 or (sys.version_info[0] == 3 and sys.version_info[1] <= 4)
-windows = sys.platform.startswith("win")
-testing = 'INDEXED_GZIP_TESTING' in os.environ
+python2   = sys.version_info[0] == 2
+noc99     = python2 or (sys.version_info[0] == 3 and sys.version_info[1] <= 4)
+windows   = sys.platform.startswith("win")
+testing   = 'INDEXED_GZIP_TESTING' in os.environ
 
+# compile ZLIB source?
+ZLIB_HOME = os.environ.get("ZLIB_HOME", None)
+
+# Load README description
 readme = op.join(op.dirname(__file__), 'README.md')
-
 if python2:
     openreadme = ft.partial(open, readme, 'rt')
 else:
     openreadme = ft.partial(open, readme, 'rt', encoding='utf-8')
-
 with openreadme() as f:
     readme = f.read().strip()
 
@@ -103,13 +110,30 @@ try:
 except Exception:
     have_numpy = False
 
+print('indexed_gzip setup')
+print('  have_cython: {} (if True, modules will be cythonized, '
+      'otherwise pre-cythonized C files are assumed to be '
+      'present)'.format(have_cython))
+print('  have_numpy:  {} (if True, test modules will '
+      'be compiled)'.format(have_numpy))
+print('  ZLIB_HOME:   {} (if set, ZLIB sources are compiled into '
+      'the indexed_gzip extension)'.format(ZLIB_HOME))
+print('  testing:     {} (if True, code will be compiled with line '
+      'tracing enabled)'.format(testing))
+
+
 # compile flags
-include_dirs = ['indexed_gzip']
-lib_dirs = []
-libs = []
-extra_compile_args = []
+include_dirs        = ['indexed_gzip']
+lib_dirs            = []
+libs                = []
+extra_srcs          = []
+extra_compile_args  = []
 compiler_directives = {'language_level' : 2}
-define_macros = []
+define_macros       = []
+
+if ZLIB_HOME is not None:
+    include_dirs.append(ZLIB_HOME)
+    extra_srcs.extend(glob.glob(op.join(ZLIB_HOME, '*.c')))
 
 # If numpy is present, we need
 # to include the headers
@@ -117,10 +141,8 @@ if have_numpy:
     include_dirs.append(np.get_include())
 
 if windows:
-    ZLIB_HOME = os.environ.get("ZLIB_HOME", "c:/Program Files (x86)/GnuWin32")
-    include_dirs.append(os.path.join(ZLIB_HOME, "include"))
-    libs.append('zlib')
-    lib_dirs.append(os.path.join(ZLIB_HOME, "lib"))
+    if ZLIB_HOME is None:
+        libs.append('zlib')
 
     # For stdint.h which is not included in the old Visual C
     # compiler used for Python 2
@@ -131,8 +153,13 @@ if windows:
     # older versions of python
     if noc99:
         extra_compile_args += ['-DNO_C99']
+
+# linux / macOS
 else:
-    libs.append('z')
+    # if ZLIB_HOME is set, statically link,
+    # rather than use system-provided zlib
+    if ZLIB_HOME is None:
+        libs.append('z')
     extra_compile_args += ['-Wall', '-pedantic', '-Wno-unused-function']
 
 if testing:
@@ -148,7 +175,7 @@ else:           pyx_ext = 'c'
 igzip_ext = Extension(
     'indexed_gzip.indexed_gzip',
     [op.join('indexed_gzip', 'indexed_gzip.{}'.format(pyx_ext)),
-     op.join('indexed_gzip', 'zran.c')],
+     op.join('indexed_gzip', 'zran.c')] + extra_srcs,
     libraries=libs,
     library_dirs=lib_dirs,
     include_dirs=include_dirs,
@@ -173,7 +200,7 @@ if not windows:
     test_exts.append(Extension(
         'indexed_gzip.tests.ctest_zran',
         [op.join('indexed_gzip', 'tests', 'ctest_zran.{}'.format(pyx_ext)),
-         op.join('indexed_gzip', 'zran.c')],
+         op.join('indexed_gzip', 'zran.c')] + extra_srcs,
         libraries=libs,
         library_dirs=lib_dirs,
         include_dirs=include_dirs,

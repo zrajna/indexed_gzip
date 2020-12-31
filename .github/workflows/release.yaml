@@ -1,0 +1,88 @@
+# This workflow builds binary wheels for indexed_gzip,
+# for different platforms and different Python versions,
+# using cibuildwheel. It is triggered manually.
+
+on:
+  workflow_dispatch
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+
+  build_sdist:
+    name:    Build source distribution
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions/setup-python@v2
+        name: Install Python
+        with:
+          python-version: '3.7'
+
+      - name: Build sdist
+        run:  python setup.py sdist
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: sdist
+          path: ./dist/*.tar.gz
+
+  build_wheels:
+    name: Build ${{ matrix.os }} wheels
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: ["ubuntu-18.04", "macos-latest", "windows-latest"]
+
+    env:
+      PLATFORM: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        name: Install Python
+        with:
+          python-version: '3.7'
+
+      - name: Install Visual C++ for Python 2.7
+        if: runner.os == 'Windows'
+        run: |
+          choco install vcpython27 -f -y
+
+      - name: Download zlib
+        if:   ${{ matrix.os == 'windows-latest' }}
+        run:  bash ./.ci/download_zlib.sh
+
+      - name: Build wheels
+        run:  bash ./.ci/build_wheels.sh
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: wheels
+          path: ./dist/*.whl
+
+  publish_to_pypi:
+    name:    Publish indexed_gzip to PyPi
+    runs-on: ubuntu-latest
+    needs:   [build_sdist, build_wheels]
+    steps:
+
+      - name: Download source archive
+        uses: actions/download-artifact@v2
+        with:
+          name: sdist
+          path: dist/
+      - name: Download wheel archives
+        uses: actions/download-artifact@v2
+        with:
+          name: wheels
+          path: dist/
+
+      - name: Publish archives to PyPI
+        uses: pypa/gh-action-pypi-publish@v1.4.1
+        with:
+          user:     __token__
+          password: ${{ secrets.PYPI_TOKEN }}

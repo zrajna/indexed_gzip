@@ -4,11 +4,10 @@
 # It is run on pushes to the master branch.
 
 
-on: push
-#on:
-#  push:
-#    branches:
-#      - master
+on:
+  push:
+    branches:
+      - master
 
 
 defaults:

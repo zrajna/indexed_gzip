@@ -2,11 +2,10 @@
 # indexed_gzip, for different platforms, and for python
 # 2.7 and 3.7. It is run on new tags.
 
-on: push
-#on:
-#  push:
-#    tags:
-#      - '*'
+on:
+  push:
+    tags:
+      - '*'
 
 defaults:
   run:

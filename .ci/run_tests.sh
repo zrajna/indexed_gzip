@@ -23,6 +23,16 @@ if [[ -n "$NELEMS" ]]; then
   NELEMS="--nelems $NELEMS"
 fi
 
+# No coverage on windows, because coverage or
+# pytest-cov seem to have trouble with threading/
+# multiproc, which causes the coverage report
+# generation to sporadically fail
+#
+# https://github.com/pytest-dev/pytest-cov/issues/406
+if [[ "$PLATFORM" == "windows"* ]]; then
+  EXTRA_ARGS="$EXTRA_ARGS --no-cov"
+fi
+
 python -m indexed_gzip.tests      \
        -c setup.cfg               \
        --cov-config=./.coveragerc \

@@ -11,14 +11,14 @@ thisdir=$(cd $(dirname "$0") && pwd)
 
 # NUMPY=<some numpy version>
 if [[ -n "$NUMPY" ]]; then
-  NUMPY="numpy==$NUMPY"
+  NUMPY="numpy==$NUMPY.*"
 else
   NUMPY="numpy"
 fi
 
 # NIBABEL=<some nibabel version>
 if [[ -n "$NIBABEL" ]]; then
-  NIBABEL="nibabel==$NIBABEL"
+  NIBABEL="nibabel==$NIBABEL.*"
 else
   NIBABEL="nibabel"
 fi

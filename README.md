@@ -85,10 +85,11 @@ python setup.py develop
 ```
 
 
-To run the tests, type the following; you will need `numpy`, `pytest`
-and `pytest-cov` installed:
+To run the tests, type the following; you will need `numpy`, `nibabel`,
+`pytest`, `pytest-cov`, and `coverage` installed:
+
 ```sh
-pytest
+python -m indexed_gzip.tests
 ```
 
 ## Usage

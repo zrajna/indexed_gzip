@@ -158,7 +158,7 @@ cdef class _IndexedGzipFile:
         .. note:: The ``auto_build`` behaviour only takes place on calls to
                   :meth:`seek`.
 
-        :arg filename:         File name.
+        :arg filename:         File name or open file handle.
 
         :arg fileobj:          Open file handle.
 
@@ -203,6 +203,12 @@ cdef class _IndexedGzipFile:
         if (fileobj is None) and (mode not in (None, 'r', 'rb')):
             raise ValueError('Invalid mode ({}), must be '
                              '\'r\' or \'rb\''.format(mode))
+
+        # filename can be either a
+        # name or a file object
+        if  hasattr(filename, 'read'):
+            fileobj  = filename
+            filename = None
 
         mode     = 'rb'
         own_file = fileobj is None
@@ -871,7 +877,7 @@ class IndexedGzipFile(io.BufferedReader):
         .. note:: The ``auto_build`` behaviour only takes place on calls to
                   :meth:`seek`.
 
-        :arg filename:         File name.
+        :arg filename:         File name or open file handle.
 
         :arg fileobj:          Open file handle.
 

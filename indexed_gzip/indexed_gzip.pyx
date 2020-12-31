@@ -736,8 +736,7 @@ cdef class _IndexedGzipFile:
 
         else:
             close_file = False
-            if (not fileobj.writable()) or \
-               ('b' not in getattr(fileobj, 'mode', 'wb')):
+            if getattr(fileobj, 'mode', 'wb') != 'wb':
                 raise ValueError(
                     'File should be opened in writeable binary mode.')
 
@@ -779,8 +778,7 @@ cdef class _IndexedGzipFile:
 
         else:
             close_file = False
-            if (not fileobj.readable()) or \
-               ('b' not in getattr(fileobj, 'mode', 'rb')):
+            if getattr(fileobj, 'mode', 'rb') != 'rb':
                 raise ValueError(
                     'File should be opened read-only binary mode.')
 

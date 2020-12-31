@@ -23,11 +23,12 @@ if [[ -n "$NELEMS" ]]; then
   NELEMS="--nelems $NELEMS"
 fi
 
-python -m indexed_gzip.tests \
-       -c setup.cfg          \
-       -v -s                 \
-       -m "$TEST_SUITE"      \
-       -k "$TEST_PATTERN"    \
-       $NELEMS               \
-       $NITERS               \
+python -m indexed_gzip.tests      \
+       -c setup.cfg               \
+       --cov-config=./.coveragerc \
+       -v -s                      \
+       -m "$TEST_SUITE"           \
+       -k "$TEST_PATTERN"         \
+       $NELEMS                    \
+       $NITERS                    \
        $EXTRA_ARGS

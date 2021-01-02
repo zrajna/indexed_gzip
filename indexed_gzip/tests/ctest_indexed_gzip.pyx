@@ -74,6 +74,27 @@ def test_open_close(testfile, nelems, seed, drop):
     with pytest.raises(IOError):
         f.close()
 
+def test_open_function(testfile, nelems):
+
+    f1 = None
+    f2 = None
+
+    try:
+
+        f1 = igzip.IndexedGzipFile(testfile)
+        f2 = igzip.open(           testfile)
+
+        element  = np.random.randint(0, nelems, 1)
+        readval1 = read_element(f1, element)
+        readval2 = read_element(f2, element)
+
+        assert readval1 == element
+        assert readval2 == element
+
+    finally:
+        if f1 is not None: f1.close()
+        if f2 is not None: f2.close()
+
 
 def test_open_close_ctxmanager(testfile, nelems, seed, drop):
 
@@ -190,6 +211,29 @@ def test_create_from_open_handle(testfile, nelems, seed, drop):
 
     finally:
         f.close()
+
+def test_accept_filename_or_fileobj(testfile, nelems):
+
+    f    = None
+    gzf1 = None
+    gzf2 = None
+
+    try:
+        f    = open(testfile, 'rb')
+        gzf1 = igzip._IndexedGzipFile(testfile)
+        gzf2 = igzip._IndexedGzipFile(f)
+
+        element  = np.random.randint(0, nelems, 1)
+        readval1 = read_element(gzf1, element)
+        readval2 = read_element(gzf2, element)
+
+        assert readval1 == element
+        assert readval2 == element
+
+    finally:
+        if gzf2 is not None: gzf2.close()
+        if gzf1 is not None: gzf1.close()
+        if f    is not None: f   .close()
 
 
 def test_handles_not_dropped(testfile, nelems, seed):

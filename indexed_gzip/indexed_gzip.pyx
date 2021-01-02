@@ -38,38 +38,172 @@ cimport indexed_gzip.zran as zran
 import io
 import os
 import pickle
-import warnings
-import tempfile
-import contextlib
-import threading
 import logging
+import tempfile
+import warnings
+import threading
+import contextlib
+
+
+builtin_open = open
+"""Reference to the built-in open function, which is otherwise masked by
+our open function below.
+
+When support for Python 2.7 is dropped, the ``builtins`` module can be used
+instead.
+"""
 
 
 log = logging.getLogger(__name__)
 
 
-class NotCoveredError(ValueError):
-    """Exception raised by the :class:`_IndexedGzipFile` when an attempt is
-    made to seek to/read from a location that is not covered by the
-    index. If the ``_IndexedGzipFile`` was created with ``auto_build=True``,
-    this error will only occur on attempts to call the ``seek`` method
-    with ``whence=SEEK_END``, where the index has not been completely built.
+def open(filename=None, fileobj=None, *args, **kwargs):
+    """Create and return an ``IndexedGzipFile``.
+
+    :arg filename: File name or open file handle.
+    :arg fileobj:  Open file handle.
+
+    See the ``IndexedGzipFile`` class for details on the other arguments.
     """
-    pass
+    return IndexedGzipFile(filename, fileobj, **kwargs)
 
 
-class ZranError(IOError):
-    """Exception raised by the :class:`_IndexedGzipFile` when the ``zran``
-    library signals an error.
+class IndexedGzipFile(io.BufferedReader):
+    """The ``IndexedGzipFile`` class allows for fast random access of a gzip
+    file by using the ``zran`` library to build and maintain an index of seek
+    points into the file.
+
+    ``IndexedGzipFile`` is an ``io.BufferedReader`` which wraps an
+    :class:`_IndexedGzipFile` instance. By accessing the ``_IndexedGzipFile``
+    instance through an ``io.BufferedReader``, read performance is improved
+    through buffering, and access to the I/O methods is made thread-safe.
+
+    A :meth:`pread` method is also implemented, as it is not implemented by
+    the ``io.BufferedReader``.
     """
-    pass
 
 
-class NoHandleError(ValueError):
-    """Exception raised by the :class:`_IndexedGzipFile` when
-    ``drop_handles is True`` and an attempt is made to access the underlying
-    file object.
-    """
+    def __init__(self, *args, **kwargs):
+        """Create an ``IndexedGzipFile``. The file may be specified either
+        with an open file handle (``fileobj``), or with a ``filename``. If the
+        former, the file must have been opened in ``'rb'`` mode.
+
+        .. note:: The ``auto_build`` behaviour only takes place on calls to
+                  :meth:`seek`.
+
+        :arg filename:         File name or open file handle.
+
+        :arg fileobj:          Open file handle.
+
+        :arg mode:             Opening mode. Must be either ``'r'`` or ``'rb``.
+
+        :arg auto_build:       If ``True`` (the default), the index is
+                               automatically built on calls to :meth:`seek`.
+
+        :arg spacing:          Number of bytes between index seek points.
+
+        :arg window_size:      Number of bytes of uncompressed data stored with
+                               each seek point.
+
+        :arg readbuf_size:     Size of buffer in bytes for storing compressed
+                               data read in from the file.
+
+        :arg readall_buf_size: Size of buffer in bytes used by :meth:`read`
+                               when reading until EOF.
+
+        :arg drop_handles:     Has no effect if an open ``fid`` is specified,
+                               rather than a ``filename``.  If ``True`` (the
+                               default), a handle to the file is opened and
+                               closed on every access. Otherwise the file is
+                               opened at ``__cinit__``, and kept open until
+                               this ``_IndexedGzipFile`` is destroyed.
+
+        :arg index_file:       Pre-generated index for this ``gz`` file -
+                               if provided, passed through to
+                               :meth:`import_index`.
+
+        :arg buffer_size:      Optional, must be passed as a keyword argument.
+                               Passed through to
+                               ``io.BufferedReader.__init__``. If not provided,
+                               a default value of 1048576 is used.
+        """
+
+        buffer_size        = kwargs.pop('buffer_size', 1048576)
+        fobj               = _IndexedGzipFile(*args, **kwargs)
+        self.__file_lock   = threading.RLock()
+        self.__igz_fobj    = fobj
+        self.__buffer_size = buffer_size
+
+        self.build_full_index = fobj.build_full_index
+        self.import_index     = fobj.import_index
+        self.export_index     = fobj.export_index
+        self.fileobj          = fobj.fileobj
+        self.drop_handles     = fobj.drop_handles
+        self.seek_points      = fobj.seek_points
+
+        super(IndexedGzipFile, self).__init__(fobj, buffer_size)
+
+
+    def pread(self, nbytes, offset):
+        """Seeks to ``offset``, then reads and returns up to ``nbytes``.
+        The calls to seek and read are protected by a ``threading.RLock``.
+        """
+        with self.__file_lock:
+            self.seek(offset)
+            return self.read(nbytes)
+
+
+    def __reduce__(self):
+        """Used to pickle an ``IndexedGzipFile``.
+
+        Returns a tuple containing:
+          - a reference to the ``unpickle`` function
+          - a tuple containing a "state" object, which can be passed
+            to ``unpickle``.
+        """
+
+        fobj = self.__igz_fobj
+
+        if (not fobj.drop_handles) or (not fobj.own_file):
+            raise pickle.PicklingError(
+                'Cannot pickle IndexedGzipFile that has been created '
+                'with an open file object, or that has been created '
+                'with drop_handles=False')
+
+        # export and serialise the index if
+        # any index points have been created.
+        # The index data is serialised as a
+        # bytes object.
+        if fobj.npoints == 0:
+            index = None
+
+        else:
+            # zran.c:zran_export_index requires a file
+            # descriptor, so we give it a tempoorary
+            # file, and then read the bytes into memory.
+            tmpfile = None
+            try:
+                tmpfile = tempfile.NamedTemporaryFile(delete=False)
+                tmpfile.close()
+                self.export_index(tmpfile.name)
+                with builtin_open(tmpfile.name, 'rb') as f:
+                    index = f.read()
+            finally:
+                if tmpfile is not None:
+                    os.remove(tmpfile.name)
+
+        state = {
+            'filename'         : fobj.filename,
+            'auto_build'       : fobj.auto_build,
+            'spacing'          : fobj.spacing,
+            'window_size'      : fobj.window_size,
+            'readbuf_size'     : fobj.readbuf_size,
+            'readall_buf_size' : fobj.readall_buf_size,
+            'buffer_size'      : self.__buffer_size,
+            'tell'             : self.tell(),
+            'index'            : index}
+
+        return (unpickle, (state, ))
 
 
 cdef class _IndexedGzipFile:
@@ -158,7 +292,7 @@ cdef class _IndexedGzipFile:
         .. note:: The ``auto_build`` behaviour only takes place on calls to
                   :meth:`seek`.
 
-        :arg filename:         File name.
+        :arg filename:         File name or open file handle.
 
         :arg fileobj:          Open file handle.
 
@@ -204,6 +338,12 @@ cdef class _IndexedGzipFile:
             raise ValueError('Invalid mode ({}), must be '
                              '\'r\' or \'rb\''.format(mode))
 
+        # filename can be either a
+        # name or a file object
+        if  hasattr(filename, 'read'):
+            fileobj  = filename
+            filename = None
+
         mode     = 'rb'
         own_file = fileobj is None
 
@@ -217,7 +357,7 @@ cdef class _IndexedGzipFile:
         # the lifetime of this object.
         if not drop_handles:
             if fileobj is None:
-                fileobj = open(filename, mode)
+                fileobj = builtin_open(filename, mode)
             fd = fdopen(fileobj.fileno(), 'rb')
 
 
@@ -731,7 +871,7 @@ cdef class _IndexedGzipFile:
                 'Only one of filename or fileobj must be specified')
 
         if filename is not None:
-            fileobj    = open(filename, 'wb')
+            fileobj    = builtin_open(filename, 'wb')
             close_file = True
 
         else:
@@ -773,7 +913,7 @@ cdef class _IndexedGzipFile:
                 'Only one of filename or fileobj must be specified')
 
         if filename is not None:
-            fileobj    = open(filename, 'rb')
+            fileobj    = builtin_open(filename, 'rb')
             close_file = True
 
         else:
@@ -848,144 +988,6 @@ cdef class ReadBuffer:
         log.debug('ReadBuffer.__dealloc__()')
 
 
-class IndexedGzipFile(io.BufferedReader):
-    """The ``IndexedGzipFile`` class allows for fast random access of a gzip
-    file by using the ``zran`` library to build and maintain an index of seek
-    points into the file.
-
-    ``IndexedGzipFile`` is an ``io.BufferedReader`` which wraps an
-    :class:`_IndexedGzipFile` instance. By accessing the ``_IndexedGzipFile``
-    instance through an ``io.BufferedReader``, read performance is improved
-    through buffering, and access to the I/O methods is made thread-safe.
-
-    A :meth:`pread` method is also implemented, as it is not implemented by
-    the ``io.BufferedReader``.
-    """
-
-
-    def __init__(self, *args, **kwargs):
-        """Create an ``IndexedGzipFile``. The file may be specified either
-        with an open file handle (``fileobj``), or with a ``filename``. If the
-        former, the file must have been opened in ``'rb'`` mode.
-
-        .. note:: The ``auto_build`` behaviour only takes place on calls to
-                  :meth:`seek`.
-
-        :arg filename:         File name.
-
-        :arg fileobj:          Open file handle.
-
-        :arg mode:             Opening mode. Must be either ``'r'`` or ``'rb``.
-
-        :arg auto_build:       If ``True`` (the default), the index is
-                               automatically built on calls to :meth:`seek`.
-
-        :arg spacing:          Number of bytes between index seek points.
-
-        :arg window_size:      Number of bytes of uncompressed data stored with
-                               each seek point.
-
-        :arg readbuf_size:     Size of buffer in bytes for storing compressed
-                               data read in from the file.
-
-        :arg readall_buf_size: Size of buffer in bytes used by :meth:`read`
-                               when reading until EOF.
-
-        :arg drop_handles:     Has no effect if an open ``fid`` is specified,
-                               rather than a ``filename``.  If ``True`` (the
-                               default), a handle to the file is opened and
-                               closed on every access. Otherwise the file is
-                               opened at ``__cinit__``, and kept open until
-                               this ``_IndexedGzipFile`` is destroyed.
-
-        :arg index_file:       Pre-generated index for this ``gz`` file -
-                               if provided, passed through to
-                               :meth:`import_index`.
-
-        :arg buffer_size:      Optional, must be passed as a keyword argument.
-                               Passed through to
-                               ``io.BufferedReader.__init__``. If not provided,
-                               a default value of 1048576 is used.
-        """
-
-        buffer_size        = kwargs.pop('buffer_size', 1048576)
-        fobj               = _IndexedGzipFile(*args, **kwargs)
-        self.__file_lock   = threading.RLock()
-        self.__igz_fobj    = fobj
-        self.__buffer_size = buffer_size
-
-        self.build_full_index = fobj.build_full_index
-        self.import_index     = fobj.import_index
-        self.export_index     = fobj.export_index
-        self.fileobj          = fobj.fileobj
-        self.drop_handles     = fobj.drop_handles
-        self.seek_points      = fobj.seek_points
-
-        super(IndexedGzipFile, self).__init__(fobj, buffer_size)
-
-
-    def pread(self, nbytes, offset):
-        """Seeks to ``offset``, then reads and returns up to ``nbytes``.
-        The calls to seek and read are protected by a ``threading.RLock``.
-        """
-        with self.__file_lock:
-            self.seek(offset)
-            return self.read(nbytes)
-
-
-    def __reduce__(self):
-        """Used to pickle an ``IndexedGzipFile``.
-
-        Returns a tuple containing:
-          - a reference to the ``unpickle`` function
-          - a tuple containing a "state" object, which can be passed
-            to ``unpickle``.
-        """
-
-        fobj = self.__igz_fobj
-
-        if (not fobj.drop_handles) or (not fobj.own_file):
-            raise pickle.PicklingError(
-                'Cannot pickle IndexedGzipFile that has been created '
-                'with an open file object, or that has been created '
-                'with drop_handles=False')
-
-        # export and serialise the index if
-        # any index points have been created.
-        # The index data is serialised as a
-        # bytes object.
-        if fobj.npoints == 0:
-            index = None
-
-        else:
-            # zran.c:zran_export_index requires a file
-            # descriptor, so we give it a tempoorary
-            # file, and then read the bytes into memory.
-            tmpfile = None
-            try:
-                tmpfile = tempfile.NamedTemporaryFile(delete=False)
-                tmpfile.close()
-                self.export_index(tmpfile.name)
-                with open(tmpfile.name, 'rb') as f:
-                    index = f.read()
-            finally:
-                if tmpfile is not None:
-                    os.remove(tmpfile.name)
-
-        state = {
-            'filename'         : fobj.filename,
-            'auto_build'       : fobj.auto_build,
-            'spacing'          : fobj.spacing,
-            'window_size'      : fobj.window_size,
-            'readbuf_size'     : fobj.readbuf_size,
-            'readall_buf_size' : fobj.readall_buf_size,
-            'buffer_size'      : self.__buffer_size,
-            'tell'             : self.tell(),
-            'index'            : index}
-
-        return (unpickle, (state, ))
-
-
 def unpickle(state):
     """Create a new ``IndexedGzipFile`` from a pickled state.
 
@@ -1017,3 +1019,27 @@ def unpickle(state):
     gzobj.seek(tell)
 
     return gzobj
+
+
+class NotCoveredError(ValueError):
+    """Exception raised by the :class:`_IndexedGzipFile` when an attempt is
+    made to seek to/read from a location that is not covered by the
+    index. If the ``_IndexedGzipFile`` was created with ``auto_build=True``,
+    this error will only occur on attempts to call the ``seek`` method
+    with ``whence=SEEK_END``, where the index has not been completely built.
+    """
+    pass
+
+
+class ZranError(IOError):
+    """Exception raised by the :class:`_IndexedGzipFile` when the ``zran``
+    library signals an error.
+    """
+    pass
+
+
+class NoHandleError(ValueError):
+    """Exception raised by the :class:`_IndexedGzipFile` when
+    ``drop_handles is True`` and an attempt is made to access the underlying
+    file object.
+    """

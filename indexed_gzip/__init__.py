@@ -9,6 +9,7 @@
 
 from .indexed_gzip import (_IndexedGzipFile,     # noqa
                            IndexedGzipFile,
+                           open,
                            NotCoveredError,
                            NoHandleError,
                            ZranError)
@@ -20,4 +21,4 @@ versions of ``nibabel``.
 """
 
 
-__version__ = '1.3.3'
+__version__ = '1.4.0'

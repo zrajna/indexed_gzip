@@ -17,6 +17,9 @@ pytestmark = pytest.mark.indexed_gzip_test
 def test_open_close(testfile, nelems, seed):
     ctest_indexed_gzip.test_open_close(testfile, nelems, seed, False)
 
+def test_open_function(testfile, nelems):
+    ctest_indexed_gzip.test_open_function(testfile, nelems)
+
 def test_open_close_drop_handles(testfile, nelems, seed):
     ctest_indexed_gzip.test_open_close(testfile, nelems, seed, True)
 
@@ -48,6 +51,9 @@ def test_init_success_cases_drop_handles(concat):
 def test_create_from_open_handle(testfile, nelems, seed):
     ctest_indexed_gzip.test_create_from_open_handle(
         testfile, nelems, seed, False)
+
+def test_accept_filename_or_fileobj(testfile, nelems):
+    ctest_indexed_gzip.test_accept_filename_or_fileobj(testfile, nelems)
 
 def test_create_from_open_handle_drop_handles(testfile, nelems, seed):
     ctest_indexed_gzip.test_create_from_open_handle(

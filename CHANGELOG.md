@@ -1,6 +1,20 @@
 # `indexed_gzip` changelog
 
 
+## 1.4.0 (January 2nd 2021)
+
+
+* Fixed a bug in the pickling/copying logic in the `IndexedGzipFile` class
+  (#50, #51)
+* New `indexed_gzip.open` function, which just creates and returns an
+  `IndexedGzipFile`.
+* When creating an `IndexedGzipFile`, the first argument (`filename`) may
+  be either a file name, or an open file handle (#49, #53).
+* Migrated CI testing and building to Github Actions (#52).
+* Binary wheels for Windows now have ZLIB statically compiled in as part
+  of the wheel, so ZLIB no longer needs to be installed (#43, #52).
+
+
 ## 1.3.3 (November 14th 2020)
 
 

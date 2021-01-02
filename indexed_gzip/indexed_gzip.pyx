@@ -38,12 +38,20 @@ cimport indexed_gzip.zran as zran
 import io
 import os
 import pickle
-import builtins
 import logging
 import tempfile
 import warnings
 import threading
 import contextlib
+
+
+builtin_open = open
+"""Reference to the built-in open function, which is otherwise masked by
+our open function below.
+
+When support for Python 2.7 is dropped, the ``builtins`` module can be used
+instead.
+"""
 
 
 log = logging.getLogger(__name__)
@@ -178,7 +186,7 @@ class IndexedGzipFile(io.BufferedReader):
                 tmpfile = tempfile.NamedTemporaryFile(delete=False)
                 tmpfile.close()
                 self.export_index(tmpfile.name)
-                with builtins.open(tmpfile.name, 'rb') as f:
+                with builtin_open(tmpfile.name, 'rb') as f:
                     index = f.read()
             finally:
                 if tmpfile is not None:
@@ -349,7 +357,7 @@ cdef class _IndexedGzipFile:
         # the lifetime of this object.
         if not drop_handles:
             if fileobj is None:
-                fileobj = builtins.open(filename, mode)
+                fileobj = builtin_open(filename, mode)
             fd = fdopen(fileobj.fileno(), 'rb')
 
 
@@ -863,7 +871,7 @@ cdef class _IndexedGzipFile:
                 'Only one of filename or fileobj must be specified')
 
         if filename is not None:
-            fileobj    = builtins.open(filename, 'wb')
+            fileobj    = builtin_open(filename, 'wb')
             close_file = True
 
         else:
@@ -905,7 +913,7 @@ cdef class _IndexedGzipFile:
                 'Only one of filename or fileobj must be specified')
 
         if filename is not None:
-            fileobj    = builtins.open(filename, 'rb')
+            fileobj    = builtin_open(filename, 'rb')
             close_file = True
 
         else:

@@ -38,11 +38,12 @@ cimport indexed_gzip.zran as zran
 import io
 import os
 import pickle
-import warnings
-import tempfile
-import contextlib
-import threading
+import builtins
 import logging
+import tempfile
+import warnings
+import threading
+import contextlib
 
 
 log = logging.getLogger(__name__)
@@ -177,7 +178,7 @@ class IndexedGzipFile(io.BufferedReader):
                 tmpfile = tempfile.NamedTemporaryFile(delete=False)
                 tmpfile.close()
                 self.export_index(tmpfile.name)
-                with open(tmpfile.name, 'rb') as f:
+                with builtins.open(tmpfile.name, 'rb') as f:
                     index = f.read()
             finally:
                 if tmpfile is not None:
@@ -348,7 +349,7 @@ cdef class _IndexedGzipFile:
         # the lifetime of this object.
         if not drop_handles:
             if fileobj is None:
-                fileobj = open(filename, mode)
+                fileobj = builtins.open(filename, mode)
             fd = fdopen(fileobj.fileno(), 'rb')
 
 
@@ -862,7 +863,7 @@ cdef class _IndexedGzipFile:
                 'Only one of filename or fileobj must be specified')
 
         if filename is not None:
-            fileobj    = open(filename, 'wb')
+            fileobj    = builtins.open(filename, 'wb')
             close_file = True
 
         else:
@@ -904,7 +905,7 @@ cdef class _IndexedGzipFile:
                 'Only one of filename or fileobj must be specified')
 
         if filename is not None:
-            fileobj    = open(filename, 'rb')
+            fileobj    = builtins.open(filename, 'rb')
             close_file = True
 
         else:

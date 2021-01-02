@@ -36,8 +36,10 @@ from cpython.buffer cimport (PyObject_GetBuffer,
 cimport indexed_gzip.zran as zran
 
 import io
+import os
 import pickle
 import warnings
+import tempfile
 import contextlib
 import threading
 import logging
@@ -734,12 +736,12 @@ cdef class _IndexedGzipFile:
 
         else:
             close_file = False
-            if fileobj.mode != 'wb':
+            if getattr(fileobj, 'mode', 'wb') != 'wb':
                 raise ValueError(
-                    'File should be opened write-only binary mode.')
+                    'File should be opened in writeable binary mode.')
 
         try:
-            fd  = fdopen(fileobj.fileno(), 'ab')
+            fd  = fdopen(fileobj.fileno(), 'wb')
             ret = zran.zran_export_index(&self.index, fd)
             if ret != zran.ZRAN_EXPORT_OK:
                 raise ZranError('export_index returned error: {}'.format(ret))
@@ -776,7 +778,7 @@ cdef class _IndexedGzipFile:
 
         else:
             close_file = False
-            if fileobj.mode != 'rb':
+            if getattr(fileobj, 'mode', 'rb') != 'rb':
                 raise ValueError(
                     'File should be opened read-only binary mode.')
 
@@ -948,14 +950,27 @@ class IndexedGzipFile(io.BufferedReader):
                 'with an open file object, or that has been created '
                 'with drop_handles=False')
 
-        # export and serialise the
-        # index if any index points
-        # have been created
-        if fobj.npoints > 0:
-            index = io.BytesIO()
-            self.export_index(fileobj=index)
-        else:
+        # export and serialise the index if
+        # any index points have been created.
+        # The index data is serialised as a
+        # bytes object.
+        if fobj.npoints == 0:
             index = None
+
+        else:
+            # zran.c:zran_export_index requires a file
+            # descriptor, so we give it a tempoorary
+            # file, and then read the bytes into memory.
+            tmpfile = None
+            try:
+                tmpfile = tempfile.NamedTemporaryFile(delete=False)
+                tmpfile.close()
+                self.export_index(tmpfile.name)
+                with open(tmpfile.name, 'rb') as f:
+                    index = f.read()
+            finally:
+                if tmpfile is not None:
+                    os.remove(tmpfile.name)
 
         state = {
             'filename'         : fobj.filename,
@@ -985,9 +1000,20 @@ def unpickle(state):
     gzobj = IndexedGzipFile(**state)
 
     if index is not None:
-        index.seek(0)
-        gzobj.import_index(fileobj=index)
-        index.close()
+        tmpfile = None
+        try:
+            # zran.c:zran_import_index requires an
+            # actual file with a file descriptor,
+            # so we write the index data out to a
+            # temp file, and then pass the file in.
+            tmpfile = tempfile.NamedTemporaryFile(delete=False)
+            tmpfile.write(index)
+            tmpfile.close()
+            gzobj.import_index(tmpfile.name)
+
+        finally:
+            if tmpfile is not None:
+                os.remove(tmpfile.name)
     gzobj.seek(tell)
 
     return gzobj

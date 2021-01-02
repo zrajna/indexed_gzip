@@ -12,6 +12,7 @@ import itertools       as it
 import functools       as ft
 import subprocess      as sp
 import multiprocessing as mp
+import copy            as cp
 import                    sys
 import                    time
 import                    gzip
@@ -166,6 +167,7 @@ def test_init_success_cases(concat, drop):
         gf1.close()
         gf2.close()
         gf3.close()
+
 
 def test_create_from_open_handle(testfile, nelems, seed, drop):
 
@@ -770,8 +772,10 @@ def test_picklable():
 
         gzf        = igzip.IndexedGzipFile(fname)
         first50MB  = gzf.read(1048576 * 50)
+        gzf.seek(gzf.tell())
         pickled    = pickle.dumps(gzf)
         second50MB = gzf.read(1048576 * 50)
+        gzf.seek(gzf.tell())
 
         gzf.close()
         del gzf
@@ -797,6 +801,61 @@ def test_picklable():
             pickled = pickle.dumps(gzf)
         gzf.close()
         del gzf
+
+
+def test_copyable():
+    fname = 'test.gz'
+
+    with tempdir():
+        data = np.random.randint(1, 1000, (10000, 10000), dtype=np.uint32)
+        with gzip.open(fname, 'wb') as f:
+            f.write(data.tobytes())
+        del f
+
+        gzf        = igzip.IndexedGzipFile(fname)
+        gzf_copy   = cp.deepcopy(gzf)
+        first50MB  = gzf.read(1048576 * 50)
+        gzf.seek(gzf.tell())
+        gzf_copy2  = cp.deepcopy(gzf)
+        second50MB = gzf.read(1048576 * 50)
+        gzf.seek(gzf.tell())
+
+        gzf.close()
+        del gzf
+
+        assert gzf_copy.tell() == 0
+        assert gzf_copy2.tell() == 1048576 * 50
+        assert gzf_copy.read(1048576 * 50) == first50MB
+        assert gzf_copy2.read(1048576 * 50) == second50MB
+        gzf_copy2.seek(0)
+        assert gzf_copy2.read(1048576 * 50) == first50MB
+        gzf_copy.close()
+        gzf_copy2.close()
+        del gzf_copy
+        del gzf_copy2
+
+    with tempdir():
+        data = np.random.randint(1, 1000, 50000, dtype=np.uint32)
+        with gzip.open(fname, 'wb') as f:
+            f.write(data.tobytes())
+        del f
+
+        # if drop_handles=False, no copy
+        gzf = igzip.IndexedGzipFile(fname, drop_handles=False)
+
+        with pytest.raises(pickle.PicklingError):
+            gzf_copy = cp.deepcopy(gzf)
+        gzf.close()
+        del gzf
+
+        # If passed an open filehandle, no copy
+        with open(fname, 'rb') as fobj:
+            gzf = igzip.IndexedGzipFile(fileobj=fobj)
+            with pytest.raises(pickle.PicklingError):
+                gzf_copy = cp.deepcopy(gzf)
+            gzf.close()
+            del gzf
+        del fobj
 
 
 def _mpfunc(gzf, size, offset):

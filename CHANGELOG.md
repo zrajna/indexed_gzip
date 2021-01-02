@@ -6,6 +6,8 @@
 
 * Fixed a bug in the pickling/copying logic in the `IndexedGzipFile` class
   (#50, #51)
+* New `indexed_gzip.open` function, which just creates and returns an
+  `IndexedGzipFile`.
 * When creating an `IndexedGzipFile`, the first argument (`filename`) may
   be either a file name, or an open file handle (#49, #53).
 * Migrated CI testing and building to Github Actions (#52).

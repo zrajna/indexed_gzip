@@ -184,6 +184,15 @@ struct _zran_point {
 };
 
 
+size_t _fread_python(void *ptr, size_t size, size_t nmemb, PyObject *f);
+long int _ftell_python(PyObject *f);
+int _fseek_python(PyObject *f, long int offset, int whence);
+int _feof_python(PyObject *f, int64_t compressed_size);
+int _ferror_python(PyObject *f);
+int _fflush_python(PyObject *f);
+size_t _fwrite_python(const void *ptr, size_t size, size_t nmemb, PyObject *f);
+int _getc_python(PyObject *f);
+
 /*
  * Initialise a zran_index_t struct for use with the given file.
  *

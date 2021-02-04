@@ -7,12 +7,14 @@
 from libc.stdio  cimport FILE
 from libc.stdint cimport uint8_t, uint16_t, uint32_t, uint64_t, int64_t
 from posix.types cimport off_t
+from cpython.ref cimport PyObject
 
 
 cdef extern from "zran.h":
 
     ctypedef struct zran_index_t:
         FILE         *fd;
+        PyObject     *f;
         size_t        compressed_size;
         size_t        uncompressed_size;
         uint32_t      spacing;
@@ -54,6 +56,7 @@ cdef extern from "zran.h":
 
     bint zran_init(zran_index_t *index,
                    FILE         *fd,
+                   PyObject     *f,
                    uint32_t      spacing,
                    uint32_t      window_size,
                    uint32_t      readbuf_size,
@@ -77,7 +80,7 @@ cdef extern from "zran.h":
                       uint64_t      len) nogil;
 
     int zran_export_index(zran_index_t *index,
-                          FILE         *fd);
+                          PyObject     *f);
 
     int zran_import_index(zran_index_t *index,
-                          FILE         *fd);
+                          PyObject     *f);

@@ -94,7 +94,7 @@ int fseek_python(PyObject *f, long int offset, int whence) {
 }
 
 int feof_python(PyObject *f, int64_t compressed_size) {
-    return FTELL(f) == int64_t;
+    return FTELL(f) == compressed_size;
 }
 
 int ferror_python(PyObject *f) {

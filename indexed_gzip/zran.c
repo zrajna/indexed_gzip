@@ -1608,7 +1608,7 @@ static int _zran_inflate(zran_index_t *index,
              * No bytes read - we've reached EOF
              */
             if (f_ret == 0) {
-                if (feof_(index->f)) {
+                if (feof_(index->f, index->compressed_size)) {
                     return_val = ZRAN_INFLATE_EOF;
                     break;
                 }

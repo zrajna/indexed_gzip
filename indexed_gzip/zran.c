@@ -56,14 +56,14 @@ size_t _fread_python(void *ptr, size_t size, size_t nmemb, PyObject *f) {
         return 0;
     }
     char *buf;
-    size_t len;
+    Py_Ssize_t len;
     if ((buf = PyBytes_AsString(data)) == -1 || (len = PyBytes_Size(data)) == -1) {
         Py_DECREF(data);
         return 0;
     }
-    memmove(ptr, buf, len);
+    memmove(ptr, buf, (size_t) len);
     Py_DECREF(data);
-    return len / size;
+    return len / (size_t) size;
 
 }
 
@@ -139,43 +139,43 @@ int _getc_python(PyObject *f) {
 
 int ferror_(FILE *fd, PyObject *f) {
     int one = ferror(fd);
-    int two = _ferror_python(f);
-    return two;
+    // int two = _ferror_python(f);
+    return one;
 }
 
 int fseek_(FILE *fd, PyObject *f, long int offset, int whence) {
     int one = fseeko(fd, offset, whence);
-    int two = _fseek_python(f, offset, whence);
-    return two;
+    // int two = _fseek_python(f, offset, whence);
+    return one;
 }
 
 int ftell_(FILE *fd, PyObject *f) {
     int one = ftello(fd);
-    int two = _ftell_python(f);
-    return two;
+    // int two = _ftell_python(f);
+    return one;
 }
 
 size_t fread_(void *ptr, size_t size, size_t nmemb, FILE *fd, PyObject *f) {
     char* ptr2 = malloc(nmemb * size);
-    size_t two = _fread_python(ptr, size, nmemb, f);
-    size_t one = fread(ptr2, size, nmemb, fd);
-    if (one != two) {
-        printf("not equal, called with size %zu, nmemb %zu, got %zu, %zu\n", size, nmemb, one, two);
-    }
+    // size_t two = _fread_python(ptr2, size, nmemb, f);
+    size_t one = fread(ptr, size, nmemb, fd);
+    // if (one != two) {
+    //     printf("not equal, called with size %zu, nmemb %zu, got %zu, %zu\n", size, nmemb, one, two);
+    // }
     free(ptr2);
-    return two;
+    return one;
 }
 
 int feof_(FILE *fd, PyObject *f, int64_t size) {
     int one = feof(fd);
-    int two = _feof_python(f, size);
-    return two;
+    // int two = _feof_python(f, size);
+    return one;
 }
 
 int fflush_(FILE *fd, PyObject *f) {
     int one = fflush(fd);
-    int two = _fflush_python(f);
-    return two;
+    // int two = _fflush_python(f);
+    return one;
 }
 
 size_t fwrite_(const void *ptr, size_t size, size_t nmemb, FILE *fd, PyObject *f) {
@@ -184,8 +184,8 @@ size_t fwrite_(const void *ptr, size_t size, size_t nmemb, FILE *fd, PyObject *f
 
 int getc_(FILE *fd, PyObject *f) {
     int one = getc(fd);
-    int two = _getc_python(f);
-    return two;
+    // int two = _getc_python(f);
+    return one;
 }
 
 

@@ -230,7 +230,7 @@ def readVersion():
 
 
 setup(
-    name='indexed_gzip',
+    name='indexed_gzip_fileobj_fork_epicfaace',
     packages=['indexed_gzip', 'indexed_gzip.tests'],
     version=readVersion(),
     author='Paul McCarthy',

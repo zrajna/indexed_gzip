@@ -376,6 +376,7 @@ cdef class _IndexedGzipFile:
         self.own_file         = own_file
         self.pyfid            = fileobj
         self.index.fd         = fd
+        self.index.f          = <PyObject*>fileobj
 
         if self.auto_build: flags = zran.ZRAN_AUTO_BUILD
         else:               flags = 0
@@ -383,7 +384,7 @@ cdef class _IndexedGzipFile:
         with self.__file_handle():
             if zran.zran_init(index=&self.index,
                               fd=self.index.fd,
-                              f=<PyObject*>self.pyfid,
+                              f=<PyObject*>self.index.f,
                               spacing=spacing,
                               window_size=window_size,
                               readbuf_size=readbuf_size,
@@ -498,6 +499,7 @@ cdef class _IndexedGzipFile:
 
         zran.zran_free(&self.index)
 
+        self.index.f   = NULL
         self.index.fd  = NULL
         self.filename  = None
         self.pyfid     = None

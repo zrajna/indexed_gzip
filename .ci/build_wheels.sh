@@ -33,4 +33,4 @@ export CIBW_TEST_COMMAND="bash {project}/testcmd {project}"
 
 python -m pip install cibuildwheel==1.7.2
 
-python -m cibuildwheel --platform linux --output-dir ./dist
+python -m cibuildwheel --output-dir ./dist

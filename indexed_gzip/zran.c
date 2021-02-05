@@ -20,9 +20,11 @@
 #include <Python.h>
 
 #ifdef _WIN32
+// #define FSEEK _fseeki64
+#define FTELL _ftelli64
 #include "windows.h"
 #include "io.h"
-static int is_readonly(PyObject *f)
+static int is_readonly(FILE *fd)
 {
     /* Can't find a way to do this correctly under Windows and
        the check is not required anyway since the underlying
@@ -31,8 +33,10 @@ static int is_readonly(PyObject *f)
 }
 #else
 #include <fcntl.h>
+// #define FSEEK fseeko
+#define FTELL ftello
 /* Check if file is read-only */
-static int is_readonly(PyObject *f)
+static int is_readonly(FILE *fd)
 {
     return 1;
 }
@@ -45,32 +49,22 @@ static uint32_t max(uint32_t a, uint32_t b) {
 }
 #endif
 
-#define FREAD_ _fread_python
-#define FSEEK _fseek_python
-#define FTELL _ftell_python
-#define FEOF _feof_python
-#define FERROR _ferror_python
-#define FFLUSH _fflush_python
-#define FWRITE_ _fwrite_python
-#define GETC _getc_python
-
-
 size_t _fread_python(void *ptr, size_t size, size_t nmemb, PyObject *f) {
     PyObject *data;
-    printf("\n_fread_python %zu, %zu.\n", size, nmemb);
-    // TODO: check Py_ssize_t formatting
     if ((data = PyObject_CallMethod(f, "read", "(n)", size * nmemb)) == NULL) {
         Py_DECREF(data);
         return 0;
     }
-    Py_ssize_t len;
-    if (PyBytes_AsStringAndSize(data, (char **) ptr, &len) == -1) {
+    char *buf;
+    size_t len;
+    if ((buf = PyBytes_AsString(data)) == -1 || (len = PyBytes_Size(data)) == -1) {
         Py_DECREF(data);
         return 0;
     }
-    printf("_fread_python read %d bytes.\n", len);
+    memmove(ptr, buf, len);
     Py_DECREF(data);
-    return (size_t) len;
+    return len / size;
+
 }
 
 long int _ftell_python(PyObject *f) {
@@ -79,14 +73,18 @@ long int _ftell_python(PyObject *f) {
         Py_DECREF(data);
         return -1;
     }
-    long int result = PyLong_AsLong(data);
+    long int result;
+    if ((result = PyLong_AsLong(data)) == -1) {
+        Py_DECREF(data);
+        return -1;
+    }
     Py_DECREF(data);
     return result;
 }
 
 int _fseek_python(PyObject *f, long int offset, int whence) {
     PyObject *data;
-    if ((data = PyObject_CallMethod(f, "seek", "(n,n)", offset, whence)) == NULL) {
+    if ((data = PyObject_CallMethod(f, "seek", "(l,i)", offset, whence)) == NULL) {
         Py_DECREF(data);
         return -1;
     }
@@ -95,7 +93,7 @@ int _fseek_python(PyObject *f, long int offset, int whence) {
 }
 
 int _feof_python(PyObject *f, int64_t size) {
-    return FTELL(f) == size;
+    return _ftell_python(f) == size;
 }
 
 int _ferror_python(PyObject *f) {
@@ -132,11 +130,62 @@ size_t _fwrite_python(const void *ptr, size_t size, size_t nmemb, PyObject *f) {
 }
 
 int _getc_python(PyObject *f) {
-    char *buf;
-    if (FREAD_(&buf, 1, 1, f) == -1) {
+    char buf [1];
+    if (_fread_python(buf, 1, 1, f) == 0) {
         return -1;
     }
     return (int) buf[0];
+}
+
+int ferror_(FILE *fd, PyObject *f) {
+    int one = ferror(fd);
+    int two = _ferror_python(f);
+    return two;
+}
+
+int fseek_(FILE *fd, PyObject *f, long int offset, int whence) {
+    int one = fseeko(fd, offset, whence);
+    int two = _fseek_python(f, offset, whence);
+    return two;
+}
+
+int ftell_(FILE *fd, PyObject *f) {
+    int one = ftello(fd);
+    int two = _ftell_python(f);
+    return two;
+}
+
+size_t fread_(void *ptr, size_t size, size_t nmemb, FILE *fd, PyObject *f) {
+    char* ptr2 = malloc(nmemb * size);
+    size_t two = _fread_python(ptr, size, nmemb, f);
+    size_t one = fread(ptr2, size, nmemb, fd);
+    if (one != two) {
+        printf("not equal, called with size %zu, nmemb %zu, got %zu, %zu\n", size, nmemb, one, two);
+    }
+    free(ptr2);
+    return two;
+}
+
+int feof_(FILE *fd, PyObject *f, int64_t size) {
+    int one = feof(fd);
+    int two = _feof_python(f, size);
+    return two;
+}
+
+int fflush_(FILE *fd, PyObject *f) {
+    int one = fflush(fd);
+    int two = _fflush_python(f);
+    return two;
+}
+
+size_t fwrite_(const void *ptr, size_t size, size_t nmemb, FILE *fd, PyObject *f) {
+
+}
+
+int getc_(FILE *fd, PyObject *f) {
+    int one = getc(fd);
+    int two = _getc_python(f);
+    return two;
 }
 
 
@@ -154,7 +203,7 @@ static double round(double val)
  *
  * #define ZRAN_VERBOSE
  */
-//#define ZRAN_VERBOSE
+// #define ZRAN_VERBOSE
 
 
 #ifdef ZRAN_VERBOSE
@@ -565,6 +614,7 @@ static int _zran_inflate(
 
 /* Initialise a zran_index_t struct for use with the given GZIP file. */
 int zran_init(zran_index_t *index,
+              FILE         *fd,
               PyObject     *f,
               uint32_t      spacing,
               uint32_t      window_size,
@@ -599,21 +649,21 @@ int zran_init(zran_index_t *index,
       goto fail;
 
     /* The file must be opened in read-only mode */
-    if (!is_readonly(f))
+    if (!is_readonly(fd))
         goto fail;
 
     /*
      * Calculate the size of the compressed file
      */
-    if (FSEEK(f, 0, SEEK_END) != 0)
+    if (fseek_(fd, f, 0, SEEK_END) != 0)
         goto fail;
 
-    compressed_size = FTELL(f);
+    compressed_size = ftell_(fd, f);
 
     if (compressed_size < 0)
         goto fail;
 
-    if (FSEEK(f, 0, SEEK_SET) != 0)
+    if (fseek_(fd, f, 0, SEEK_SET) != 0)
         goto fail;
 
     /*
@@ -626,6 +676,7 @@ int zran_init(zran_index_t *index,
     }
 
     /* initialise the index struct */
+    index->fd                   = fd;
     index->f                    = f;
     index->flags                = flags;
     index->compressed_size      = compressed_size;
@@ -724,6 +775,7 @@ void zran_free(zran_index_t *index) {
 
     free(index->list);
 
+    index->fd                = NULL;
     index->f                 = NULL;
     index->spacing           = 0;
     index->window_size       = 0;
@@ -940,6 +992,7 @@ int _zran_get_point_with_expand(zran_index_t  *index,
          * Expand the index
          */
         if (_zran_expand_index(index, expand) != 0) {
+            printf("failed 2");
             goto fail;
         }
 
@@ -1166,7 +1219,8 @@ int _zran_init_zlib_inflate(zran_index_t *index,
     if (point == NULL) seek_loc = 0;
     else               seek_loc = point->cmp_offset - (point->bits > 0);
 
-    if (FSEEK(index->f, seek_loc, SEEK_SET) != 0)
+    // printf("fseek inflate: %zd, %d\n", seek_loc, SEEK_SET);
+    if (fseek_(index->fd, index->f, seek_loc, SEEK_SET) != 0)
         goto fail;
 
     /*
@@ -1207,7 +1261,7 @@ int _zran_init_zlib_inflate(zran_index_t *index,
          */
         if (point->bits > 0) {
 
-            ret = GETC(index->f);
+            ret = getc_(index->fd, index->f);
 
             if (ret == -1)
                 goto fail;
@@ -1311,7 +1365,7 @@ static int _zran_inflate(zran_index_t *index,
 
     /*
      * Used to store and check return
-     * values. f_ret is for FREAD_,
+     * values. f_ret is for fread,
      * z_ret is for zlib/zran functions.
      * off is for storing offset of new
      * stream (from _zran_find_next_stream).
@@ -1528,7 +1582,7 @@ static int _zran_inflate(zran_index_t *index,
 
             zran_log("Reading from file %llu [== %llu?] "
                      "[into readbuf offset %u]\n",
-                     FTELL(index->f), cmp_offset, strm->avail_in);
+                     ftell_(index->fd, index->f), cmp_offset, strm->avail_in);
 
             /*
              * Read a block of compressed data
@@ -1537,12 +1591,13 @@ static int _zran_inflate(zran_index_t *index,
              * the beginning of the read buffer
              * above).
              */
-            f_ret = FREAD_(index->readbuf + strm->avail_in,
+            f_ret = fread_(index->readbuf + strm->avail_in,
                           1,
                           index->readbuf_size - strm->avail_in,
+                          index->fd,
                           index->f);
 
-            if (FERROR(index->f)) {
+            if (ferror_(index->fd, index->f)) {
                 goto fail;
             }
 
@@ -1550,7 +1605,7 @@ static int _zran_inflate(zran_index_t *index,
              * No bytes read - we've reached EOF
              */
             if (f_ret == 0) {
-                if (FEOF(index->f, index->compressed_size)) {
+                if (feof(index->fd)) {
                     return_val = ZRAN_INFLATE_EOF;
                     break;
                 }
@@ -1747,7 +1802,7 @@ static int _zran_inflate(zran_index_t *index,
              * size is an exact multiple of
              # the read buffer size.
              */
-            if ((FTELL(index->f) >= index->compressed_size) &&
+            if ((ftell_(index->fd, index->f) >= index->compressed_size) &&
                 strm->avail_in <= 8) {
 
                 zran_log("End of file, stopping inflation\n");
@@ -2225,7 +2280,8 @@ int zran_seek(zran_index_t  *index,
         *point = seek_point;
     }
 
-    if (FSEEK(index->f, offset, SEEK_SET) != 0)
+    // printf("fseek zran_seek: %zd, %d\n", offset, SEEK_SET);
+    if (fseek_(index->fd, index->f, offset, SEEK_SET) != 0)
         goto fail;
 
     return ZRAN_SEEK_OK;
@@ -2340,7 +2396,6 @@ int64_t zran_read(zran_index_t *index,
      */
     discard = malloc(discard_size);
     if (discard == NULL) {
-        printf("fail 1");
         goto fail;
     }
 
@@ -2412,7 +2467,7 @@ int64_t zran_read(zran_index_t *index,
         if (ret != ZRAN_INFLATE_OUTPUT_FULL &&
             ret != ZRAN_INFLATE_EOF         &&
             ret != ZRAN_INFLATE_OK)
-            {printf("fail 2");goto fail;}
+            goto fail;
 
         cmp_offset      += bytes_consumed;
         uncmp_offset    += bytes_output;
@@ -2427,7 +2482,7 @@ int64_t zran_read(zran_index_t *index,
      * TODO What happens here if we are at EOF?
      */
     if (uncmp_offset != index->uncmp_seek_offset)
-        {printf("fail 3");goto fail;}
+        goto fail;
 
     zran_log("Discarded %llu bytes, ready to "
              "read from %llu (== %llu)\n",
@@ -2499,7 +2554,7 @@ int64_t zran_read(zran_index_t *index,
             }
         }
         else if (ret != ZRAN_INFLATE_OK)
-            {printf("fail 4, %d", ret);goto fail;}
+            goto fail;
 
         zran_log("Read %u bytes (%llu / %llu)\n",
                  bytes_output,
@@ -2523,7 +2578,7 @@ int64_t zran_read(zran_index_t *index,
                         discard);
 
     if (ret != ZRAN_INFLATE_OK && ret != ZRAN_INFLATE_EOF) {
-        {printf("fail 5");goto fail;}
+        goto fail;
     }
 
     /*
@@ -2534,7 +2589,7 @@ int64_t zran_read(zran_index_t *index,
 
     zran_log("Read succeeded - %llu bytes read [compressed offset: %ld]\n",
              total_read,
-             FTELL(index->f));
+             ftell_(index->fd, index->f));
 
     free(discard);
 
@@ -2544,7 +2599,7 @@ not_covered: return ZRAN_READ_NOT_COVERED;
 eof:         return ZRAN_READ_EOF;
 
 fail:
-    printf("\n\nFAILED!\n\n");
+
     if (discard != NULL)
         free(discard);
 
@@ -2552,18 +2607,19 @@ fail:
 }
 
 /*
- * Store checkpoint information from index to file f. File should be opened in
+ * Store checkpoint information from index to file fd. File should be opened in
  * binary write mode.
  */
 int zran_export_index(zran_index_t *index,
+                      FILE *fd,
                       PyObject *f) {
 
     /*
-     * TODO: Endianness check for FWRITE_ calls. Prefer little-endian to be
+     * TODO: Endianness check for fwrite calls. Prefer little-endian to be
      * consistent with gzip library.
      */
 
-    /* Used for checking return value of FWRITE_ calls. */
+    /* Used for checking return value of fwrite calls. */
     size_t f_ret;
 
     /* Used for iterating over elements of zran_index_t.list. */
@@ -2578,41 +2634,41 @@ int zran_export_index(zran_index_t *index,
              index->npoints);
 
     /* Write magic bytes, and check for errors. */
-    f_ret = FWRITE_(zran_magic_bytes, sizeof(zran_magic_bytes), 1, f);
+    f_ret = fwrite(zran_magic_bytes, sizeof(zran_magic_bytes), 1, fd);
 
-    if (FERROR(f)) goto fail;
+    if (ferror(fd)) goto fail;
     if (f_ret != 1) goto fail;
 
     /* Write compressed size, and check for errors. */
-    f_ret = FWRITE_(&index->compressed_size,
-                   sizeof(index->compressed_size), 1, f);
+    f_ret = fwrite(&index->compressed_size,
+                   sizeof(index->compressed_size), 1, fd);
 
-    if (FERROR(f)) goto fail;
+    if (ferror(fd)) goto fail;
     if (f_ret != 1) goto fail;
 
     /* Write uncompressed size, and check for errors. */
-    f_ret = FWRITE_(&index->uncompressed_size,
-                   sizeof(index->uncompressed_size), 1, f);
+    f_ret = fwrite(&index->uncompressed_size,
+                   sizeof(index->uncompressed_size), 1, fd);
 
-    if (FERROR(f)) goto fail;
+    if (ferror(fd)) goto fail;
     if (f_ret != 1) goto fail;
 
     /* Write spacing, and check for errors. */
-    f_ret = FWRITE_(&index->spacing, sizeof(index->spacing), 1, f);
+    f_ret = fwrite(&index->spacing, sizeof(index->spacing), 1, fd);
 
-    if (FERROR(f)) goto fail;
+    if (ferror(fd)) goto fail;
     if (f_ret != 1) goto fail;
 
     /* Write window size, and check for errors. */
-    f_ret = FWRITE_(&index->window_size, sizeof(index->window_size), 1, f);
+    f_ret = fwrite(&index->window_size, sizeof(index->window_size), 1, fd);
 
-    if (FERROR(f)) goto fail;
+    if (ferror(fd)) goto fail;
     if (f_ret != 1) goto fail;
 
     /* Write number of points, and check for errors. */
-    f_ret = FWRITE_(&index->npoints, sizeof(index->npoints), 1, f);
+    f_ret = fwrite(&index->npoints, sizeof(index->npoints), 1, fd);
 
-    if (FERROR(f)) goto fail;
+    if (ferror(fd)) goto fail;
     if (f_ret != 1) goto fail;
 
     /*
@@ -2633,26 +2689,26 @@ int zran_export_index(zran_index_t *index,
     while (point < list_end) {
 
         /*
-         * Below, it's preFERRORed to write members of points elementwise to
+         * Below, it's preferred to write members of points elementwise to
          * avoid handling struct alignment and padding issues.
          */
 
         /* Write compressed offset, and check for errors. */
-        f_ret = FWRITE_(&point->cmp_offset, sizeof(point->cmp_offset), 1, f);
+        f_ret = fwrite(&point->cmp_offset, sizeof(point->cmp_offset), 1, fd);
 
-        if (FERROR(f)) goto fail;
+        if (ferror(fd)) goto fail;
         if (f_ret != 1) goto fail;
 
         /* Write uncompressed offset, and check for errors. */
-        f_ret = FWRITE_(&point->uncmp_offset, sizeof(point->uncmp_offset), 1, f);
+        f_ret = fwrite(&point->uncmp_offset, sizeof(point->uncmp_offset), 1, fd);
 
-        if (FERROR(f)) goto fail;
+        if (ferror(fd)) goto fail;
         if (f_ret != 1) goto fail;
 
         /* Write bit offset, and check for errors. */
-        f_ret = FWRITE_(&point->bits, sizeof(point->bits), 1, f);
+        f_ret = fwrite(&point->bits, sizeof(point->bits), 1, fd);
 
-        if (FERROR(f)) goto fail;
+        if (ferror(fd)) goto fail;
         if (f_ret != 1) goto fail;
 
         zran_log("zran_export_index: (%lu, %lu, %lu, %u)\n",
@@ -2676,9 +2732,9 @@ int zran_export_index(zran_index_t *index,
     while (point < list_end) {
 
         /* Write checkpoint data, and check for errors. */
-        f_ret = FWRITE_(point->data, index->window_size, 1, f);
+        f_ret = fwrite(point->data, index->window_size, 1, fd);
 
-        if (FERROR(f)) goto fail;
+        if (ferror(fd)) goto fail;
         if (f_ret != 1) goto fail;
 
         /* Print first and last three bytes of the checkpoint window. */
@@ -2702,9 +2758,9 @@ int zran_export_index(zran_index_t *index,
      * It is important to flush written file when done, since underlying file
      * descriptor can be closed by Python code before having a chance to flush.
      */
-    f_ret = FFLUSH(f);
+    f_ret = fflush(fd);
 
-    if (FERROR(f)) goto fail;
+    if (ferror(fd)) goto fail;
     if (f_ret != 0) goto fail;
 
     return ZRAN_EXPORT_OK;
@@ -2715,13 +2771,14 @@ fail:
 }
 
 /*
- * Load checkpoint information from file f to index. File should be opened in
+ * Load checkpoint information from file fd to index. File should be opened in
  * binary read mode.
  */
 int zran_import_index(zran_index_t *index,
+                      FILE *fd,
                       PyObject *f) {
 
-    /* Used for checking return value of FREAD_ calls. */
+    /* Used for checking return value of fread calls. */
     size_t f_ret;
 
     /* Return value of function if a failure happens. */
@@ -2747,13 +2804,13 @@ int zran_import_index(zran_index_t *index,
     zran_point_t *new_list = NULL;
 
     /* Check if file is read only. */
-    if (!is_readonly(f)) goto fail;
+    if (!is_readonly(fd)) goto fail;
 
     /* Read magic bytes, and check for file errors and EOF. */
-    f_ret = FREAD_(magic_bytes, sizeof(magic_bytes), 1, f);
+    f_ret = fread_(magic_bytes, sizeof(magic_bytes), 1, fd, f);
 
-    // if (FEOF(f))   goto eof;
-    if (FERROR(f)) goto read_error;
+    // if (feof_(fd, f, compressed_size))   goto eof;
+    if (ferror_(fd, f)) goto read_error;
     if (f_ret != 1) goto read_error;
 
     /* Verify magic bytes. */
@@ -2762,10 +2819,9 @@ int zran_import_index(zran_index_t *index,
     }
 
     /* Read compressed size, and check for file errors and EOF. */
-    f_ret = FREAD_(&compressed_size, sizeof(compressed_size), 1, f);
+    f_ret = fread_(&compressed_size, sizeof(compressed_size), 1, fd, f);
 
-    if (FEOF(f, uncompressed_size))   goto eof;
-    if (FERROR(f)) goto read_error;
+    if (ferror_(fd, f)) goto read_error;
     if (f_ret != 1) goto read_error;
 
     /*
@@ -2774,12 +2830,14 @@ int zran_import_index(zran_index_t *index,
      * this index file is not created for this compressed file.
      */
     if (compressed_size != index->compressed_size) goto inconsistent;
+    
+    if (feof_(fd, f, compressed_size))   goto eof;
 
     /* Read uncompressed size, and check for file errors and EOF. */
-    f_ret = FREAD_(&uncompressed_size, sizeof(uncompressed_size), 1, f);
+    f_ret = fread_(&uncompressed_size, sizeof(uncompressed_size), 1, fd, f);
 
-    if (FEOF(f, uncompressed_size))   goto eof;
-    if (FERROR(f)) goto read_error;
+    if (feof_(fd, f, compressed_size))   goto eof;
+    if (ferror_(fd, f)) goto read_error;
     if (f_ret != 1) goto read_error;
 
     /*
@@ -2791,17 +2849,17 @@ int zran_import_index(zran_index_t *index,
         index->uncompressed_size != uncompressed_size) goto inconsistent;
 
     /* Read spacing, and check for file errors and EOF. */
-    f_ret = FREAD_(&spacing, sizeof(spacing), 1, f);
+    f_ret = fread_(&spacing, sizeof(spacing), 1, fd, f);
 
-    if (FEOF(f, uncompressed_size))   goto eof;
-    if (FERROR(f)) goto read_error;
+    if (feof_(fd, f, compressed_size))   goto eof;
+    if (ferror_(fd, f)) goto read_error;
     if (f_ret != 1) goto read_error;
 
     /* Read window size, and check for file errors and EOF. */
-    f_ret = FREAD_(&window_size, sizeof(window_size), 1, f);
+    f_ret = fread_(&window_size, sizeof(window_size), 1, fd, f);
 
-    if (FEOF(f, uncompressed_size))   goto eof;
-    if (FERROR(f)) goto read_error;
+    if (feof_(fd, f, compressed_size))   goto eof;
+    if (ferror_(fd, f)) goto read_error;
     if (f_ret != 1) goto read_error;
 
     /*
@@ -2812,10 +2870,10 @@ int zran_import_index(zran_index_t *index,
     if (spacing     < window_size) goto fail;
 
     /* Read number of points, and check for file errors and EOF. */
-    f_ret = FREAD_(&npoints, sizeof(npoints), 1, f);
+    f_ret = fread_(&npoints, sizeof(npoints), 1, fd, f);
 
-    if (FEOF(f, uncompressed_size))   goto eof;
-    if (FERROR(f)) goto read_error;
+    if (feof_(fd, f, compressed_size))   goto eof;
+    if (ferror_(fd, f)) goto read_error;
     if (f_ret != 1) goto read_error;
 
     zran_log("zran_import_index: (%lu, %lu, %u, %u, %u)\n",
@@ -2849,24 +2907,24 @@ int zran_import_index(zran_index_t *index,
     {
 
         /* Read compressed offset, and check for errors. */
-        f_ret = FREAD_(&point->cmp_offset, sizeof(point->cmp_offset), 1, f);
+        f_ret = fread_(&point->cmp_offset, sizeof(point->cmp_offset), 1, fd, f);
 
-        if (FEOF(f, uncompressed_size))   goto eof;
-        if (FERROR(f)) goto read_error;
+        if (feof_(fd, f, compressed_size))   goto eof;
+        if (ferror_(fd, f)) goto read_error;
         if (f_ret != 1) goto read_error;
 
         /* Read uncompressed offset, and check for errors. */
-        f_ret = FREAD_(&point->uncmp_offset, sizeof(point->uncmp_offset), 1, f);
+        f_ret = fread_(&point->uncmp_offset, sizeof(point->uncmp_offset), 1, fd, f);
 
-        if (FEOF(f, uncompressed_size))   goto eof;
-        if (FERROR(f)) goto read_error;
+        if (feof_(fd, f, compressed_size))   goto eof;
+        if (ferror_(fd, f)) goto read_error;
         if (f_ret != 1) goto read_error;
 
         /* Read bit offset, and check for errors. */
-        f_ret = FREAD_(&point->bits, sizeof(point->bits), 1, f);
+        f_ret = fread_(&point->bits, sizeof(point->bits), 1, fd, f);
 
-        if (FEOF(f, uncompressed_size))   goto eof;
-        if (FERROR(f)) goto read_error;
+        if (feof_(fd, f, compressed_size))   goto eof;
+        if (ferror_(fd, f)) goto read_error;
         if (f_ret != 1) goto read_error;
 
         zran_log("zran_import_index: (%lu, %lu, %lu, %u)\n",
@@ -2902,10 +2960,10 @@ int zran_import_index(zran_index_t *index,
          * reached just after the last element, so it's not an error for
          * the last element.
          */
-        f_ret = FREAD_(point->data, window_size, 1, f);
+        f_ret = fread_(point->data, window_size, 1, fd, f);
 
-        if (FEOF(f, uncompressed_size) && point < list_end - 1) goto eof;
-        if (FERROR(f))                       goto read_error;
+        if (feof_(fd, f, compressed_size) && point < list_end - 1) goto eof;
+        if (ferror_(fd, f))                       goto read_error;
         if (f_ret != 1)                       goto read_error;
 
         /*

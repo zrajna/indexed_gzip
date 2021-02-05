@@ -329,7 +329,7 @@ cdef class _IndexedGzipFile:
            (fileobj is not None and filename is not None):
             raise ValueError('One of fileobj or filename must be specified')
 
-        if fileobj is not None and fileobj.mode != 'rb':
+        if fileobj is not None and getattr(fileobj, 'mode', 'rb') != 'rb':
             raise ValueError('The gzip file must be opened in '
                              'read-only binary ("rb") mode')
 

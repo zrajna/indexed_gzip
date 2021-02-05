@@ -25,7 +25,7 @@ import                    tempfile
 import                    contextlib
 
 import numpy as np
-
+from io import BytesIO
 import pytest
 
 import indexed_gzip as igzip
@@ -222,15 +222,19 @@ def test_accept_filename_or_fileobj(testfile, nelems):
         f    = open(testfile, 'rb')
         gzf1 = igzip._IndexedGzipFile(testfile)
         gzf2 = igzip._IndexedGzipFile(f)
+        gzf3 = igzip._IndexedGzipFile(fileobj=BytesIO(open(testfile, 'rb').read()))
 
         element  = np.random.randint(0, nelems, 1)
         readval1 = read_element(gzf1, element)
         readval2 = read_element(gzf2, element)
+        readval3 = read_element(gzf3, element)
 
         assert readval1 == element
         assert readval2 == element
+        assert readval3 == element
 
     finally:
+        if gzf3 is not None: gzf3.close()
         if gzf2 is not None: gzf2.close()
         if gzf1 is not None: gzf1.close()
         if f    is not None: f   .close()

@@ -96,7 +96,7 @@ def testfile(request, nelems, concat):
     filename = request.config.getoption('--testfile')
 
     if filename is None:
-        filename = op.join(os.getcwd(),
+        filename = op.join("/tmp",
                            'ctest_zran_{}_{}.gz'.format(nelems, concat))
 
     if not op.exists(filename):

@@ -16,7 +16,7 @@ export CIBW_ENVIRONMENT_WINDOWS="ZLIB_HOME='$ZLIB_HOME'"
 export CIBW_TEST_REQUIRES="cython pytest pytest-cov coverage numpy nibabel"
 
 # Disable pypy builds
-export CIBW_SKIP="pp*"
+export CIBW_SKIP="pp* cp27-*"
 
 # Pytest makes it *very* awkward to run tests
 # from an installed package, and still find/
@@ -33,4 +33,4 @@ export CIBW_TEST_COMMAND="bash {project}/testcmd {project}"
 
 python -m pip install cibuildwheel==1.7.2
 
-python -m cibuildwheel --output-dir ./dist
+python -m cibuildwheel --platform linux --output-dir ./dist

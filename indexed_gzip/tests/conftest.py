@@ -17,7 +17,7 @@ def pytest_addoption(parser):
     parser.addoption('--nelems',
                      type=str,
                      action='store',
-                     default='rnd_16777217',
+                     default='rnd_167772',
                      help='Number of uint64 elements for test data')
 
     parser.addoption('--concat',
@@ -96,7 +96,7 @@ def testfile(request, nelems, concat):
     filename = request.config.getoption('--testfile')
 
     if filename is None:
-        filename = op.join("/tmp",
+        filename = op.join(os.getcwd(),
                            'ctest_zran_{}_{}.gz'.format(nelems, concat))
 
     if not op.exists(filename):

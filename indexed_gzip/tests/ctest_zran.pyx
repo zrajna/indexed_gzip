@@ -258,12 +258,12 @@ def test_file_funcs(testfile):
 
     # fwrite
     f = BytesIO(b"abc")
-    cdef char* inp = 'def'
-    bytes_written = zran._fwrite_python(inp, 1, 3, <PyObject*>f)
-    assert bytes_written == 3
-    assert f.tell() == 3
+    cdef char* inp = 'de'
+    elems_written = zran._fwrite_python(inp, 1, 2, <PyObject*>f)
+    assert elems_written == 2
+    assert f.tell() == 2
     f.seek(0)
-    assert f.read() == b"def"
+    assert f.read() == b"dec"
 
     # getc
     f = BytesIO(b"dbc")
@@ -953,9 +953,9 @@ def test_export_then_import(testfile):
 
         assert not zran.zran_build_index(&index1, 0, 0)
 
-        with open(testfile + '.idx.tmp', 'wb') as pyexportfid:
+        with open(testfile + '.idx.tmp', 'wb') as pyexportfid, open(testfile + '2.idx.tmp', 'wb') as pyexportfid2:
             cfid = fdopen(pyexportfid.fileno(), 'ab')
-            ret  = zran.zran_export_index(&index1, cfid, <PyObject*>pyexportfid)
+            ret  = zran.zran_export_index(&index1, cfid, <PyObject*>pyexportfid2)
             assert not ret, str(ret)
 
     with open(testfile, 'rb') as pyfid, open(testfile, 'rb') as pyfid2:
@@ -968,7 +968,7 @@ def test_export_then_import(testfile):
                                   readbufSize,
                                   flag)
 
-        with open(testfile + '.idx.tmp', 'rb') as pyexportfid, open(testfile + '.idx.tmp', 'rb') as pyexportfid2:
+        with open(testfile + '.idx.tmp', 'rb') as pyexportfid, open(testfile + '2.idx.tmp', 'rb') as pyexportfid2:
             cfid = fdopen(pyexportfid.fileno(), 'rb')
             ret  = zran.zran_import_index(&index2, cfid, <PyObject*>pyexportfid2)
             assert not ret, str(ret)
@@ -1031,9 +1031,9 @@ def test_export_import_no_points():
             pybuf = <bytes>(<char *>buffer)[:100]
             assert np.all(np.frombuffer(pybuf, dtype=np.uint8) == data)
 
-            with open('data.gz.index', 'wb') as pyidxfid:
+            with open('data.gz.index', 'wb') as pyidxfid, open('data2.gz.index', 'wb') as pyidxfid2:
                 cidxfid = fdopen(pyidxfid.fileno(), 'wb')
-                assert zran.zran_export_index(&index, cidxfid, <PyObject*>pyidxfid) == 0
+                assert zran.zran_export_index(&index, cidxfid, <PyObject*>pyidxfid2) == 0
             zran.zran_free(&index)
 
         with open('data.gz', 'rb')  as pyfid, open('data.gz', 'rb')  as pyfid2:
@@ -1046,7 +1046,7 @@ def test_export_import_no_points():
                                   131072,
                                   0) == 0
 
-            with open('data.gz.index', 'rb') as pyidxfid, open('data.gz.index', 'rb') as pyidxfid2:
+            with open('data.gz.index', 'rb') as pyidxfid, open('data2.gz.index', 'rb') as pyidxfid2:
                 cidxfid = fdopen(pyidxfid.fileno(), 'rb')
                 assert zran.zran_import_index(&index, cidxfid, <PyObject*>pyidxfid2) == 0
             assert index.npoints == 0

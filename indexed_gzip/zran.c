@@ -63,7 +63,7 @@ size_t _fread_python(void *ptr, size_t size, size_t nmemb, PyObject *f) {
     }
     memmove(ptr, buf, (size_t) len);
     Py_DECREF(data);
-    return len / (size_t) size;
+    return (size_t) len / size;
 
 }
 
@@ -104,29 +104,33 @@ int _fflush_python(PyObject *f) {
     PyObject *data;
     if ((data = PyObject_CallMethod(f, "flush", NULL)) == NULL) {
         Py_DECREF(data);
-        return 0;
+        return -1;
     }
     Py_DECREF(data);
-    return 1;
+    return 0;
 }
 
 size_t _fwrite_python(const void *ptr, size_t size, size_t nmemb, PyObject *f) {
     PyObject *input;
     if ((input = PyBytes_FromStringAndSize(ptr, size * nmemb)) == NULL) {
         Py_DECREF(input);
-        return -1;
+        return 0;
     }
-
     PyObject *data;
     if ((data = PyObject_CallMethod(f, "write", "(O)", input)) == NULL) {
         Py_DECREF(input);
         Py_DECREF(data);
-        return -1;
+        return 0;
     }
-    size_t result = PyLong_AsSize_t(data);
+    Py_ssize_t len;
+    if ((len = PyLong_AsSize_t(data)) == -1) {
+        Py_DECREF(input);
+        Py_DECREF(data);
+        return 0;
+    }
     Py_DECREF(input);
     Py_DECREF(data);
-    return result;
+    return (size_t) len / size;
 }
 
 int _getc_python(PyObject *f) {
@@ -179,7 +183,10 @@ int fflush_(FILE *fd, PyObject *f) {
 }
 
 size_t fwrite_(const void *ptr, size_t size, size_t nmemb, FILE *fd, PyObject *f) {
-
+    // int one = fwrite(ptr, size, nmemb, fd);
+    int two = _fwrite_python(ptr, size, nmemb, f);
+    // printf("fwrite_ returned: %d", two);
+    return two;
 }
 
 int getc_(FILE *fd, PyObject *f) {
@@ -2634,41 +2641,41 @@ int zran_export_index(zran_index_t *index,
              index->npoints);
 
     /* Write magic bytes, and check for errors. */
-    f_ret = fwrite(zran_magic_bytes, sizeof(zran_magic_bytes), 1, fd);
+    f_ret = fwrite_(zran_magic_bytes, sizeof(zran_magic_bytes), 1, fd, f);
 
-    if (ferror(fd)) goto fail;
+    if (ferror_(fd, f)) goto fail;
     if (f_ret != 1) goto fail;
 
     /* Write compressed size, and check for errors. */
-    f_ret = fwrite(&index->compressed_size,
-                   sizeof(index->compressed_size), 1, fd);
+    f_ret = fwrite_(&index->compressed_size,
+                   sizeof(index->compressed_size), 1, fd, f);
 
-    if (ferror(fd)) goto fail;
+    if (ferror_(fd, f)) goto fail;
     if (f_ret != 1) goto fail;
 
     /* Write uncompressed size, and check for errors. */
-    f_ret = fwrite(&index->uncompressed_size,
-                   sizeof(index->uncompressed_size), 1, fd);
+    f_ret = fwrite_(&index->uncompressed_size,
+                   sizeof(index->uncompressed_size), 1, fd, f);
 
-    if (ferror(fd)) goto fail;
+    if (ferror_(fd, f)) goto fail;
     if (f_ret != 1) goto fail;
 
     /* Write spacing, and check for errors. */
-    f_ret = fwrite(&index->spacing, sizeof(index->spacing), 1, fd);
+    f_ret = fwrite_(&index->spacing, sizeof(index->spacing), 1, fd, f);
 
-    if (ferror(fd)) goto fail;
+    if (ferror_(fd, f)) goto fail;
     if (f_ret != 1) goto fail;
 
     /* Write window size, and check for errors. */
-    f_ret = fwrite(&index->window_size, sizeof(index->window_size), 1, fd);
+    f_ret = fwrite_(&index->window_size, sizeof(index->window_size), 1, fd, f);
 
-    if (ferror(fd)) goto fail;
+    if (ferror_(fd, f)) goto fail;
     if (f_ret != 1) goto fail;
 
     /* Write number of points, and check for errors. */
-    f_ret = fwrite(&index->npoints, sizeof(index->npoints), 1, fd);
+    f_ret = fwrite_(&index->npoints, sizeof(index->npoints), 1, fd, f);
 
-    if (ferror(fd)) goto fail;
+    if (ferror_(fd, f)) goto fail;
     if (f_ret != 1) goto fail;
 
     /*
@@ -2694,21 +2701,21 @@ int zran_export_index(zran_index_t *index,
          */
 
         /* Write compressed offset, and check for errors. */
-        f_ret = fwrite(&point->cmp_offset, sizeof(point->cmp_offset), 1, fd);
+        f_ret = fwrite_(&point->cmp_offset, sizeof(point->cmp_offset), 1, fd, f);
 
-        if (ferror(fd)) goto fail;
+        if (ferror_(fd, f)) goto fail;
         if (f_ret != 1) goto fail;
 
         /* Write uncompressed offset, and check for errors. */
-        f_ret = fwrite(&point->uncmp_offset, sizeof(point->uncmp_offset), 1, fd);
+        f_ret = fwrite_(&point->uncmp_offset, sizeof(point->uncmp_offset), 1, fd, f);
 
-        if (ferror(fd)) goto fail;
+        if (ferror_(fd, f)) goto fail;
         if (f_ret != 1) goto fail;
 
         /* Write bit offset, and check for errors. */
-        f_ret = fwrite(&point->bits, sizeof(point->bits), 1, fd);
+        f_ret = fwrite_(&point->bits, sizeof(point->bits), 1, fd, f);
 
-        if (ferror(fd)) goto fail;
+        if (ferror_(fd, f)) goto fail;
         if (f_ret != 1) goto fail;
 
         zran_log("zran_export_index: (%lu, %lu, %lu, %u)\n",
@@ -2732,9 +2739,9 @@ int zran_export_index(zran_index_t *index,
     while (point < list_end) {
 
         /* Write checkpoint data, and check for errors. */
-        f_ret = fwrite(point->data, index->window_size, 1, fd);
+        f_ret = fwrite_(point->data, index->window_size, 1, fd, f);
 
-        if (ferror(fd)) goto fail;
+        if (ferror_(fd, f)) goto fail;
         if (f_ret != 1) goto fail;
 
         /* Print first and last three bytes of the checkpoint window. */
@@ -2758,9 +2765,9 @@ int zran_export_index(zran_index_t *index,
      * It is important to flush written file when done, since underlying file
      * descriptor can be closed by Python code before having a chance to flush.
      */
-    f_ret = fflush(fd);
+    f_ret = fflush_(fd, f);
 
-    if (ferror(fd)) goto fail;
+    if (ferror_(fd, f)) goto fail;
     if (f_ret != 0) goto fail;
 
     return ZRAN_EXPORT_OK;

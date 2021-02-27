@@ -210,7 +210,7 @@ static double round(double val)
  *
  * #define ZRAN_VERBOSE
  */
-// #define ZRAN_VERBOSE
+//#define ZRAN_VERBOSE
 
 
 #ifdef ZRAN_VERBOSE
@@ -655,8 +655,8 @@ int zran_init(zran_index_t *index,
       goto fail;
 
     /* The file must be opened in read-only mode */
-    // if (!is_readonly(fd))
-    //     goto fail;
+    if (!is_readonly(f))
+        goto fail;
 
     /*
      * Calculate the size of the compressed file

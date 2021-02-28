@@ -125,7 +125,7 @@ int _fflush_python(PyObject *f) {
 size_t _fwrite_python(const void *ptr, size_t size, size_t nmemb, PyObject *f) {
     PyObject *input;
     PyObject *data;
-    Py_ssize_t len;
+    unsigned long len;
     if ((input = PyBytes_FromStringAndSize(ptr, size * nmemb)) == NULL) {
         Py_DECREF(input);
         return 0;
@@ -135,11 +135,17 @@ size_t _fwrite_python(const void *ptr, size_t size, size_t nmemb, PyObject *f) {
         Py_DECREF(data);
         return 0;
     }
-    if ((len = PyLong_AsSsize_t(data)) == -1) {
+    #if PY_MAJOR_VERSION >= 3
+    if ((len = PyLong_AsUnsignedLong(data)) == -1) {
         Py_DECREF(input);
         Py_DECREF(data);
         return 0;
     }
+    #else
+    // In Python 2, a file object's write() method does not return the number of
+    // bytes written, so let's just assume that everything has been written properly.
+    len = size * nmemb;
+    #endif
     Py_DECREF(input);
     Py_DECREF(data);
     return (size_t) len / size;

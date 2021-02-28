@@ -22,9 +22,10 @@
 #include "zran.h"
 #include "zran_file_util.h"
 
-#ifndef _WIN32
+#ifdef _WIN32
 #include "windows.h"
 #include "io.h"
+#else
 static uint32_t max(uint32_t a, uint32_t b) {
 
   if (a > b) return a;

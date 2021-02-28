@@ -190,9 +190,11 @@ def test_init_success_cases(concat, drop):
         gf3.close()
 
 
-def test_create_from_open_handle(testfile, nelems, seed, drop):
+def test_create_from_open_handle(testfile, nelems, seed, drop, file_like_object):
 
     f   = open(testfile, 'rb')
+    if file_like_object:
+        f = BytesIO(f.read())
     gzf = igzip._IndexedGzipFile(fileobj=f, drop_handles=drop)
 
     assert gzf.fileobj() is f
@@ -734,6 +736,17 @@ def test_import_export_index():
 
             with open(idxfname, 'rb') as idxf:
                 f.import_index(fileobj=idxf)
+            f.seek(65535 * 8)
+            val = np.frombuffer(f.read(8), dtype=np.uint64)
+            assert val[0] == 65535
+
+        # Test exporting to / importing from a file-like object
+        idxf = BytesIO()
+        with igzip._IndexedGzipFile(fname) as f:
+            f.export_index(fileobj=idxf)
+        idxf.seek(0)
+        with igzip._IndexedGzipFile(fname) as f:
+            f.import_index(fileobj=idxf)
             f.seek(65535 * 8)
             val = np.frombuffer(f.read(8), dtype=np.uint64)
             assert val[0] == 65535

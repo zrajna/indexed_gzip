@@ -34,18 +34,19 @@ size_t _fread_python(void *ptr, size_t size, size_t nmemb, PyObject *f) {
     PyObject *data;
     char *buf;
     Py_ssize_t len;
-    if ((data = PyObject_CallMethod(f, "read", "(n)", size * nmemb)) == NULL) {
-        Py_DECREF(data);
-        return 0;
-    }
-    if ((buf = PyBytes_AsString(data)) == NULL || (len = PyBytes_Size(data)) == -1) {
-        Py_DECREF(data);
-        return 0;
-    }
+    if ((data = PyObject_CallMethod(f, "read", "(n)", size * nmemb)) == NULL)
+        goto fail;
+    if ((buf = PyBytes_AsString(data)) == NULL)
+        goto fail;
+    if ((len = PyBytes_Size(data)) == -1)
+        goto fail;
     memmove(ptr, buf, (size_t) len);
     Py_DECREF(data);
     return (size_t) len / size;
 
+fail:
+    Py_DECREF(data);
+    return 0;
 }
 
 /*
@@ -54,15 +55,17 @@ size_t _fread_python(void *ptr, size_t size, size_t nmemb, PyObject *f) {
 uint64_t _ftell_python(PyObject *f) {
     PyObject *data;
     uint64_t result;
-    if ((data = PyObject_CallMethod(f, "tell", NULL)) == NULL) {
-        Py_DECREF(data);
-        return -1;
-    }
+    if ((data = PyObject_CallMethod(f, "tell", NULL)) == NULL)
+        goto fail;
     // TODO: Add error handling for this statement using PyErr_Occurred
     result = PyLong_AsUnsignedLong(data);
 
     Py_DECREF(data);
     return result;
+
+fail:
+    Py_DECREF(data);
+    return -1;
 }
 
 /*
@@ -70,12 +73,14 @@ uint64_t _ftell_python(PyObject *f) {
  */
 int _fseek_python(PyObject *f, long int offset, int whence) {
     PyObject *data;
-    if ((data = PyObject_CallMethod(f, "seek", "(l,i)", offset, whence)) == NULL) {
-        Py_DECREF(data);
-        return -1;
-    }
+    if ((data = PyObject_CallMethod(f, "seek", "(l,i)", offset, whence)) == NULL)
+        goto fail;
     Py_DECREF(data);
     return 0;
+
+fail:
+    Py_DECREF(data);
+    return -1;
 }
 
 /*
@@ -98,12 +103,13 @@ int _ferror_python(PyObject *f) {
  */
 int _fflush_python(PyObject *f) {
     PyObject *data;
-    if ((data = PyObject_CallMethod(f, "flush", NULL)) == NULL) {
-        Py_DECREF(data);
-        return -1;
-    }
+    if ((data = PyObject_CallMethod(f, "flush", NULL)) == NULL) goto fail;
     Py_DECREF(data);
     return 0;
+
+fail:
+    Py_DECREF(data);
+    return -1;
 }
 
 /*
@@ -111,23 +117,15 @@ int _fflush_python(PyObject *f) {
  */
 size_t _fwrite_python(const void *ptr, size_t size, size_t nmemb, PyObject *f) {
     PyObject *input;
-    PyObject *data;
+    PyObject *data = NULL;
     unsigned long len;
-    if ((input = PyBytes_FromStringAndSize(ptr, size * nmemb)) == NULL) {
-        Py_DECREF(input);
-        return 0;
-    }
-    if ((data = PyObject_CallMethod(f, "write", "(O)", input)) == NULL) {
-        Py_DECREF(input);
-        Py_DECREF(data);
-        return 0;
-    }
+    if ((input = PyBytes_FromStringAndSize(ptr, size * nmemb)) == NULL)
+        goto fail;
+    if ((data = PyObject_CallMethod(f, "write", "(O)", input)) == NULL)
+        goto fail;
     #if PY_MAJOR_VERSION >= 3
-    if ((len = PyLong_AsUnsignedLong(data)) == -1) {
-        Py_DECREF(input);
-        Py_DECREF(data);
-        return 0;
-    }
+    // TODO: error handling with PyError_Occurred
+    len = PyLong_AsUnsignedLong(data);
     #else
     // In Python 2, a file object's write() method does not return the number of
     // bytes written, so let's just assume that everything has been written properly.
@@ -136,6 +134,12 @@ size_t _fwrite_python(const void *ptr, size_t size, size_t nmemb, PyObject *f) {
     Py_DECREF(input);
     Py_DECREF(data);
     return (size_t) len / size;
+
+fail:
+    Py_DECREF(input);
+    if (data != NULL)
+        Py_DECREF(data);
+    return 0;
 }
 
 /*
@@ -144,6 +148,7 @@ size_t _fwrite_python(const void *ptr, size_t size, size_t nmemb, PyObject *f) {
 int _getc_python(PyObject *f) {
     char buf [1];
     if (_fread_python(buf, 1, 1, f) == 0) {
+        // TODO: set an error indicator that can be retrieved from _ferror_python.
         return -1;
     }
     return (int) buf[0];

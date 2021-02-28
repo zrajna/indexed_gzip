@@ -45,12 +45,12 @@ int is_readonly(FILE *fd, PyObject *f)
  */
 size_t _fread_python(void *ptr, size_t size, size_t nmemb, PyObject *f) {
     PyObject *data;
+    char *buf;
+    Py_ssize_t len;
     if ((data = PyObject_CallMethod(f, "read", "(n)", size * nmemb)) == NULL) {
         Py_DECREF(data);
         return 0;
     }
-    char *buf;
-    Py_ssize_t len;
     if ((buf = PyBytes_AsString(data)) == NULL || (len = PyBytes_Size(data)) == -1) {
         Py_DECREF(data);
         return 0;
@@ -66,11 +66,11 @@ size_t _fread_python(void *ptr, size_t size, size_t nmemb, PyObject *f) {
  */
 long int _ftell_python(PyObject *f) {
     PyObject *data;
+    long int result;
     if ((data = PyObject_CallMethod(f, "tell", NULL)) == NULL) {
         Py_DECREF(data);
         return -1;
     }
-    long int result;
     if ((result = PyLong_AsLong(data)) == -1) {
         Py_DECREF(data);
         return -1;
@@ -125,17 +125,17 @@ int _fflush_python(PyObject *f) {
  */
 size_t _fwrite_python(const void *ptr, size_t size, size_t nmemb, PyObject *f) {
     PyObject *input;
+    PyObject *data;
+    Py_ssize_t len;
     if ((input = PyBytes_FromStringAndSize(ptr, size * nmemb)) == NULL) {
         Py_DECREF(input);
         return 0;
     }
-    PyObject *data;
     if ((data = PyObject_CallMethod(f, "write", "(O)", input)) == NULL) {
         Py_DECREF(input);
         Py_DECREF(data);
         return 0;
     }
-    Py_ssize_t len;
     if ((len = PyLong_AsSsize_t(data)) == -1) {
         Py_DECREF(input);
         Py_DECREF(data);

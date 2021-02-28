@@ -40,6 +40,11 @@ enum {
 struct _zran_index {
 
     /*
+     * Handle to the compressed file.
+     */
+    FILE         *fd;
+
+    /*
      * Handle to the compressed file object.
      */
     PyObject     *f;
@@ -204,7 +209,8 @@ int _getc_python(PyObject *f);
  */
 int  zran_init(
   zran_index_t *index,        /* The index                          */
-  PyObject     *f,            /* Open handle to the compressed file object  */
+  FILE         *fd,           /* Open handle to the compressed file */
+  PyObject     *f,            /* Open handle to export file object  */
   uint32_t      spacing,      /* Distance in bytes between
                                  index seek points                  */
   uint32_t      window_size,  /* Number of uncompressed bytes
@@ -371,6 +377,7 @@ enum {
  */
 int zran_export_index(
   zran_index_t  *index, /* The index                  */
+  FILE          *fd,    /* Open handle to export file */
   PyObject      *f     /* Open handle to export file object */
 );
 
@@ -421,6 +428,7 @@ enum {
  */
 int zran_import_index(
   zran_index_t  *index, /* The index                  */
+  FILE          *fd,    /* Open handle to import file */
   PyObject      *f     /* Open handle to export file object */
 );
 

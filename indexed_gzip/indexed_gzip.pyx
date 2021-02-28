@@ -13,7 +13,11 @@ random access to gzip files.
 
 from libc.stdio     cimport (SEEK_SET,
                              SEEK_CUR,
-                             SEEK_END)
+                             SEEK_END,
+                             FILE,
+                             fopen,
+                             fdopen,
+                             fclose)
 
 from libc.stdint    cimport (uint8_t,
                              uint32_t,
@@ -325,6 +329,8 @@ cdef class _IndexedGzipFile:
                                :meth:`import_index`.
         """
 
+        cdef FILE *fd = NULL
+
         if (fileobj is     None and filename is     None) or \
            (fileobj is not None and filename is not None):
             raise ValueError('One of fileobj or filename must be specified')
@@ -357,6 +363,7 @@ cdef class _IndexedGzipFile:
         if not drop_handles:
             if fileobj is None:
                 fileobj = builtin_open(filename, mode)
+            fd = fdopen(fileobj.fileno(), 'rb')
 
 
         self.spacing          = spacing
@@ -368,6 +375,7 @@ cdef class _IndexedGzipFile:
         self.filename         = filename
         self.own_file         = own_file
         self.pyfid            = fileobj
+        self.index.fd         = fd
         self.index.f          = <PyObject*>fileobj
 
         if self.auto_build: flags = zran.ZRAN_AUTO_BUILD
@@ -375,6 +383,7 @@ cdef class _IndexedGzipFile:
 
         with self.__file_handle():
             if zran.zran_init(index=&self.index,
+                              fd=self.index.fd,
                               f=<PyObject*>self.index.f,
                               spacing=spacing,
                               window_size=window_size,
@@ -398,7 +407,7 @@ cdef class _IndexedGzipFile:
 
     def __file_handle(self):
         """This method is used as a context manager whenever access to the
-        underlying file stream is required. It makes sure that ``index.f``
+        underlying file stream is required. It makes sure that ``index.fd``
         field is set appropriately, opening/closing the file handle as
         necessary (depending on the value of :attr:`drop_handles`).
         """
@@ -414,7 +423,7 @@ cdef class _IndexedGzipFile:
             # If a file handle already exists,
             # return it. This clause makes this
             # context manager reentrant.
-            if self.pyfid is not None:
+            if self.index.fd is not NULL or self.pyfid is not None:
                 yield
 
             # otherwise we open a new
@@ -422,12 +431,15 @@ cdef class _IndexedGzipFile:
             else:
 
                 try:
+                    self.index.fd = fopen(self.filename.encode(), 'rb')
                     self._pyfid_tmp = builtin_open(self.filename, 'rb')
                     self.index.f = <PyObject*> self._pyfid_tmp
                     yield
 
                 finally:
+                    fclose(self.index.fd)
                     self._pyfid_tmp.close()
+                    self.index.fd = NULL
                     self.index.f = <PyObject*>None
 
         return proxy()
@@ -483,10 +495,12 @@ cdef class _IndexedGzipFile:
             raise IOError('_IndexedGzipFile is already closed')
 
         if   self.own_file and self.pyfid    is not None: self.pyfid.close()
+        elif self.own_file and self.index.fd is not NULL: fclose(self.index.fd)
 
         zran.zran_free(&self.index)
 
         self.index.f   = NULL
+        self.index.fd  = NULL
         self.filename  = None
         self.pyfid     = None
         self.finalized = True
@@ -878,7 +892,8 @@ cdef class _IndexedGzipFile:
                     'File should be opened in writeable binary mode.')
 
         try:
-            ret = zran.zran_export_index(&self.index, <PyObject*>fileobj)
+            fd  = fdopen(fileobj.fileno(), 'wb')
+            ret = zran.zran_export_index(&self.index, fd, <PyObject*>fileobj)
             if ret != zran.ZRAN_EXPORT_OK:
                 raise ZranError('export_index returned error: {}'.format(ret))
 
@@ -919,7 +934,8 @@ cdef class _IndexedGzipFile:
                     'File should be opened read-only binary mode.')
 
         try:
-            ret = zran.zran_import_index(&self.index, <PyObject*>fileobj)
+            fd  = fdopen(fileobj.fileno(), 'rb')
+            ret = zran.zran_import_index(&self.index, fd, <PyObject*>fileobj)
             if ret != zran.ZRAN_IMPORT_OK:
                 raise ZranError('import_index returned error: {}'.format(ret))
 

@@ -13,6 +13,7 @@ from cpython.ref cimport PyObject
 cdef extern from "zran.h":
 
     ctypedef struct zran_index_t:
+        FILE         *fd;
         PyObject     *f;
         size_t        compressed_size;
         size_t        uncompressed_size;
@@ -63,6 +64,7 @@ cdef extern from "zran.h":
     int _getc_python(PyObject *f)
 
     bint zran_init(zran_index_t *index,
+                   FILE         *fd,
                    PyObject     *f,
                    uint32_t      spacing,
                    uint32_t      window_size,
@@ -87,7 +89,9 @@ cdef extern from "zran.h":
                       uint64_t      len) nogil;
 
     int zran_export_index(zran_index_t *index,
+                          FILE         *fd,
                           PyObject     *f);
 
     int zran_import_index(zran_index_t *index,
+                          FILE         *fd,
                           PyObject     *f);

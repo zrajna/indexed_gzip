@@ -30,7 +30,10 @@ from io import BytesIO
 
 from libc.stdio  cimport (SEEK_SET,
                           SEEK_CUR,
-                          SEEK_END)
+                          SEEK_END,
+                          FILE,
+                          fdopen,
+                          fwrite)
 
 from libc.string cimport memset, memcmp
 
@@ -276,15 +279,18 @@ def test_init(testfile):
     flags         = [0, zran.ZRAN_AUTO_BUILD]
 
     cdef zran.zran_index_t index
+    cdef FILE             *cfid
 
-    with open(testfile, 'rb') as pyfid:
+    with open(testfile, 'rb') as pyfid, open(testfile, 'rb') as pyfid2:
+
+        cfid = fdopen(pyfid.fileno(), 'rb')
 
         for s, w, r, f in it.product(spacings,
                                      window_sizes,
                                      readbuf_sizes,
                                      flags):
 
-            result = not zran.zran_init(&index, <PyObject*>pyfid, s, w, r, f)
+            result = not zran.zran_init(&index, cfid, <PyObject*>pyfid, s, w, r, f)
 
             expected = True
 
@@ -310,6 +316,7 @@ def test_init_file_modes(testfile):
              'dummy.gz', 'dummy.gz', 'dummy.gz', 'dummy.gz']
 
     cdef zran.zran_index_t index
+    cdef FILE             *cfid
     cdef bytes             bmode
     cdef char             *cmode
 
@@ -319,10 +326,11 @@ def test_init_file_modes(testfile):
 
             bmode    = mode.encode()
             cmode    = bmode
+            cfid     = fdopen(pyfid.fileno(), cmode)
 
             expected = 1
 
-            result = not zran.zran_init(&index, <PyObject*>pyfid, 0, 0, 0, 0)
+            result = not zran.zran_init(&index, cfid, <PyObject*>pyfid, 0, 0, 0, 0)
 
             assert result == expected
 
@@ -343,10 +351,12 @@ def test_no_auto_build(testfile, nelems):
     buf          = ReadBuffer(bufSize)
     buffer       = buf.buffer
 
-    with open(testfile, 'rb') as pyfid:
+    with open(testfile, 'rb') as pyfid, open(testfile, 'rb') as pyfid2:
+        cfid = fdopen(pyfid.fileno(), 'rb')
 
         assert not zran.zran_init(&index,
-                                  <PyObject*>pyfid,
+                                  cfid,
+                                  <PyObject*>pyfid2,
                                   indexSpacing,
                                   32768,
                                   131072,
@@ -394,10 +404,12 @@ def test_seek_to_end(testfile, nelems):
     seek_point   = filesize - 1
     indexSpacing = max(524288, filesize // 1500)
 
-    with open(testfile, 'rb') as pyfid:
+    with open(testfile, 'rb') as pyfid, open(testfile, 'rb') as pyfid2:
+        cfid = fdopen(pyfid.fileno(), 'rb')
 
         assert not zran.zran_init(&index,
-                                  <PyObject*>pyfid,
+                                  cfid,
+                                  <PyObject*>pyfid2,
                                   indexSpacing,
                                   32768,
                                   131072,
@@ -421,10 +433,12 @@ def test_seek_cur(testfile, nelems):
     seekstep     = max(1, (nelems - 1) // 500)
     curelem      = 0;
 
-    with open(testfile, 'rb') as pyfid:
+    with open(testfile, 'rb') as pyfid, open(testfile, 'rb') as pyfid2:
+        cfid = fdopen(pyfid.fileno(), 'rb')
 
         assert not zran.zran_init(&index,
-                                  <PyObject*>pyfid,
+                                  cfid,
+                                  <PyObject*>pyfid2,
                                   indexSpacing,
                                   32768,
                                   131072,
@@ -462,10 +476,12 @@ def test_seek_end(testfile, nelems):
     seekstep     = max(1, (nelems - 1) // 500)
     curelem      = 0
 
-    with open(testfile, 'rb') as pyfid:
+    with open(testfile, 'rb') as pyfid, open(testfile, 'rb') as pyfid2:
+        cfid = fdopen(pyfid.fileno(), 'rb')
 
         assert not zran.zran_init(&index,
-                                  <PyObject*>pyfid,
+                                  cfid,
+                                  <PyObject*>pyfid2,
                                   indexSpacing,
                                   32768,
                                   131072,
@@ -524,10 +540,12 @@ def test_seek_beyond_end(testfile, nelems):
                     filesize + 2,
                     filesize + 10]
 
-    with open(testfile, 'rb') as pyfid:
+    with open(testfile, 'rb') as pyfid, open(testfile, 'rb') as pyfid2:
+        cfid = fdopen(pyfid.fileno(), 'rb')
 
         assert not zran.zran_init(&index,
-                                  <PyObject*>pyfid,
+                                  cfid,
+                                  <PyObject*>pyfid2,
                                   indexSpacing,
                                   32768,
                                   131072,
@@ -572,10 +590,12 @@ def test_sequential_seek_to_end(testfile, nelems, niters):
     seek_points = np.sort(seek_points)
     indexSpacing = max(524288, filesize // 2000)
 
-    with open(testfile, 'rb') as pyfid:
+    with open(testfile, 'rb') as pyfid, open(testfile, 'rb') as pyfid2:
+        cfid = fdopen(pyfid.fileno(), 'rb')
 
         assert not zran.zran_init(&index,
-                                  <PyObject*>pyfid,
+                                  cfid,
+                                  <PyObject*>pyfid2,
                                   indexSpacing,
                                   32768,
                                   131072,
@@ -616,10 +636,12 @@ def test_random_seek(testfile, nelems, niters, seed):
     seekpoints   = [random.randint(0, filesize) for i in range(niters)]
     indexSpacing = max(524288, filesize // 1000)
 
-    with open(testfile, 'rb') as pyfid:
+    with open(testfile, 'rb') as pyfid, open(testfile, 'rb') as pyfid2:
+        cfid = fdopen(pyfid.fileno(), 'rb')
 
         assert not zran.zran_init(&index,
-                                  <PyObject*>pyfid,
+                                  cfid,
+                                  <PyObject*>pyfid2,
                                   indexSpacing,
                                   32768,
                                   131072,
@@ -648,10 +670,12 @@ def test_read_all(testfile, nelems, use_mmap):
     buf    = ReadBuffer(filesize, use_mmap=use_mmap)
     buffer = buf.buffer
 
-    with open(testfile, 'rb') as pyfid:
+    with open(testfile, 'rb') as pyfid, open(testfile, 'rb') as pyfid2:
+        cfid = fdopen(pyfid.fileno(), 'rb')
 
         assert not zran.zran_init(&index,
-                                  <PyObject*>pyfid,
+                                  cfid,
+                                  <PyObject*>pyfid2,
                                   indexSpacing,
                                   32768,
                                   131072,
@@ -682,10 +706,12 @@ def test_seek_then_read_block(testfile, nelems, niters, seed, use_mmap):
     cdef void             *buffer = buf.buffer
     cdef np.npy_intp       nelemsp
 
-    with open(testfile, 'rb') as pyfid:
+    with open(testfile, 'rb') as pyfid, open(testfile, 'rb') as pyfid2:
+        cfid = fdopen(pyfid.fileno(), 'rb')
 
         assert not zran.zran_init(&index,
-                                  <PyObject*>pyfid,
+                                  cfid,
+                                  <PyObject*>pyfid2,
                                   indexSpacing,
                                   32768,
                                   131072,
@@ -741,10 +767,12 @@ def test_random_seek_and_read(testfile, nelems, niters, seed):
     seekelems    = np.random.randint(0, nelems, niters)
     indexSpacing = max(524288, filesize // 1000)
 
-    with open(testfile, 'rb') as pyfid:
+    with open(testfile, 'rb') as pyfid, open(testfile, 'rb') as pyfid2:
+        cfid = fdopen(pyfid.fileno(), 'rb')
 
         assert not zran.zran_init(&index,
-                                  <PyObject*>pyfid,
+                                  cfid,
+                                  <PyObject*>pyfid2,
                                   indexSpacing,
                                   32768,
                                   131072,
@@ -779,10 +807,12 @@ def test_read_all_sequential(testfile, nelems):
     seekelems = np.random.randint(0, nelems - 1, 10000, dtype=np.uint64)
     seekelems = np.sort(seekelems)
 
-    with open(testfile, 'rb') as pyfid:
+    with open(testfile, 'rb') as pyfid, open(testfile, 'rb') as pyfid2:
+        cfid = fdopen(pyfid.fileno(), 'rb')
 
         assert not zran.zran_init(&index,
-                                  <PyObject*>pyfid,
+                                  cfid,
+                                  <PyObject*>pyfid2,
                                   indexSpacing,
                                   32768,
                                   131072,
@@ -812,10 +842,12 @@ def test_build_then_read(testfile, nelems, seed, use_mmap):
     cdef zran.zran_index_t index
     cdef void             *buffer = buf.buffer
 
-    with open(testfile, 'rb') as pyfid:
+    with open(testfile, 'rb') as pyfid, open(testfile, 'rb') as pyfid2:
+        cfid = fdopen(pyfid.fileno(), 'rb')
 
         assert not zran.zran_init(&index,
-                                  <PyObject*>pyfid,
+                                  cfid,
+                                  <PyObject*>pyfid2,
                                   indexSpacing,
                                   32768,
                                   131072,
@@ -861,15 +893,17 @@ def test_readbuf_spacing_sizes(testfile, nelems, niters, seed):
 
     for sbi, (spacing, bufsize) in enumerate(it.product(spacings, bufsizes)):
 
-        with open(testfile, 'rb') as pyfid:
+        with open(testfile, 'rb') as pyfid, open(testfile, 'rb') as pyfid2:
 
             print('{} / {}: spacing={}, bufsize={} ... '.format(
                 sbi,
                 len(spacings) * len(bufsizes),
                 spacing, bufsize), end='')
 
+            cfid = fdopen(pyfid.fileno(), 'rb')
 
             assert not zran.zran_init(&index,
+                                      cfid,
                                       <PyObject*>pyfid,
                                       spacing,
                                       32768,
@@ -906,10 +940,12 @@ def test_export_then_import(testfile):
     readbufSize  = 131072
     flag         = 0
 
-    with open(testfile, 'rb') as pyfid:
+    with open(testfile, 'rb') as pyfid, open(testfile, 'rb') as pyfid2:
+        cfid = fdopen(pyfid.fileno(), 'rb')
 
         assert not zran.zran_init(&index1,
-                                  <PyObject*>pyfid,
+                                  cfid,
+                                  <PyObject*>pyfid2,
                                   indexSpacing,
                                   windowSize,
                                   readbufSize,
@@ -917,20 +953,24 @@ def test_export_then_import(testfile):
 
         assert not zran.zran_build_index(&index1, 0, 0)
 
-        with open(testfile + '.idx.tmp', 'wb') as pyexportfid:
-            ret  = zran.zran_export_index(&index1, <PyObject*>pyexportfid)
+        with open(testfile + '.idx.tmp', 'wb') as pyexportfid, open(testfile + '2.idx.tmp', 'wb') as pyexportfid2:
+            cfid = fdopen(pyexportfid.fileno(), 'ab')
+            ret  = zran.zran_export_index(&index1, cfid, <PyObject*>pyexportfid2)
             assert not ret, str(ret)
 
-    with open(testfile, 'rb') as pyfid:
+    with open(testfile, 'rb') as pyfid, open(testfile, 'rb') as pyfid2:
+        cfid = fdopen(pyfid.fileno(), 'rb')
         assert not zran.zran_init(&index2,
-                                  <PyObject*>pyfid,
+                                  cfid,
+                                  <PyObject*>pyfid2,
                                   indexSpacing,
                                   windowSize,
                                   readbufSize,
                                   flag)
 
-        with open(testfile + '.idx.tmp', 'rb') as pyexportfid:
-            ret  = zran.zran_import_index(&index2, <PyObject*>pyexportfid)
+        with open(testfile + '.idx.tmp', 'rb') as pyexportfid, open(testfile + '2.idx.tmp', 'rb') as pyexportfid2:
+            cfid = fdopen(pyexportfid.fileno(), 'rb')
+            ret  = zran.zran_import_index(&index2, cfid, <PyObject*>pyexportfid2)
             assert not ret, str(ret)
 
         assert index2.compressed_size   == index1.compressed_size
@@ -976,9 +1016,11 @@ def test_export_import_no_points():
         with gzip.open('data.gz', 'wb') as f:
             f.write(data.tostring())
 
-        with open('data.gz', 'rb')  as pyfid:
+        with open('data.gz', 'rb')  as pyfid, open('data.gz', 'rb')  as pyfid2:
+            cfid = fdopen(pyfid.fileno(), 'rb')
             assert zran.zran_init(&index,
-                                  <PyObject*>pyfid,
+                                  cfid,
+                                  <PyObject*>pyfid2,
                                   1048576,
                                   32768,
                                   131072,
@@ -989,20 +1031,24 @@ def test_export_import_no_points():
             pybuf = <bytes>(<char *>buffer)[:100]
             assert np.all(np.frombuffer(pybuf, dtype=np.uint8) == data)
 
-            with open('data.gz.index', 'wb') as pyidxfid:
-                assert zran.zran_export_index(&index, <PyObject*>pyidxfid) == 0
+            with open('data.gz.index', 'wb') as pyidxfid, open('data2.gz.index', 'wb') as pyidxfid2:
+                cidxfid = fdopen(pyidxfid.fileno(), 'wb')
+                assert zran.zran_export_index(&index, cidxfid, <PyObject*>pyidxfid2) == 0
             zran.zran_free(&index)
 
-        with open('data.gz', 'rb')  as pyfid:
+        with open('data.gz', 'rb')  as pyfid, open('data.gz', 'rb')  as pyfid2:
+            cfid = fdopen(pyfid.fileno(), 'rb')
             assert zran.zran_init(&index,
-                                  <PyObject*>pyfid,
+                                  cfid,
+                                  <PyObject*>pyfid2,
                                   1048576,
                                   32768,
                                   131072,
                                   0) == 0
 
-            with open('data.gz.index', 'rb') as pyidxfid:
-                assert zran.zran_import_index(&index, <PyObject*>pyidxfid) == 0
+            with open('data.gz.index', 'rb') as pyidxfid, open('data2.gz.index', 'rb') as pyidxfid2:
+                cidxfid = fdopen(pyidxfid.fileno(), 'rb')
+                assert zran.zran_import_index(&index, cidxfid, <PyObject*>pyidxfid2) == 0
             assert index.npoints == 0
 
             assert zran.zran_read(&index, buffer, 100)  == 100

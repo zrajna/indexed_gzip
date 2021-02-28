@@ -184,6 +184,10 @@ struct _zran_point {
 };
 
 
+/*
+ * These internal methods are used to apply file operations on
+ * file-like objects (see zran_index_t.f) that are passed to zran.
+ */
 size_t _fread_python(void *ptr, size_t size, size_t nmemb, PyObject *f);
 long int _ftell_python(PyObject *f);
 int _fseek_python(PyObject *f, long int offset, int whence);

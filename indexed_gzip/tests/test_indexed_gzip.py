@@ -158,6 +158,7 @@ def test_size_multiple_of_readbuf():
 def test_picklable():
     ctest_indexed_gzip.test_picklable()
 
+@pytest.mark.slow_test
 def test_copyable():
     ctest_indexed_gzip.test_copyable()
 

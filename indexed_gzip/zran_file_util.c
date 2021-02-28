@@ -64,17 +64,16 @@ size_t _fread_python(void *ptr, size_t size, size_t nmemb, PyObject *f) {
 /*
  * Implements a method analogous to ftell that is performed on Python file-like objects.
  */
-long int _ftell_python(PyObject *f) {
+uint64_t _ftell_python(PyObject *f) {
     PyObject *data;
-    long int result;
+    uint64_t result;
     if ((data = PyObject_CallMethod(f, "tell", NULL)) == NULL) {
         Py_DECREF(data);
         return -1;
     }
-    if ((result = PyLong_AsLong(data)) == -1) {
-        Py_DECREF(data);
-        return -1;
-    }
+    // TODO: Add error handling for this statement using PyErr_Occurred
+    result = PyLong_AsUnsignedLong(data);
+
     Py_DECREF(data);
     return result;
 }
@@ -95,7 +94,7 @@ int _fseek_python(PyObject *f, long int offset, int whence) {
 /*
  * Implements a method analogous to feof that is performed on Python file-like objects.
  */
-int _feof_python(PyObject *f, int64_t size) {
+int _feof_python(PyObject *f, uint64_t size) {
     return _ftell_python(f) == size;
 }
 
@@ -174,7 +173,7 @@ int fseek_(FILE *fd, PyObject *f, long int offset, int whence) {
 /*
  * Calls ftell on fd if specified, otherwise the Python-specific method on f.
  */
-int ftell_(FILE *fd, PyObject *f) {
+uint64_t ftell_(FILE *fd, PyObject *f) {
     return fd ? FTELL(fd): _ftell_python(f);
 }
 
@@ -188,7 +187,7 @@ size_t fread_(void *ptr, size_t size, size_t nmemb, FILE *fd, PyObject *f) {
 /*
  * Calls feof on fd if specified, otherwise the Python-specific method on f.
  */
-int feof_(FILE *fd, PyObject *f, int64_t size) {
+int feof_(FILE *fd, PyObject *f, uint64_t size) {
     return fd ? feof(fd): _feof_python(f, size);
 }
 

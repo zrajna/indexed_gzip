@@ -2645,7 +2645,11 @@ int zran_import_index(zran_index_t *index,
     /* Read magic bytes, and check for file errors and EOF. */
     f_ret = fread_(magic_bytes, sizeof(magic_bytes), 1, fd, f);
 
-    if (feof_(fd, f, compressed_size))   goto eof;
+    // We can't check for EOF if we only have a Python file-like object (f) here,
+    // as we haven't read compressed_size yet. Thus, we only call the feof
+    // function on fd if it is provided.
+    if (fd != NULL && feof(fd))   goto eof;
+    
     if (ferror_(fd, f)) goto read_error;
     if (f_ret != 1) goto read_error;
 

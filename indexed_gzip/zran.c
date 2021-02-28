@@ -20,7 +20,7 @@
 #include <Python.h>
 
 #ifdef _WIN32
-// #define FSEEK _fseeki64
+#define FSEEK _fseeki64
 #define FTELL _ftelli64
 #include "windows.h"
 #include "io.h"
@@ -33,12 +33,12 @@ static int is_readonly(FILE *fd, PyObject *f)
 }
 #else
 #include <fcntl.h>
-// #define FSEEK fseeko
+#define FSEEK fseeko
 #define FTELL ftello
 /* Check if file is read-only */
 static int is_readonly(FILE *fd, PyObject *f)
 {
-    return 1;
+    return fd ? (fcntl(fileno(fd), F_GETFL) & O_ACCMODE) == O_RDONLY : 1;
 }
 
 
@@ -97,6 +97,7 @@ int _feof_python(PyObject *f, int64_t size) {
 }
 
 int _ferror_python(PyObject *f) {
+    // TODO: better error handling for Python.
     return 0;
 }
 
@@ -148,51 +149,31 @@ int ferror_(FILE *fd, PyObject *f) {
 }
 
 int fseek_(FILE *fd, PyObject *f, long int offset, int whence) {
-    // int one = fseeko(fd, offset, whence);
-    int two = _fseek_python(f, offset, whence);
-    return two;
+    return fd ? FSEEK(fd, offset, whence): _fseek_python(f, offset, whence);
 }
 
 int ftell_(FILE *fd, PyObject *f) {
-    // int one = ftello(fd);
-    int two = _ftell_python(f);
-    return two;
+    return fd ? FTELL(fd): _ftell_python(f);
 }
 
 size_t fread_(void *ptr, size_t size, size_t nmemb, FILE *fd, PyObject *f) {
-    char* ptr2 = malloc(nmemb * size);
-    size_t two = _fread_python(ptr, size, nmemb, f);
-    // size_t one = fread(ptr2, size, nmemb, fd);
-    // if (one != two) {
-    //     printf("not equal, called with size %zu, nmemb %zu, got %zu, %zu\n", size, nmemb, one, two);
-    // }
-    free(ptr2);
-    return two;
+    return fd ? fread(ptr, size, nmemb, fd): _fread_python(ptr, size, nmemb, f);
 }
 
 int feof_(FILE *fd, PyObject *f, int64_t size) {
-    // int one = feof(fd);
-    int two = _feof_python(f, size);
-    return two;
+    return fd ? feof(fd): _feof_python(f, size);
 }
 
 int fflush_(FILE *fd, PyObject *f) {
-    // int one = fflush(fd);
-    int two = _fflush_python(f);
-    return two;
+    return fd ? fflush(fd): _fflush_python(f);
 }
 
 size_t fwrite_(const void *ptr, size_t size, size_t nmemb, FILE *fd, PyObject *f) {
-    // int one = fwrite(ptr, size, nmemb, fd);
-    int two = _fwrite_python(ptr, size, nmemb, f);
-    // printf("fwrite_ returned: %d", two);
-    return two;
+    return fd ? fwrite(ptr, size, nmemb, fd): _fwrite_python(ptr, size, nmemb, f);
 }
 
 int getc_(FILE *fd, PyObject *f) {
-    // int one = getc(fd);
-    int two = _getc_python(f);
-    return two;
+    return fd ? getc(fd): _getc_python(f);
 }
 
 

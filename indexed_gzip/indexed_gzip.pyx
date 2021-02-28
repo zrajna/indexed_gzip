@@ -363,7 +363,10 @@ cdef class _IndexedGzipFile:
         if not drop_handles:
             if fileobj is None:
                 fileobj = builtin_open(filename, mode)
-            fd = fdopen(fileobj.fileno(), 'rb')
+            try:
+                fd  = fdopen(fileobj.fileno(), 'wb')
+            except io.UnsupportedOperation:
+                fd  = NULL
 
 
         self.spacing          = spacing
@@ -384,7 +387,7 @@ cdef class _IndexedGzipFile:
         with self.__file_handle():
             if zran.zran_init(index=&self.index,
                               fd=self.index.fd,
-                              f=<PyObject*>self.index.f,
+                              f=<PyObject*>self.index.f if self.index.fd == NULL else NULL,
                               spacing=spacing,
                               window_size=window_size,
                               readbuf_size=readbuf_size,
@@ -892,8 +895,11 @@ cdef class _IndexedGzipFile:
                     'File should be opened in writeable binary mode.')
 
         try:
-            fd  = fdopen(fileobj.fileno(), 'wb')
-            ret = zran.zran_export_index(&self.index, fd, <PyObject*>fileobj)
+            try:
+                fd  = fdopen(fileobj.fileno(), 'wb')
+            except io.UnsupportedOperation:
+                fd  = NULL
+            ret = zran.zran_export_index(&self.index, fd, <PyObject*>fileobj if fd == NULL else NULL)
             if ret != zran.ZRAN_EXPORT_OK:
                 raise ZranError('export_index returned error: {}'.format(ret))
 
@@ -934,8 +940,11 @@ cdef class _IndexedGzipFile:
                     'File should be opened read-only binary mode.')
 
         try:
-            fd  = fdopen(fileobj.fileno(), 'rb')
-            ret = zran.zran_import_index(&self.index, fd, <PyObject*>fileobj)
+            try:
+                fd  = fdopen(fileobj.fileno(), 'rb')
+            except io.UnsupportedOperation:
+                fd  = NULL
+            ret = zran.zran_import_index(&self.index, fd, <PyObject*>fileobj if fd == NULL else NULL)
             if ret != zran.ZRAN_IMPORT_OK:
                 raise ZranError('import_index returned error: {}'.format(ret))
 

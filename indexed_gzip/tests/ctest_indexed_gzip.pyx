@@ -217,6 +217,7 @@ def test_accept_filename_or_fileobj(testfile, nelems):
     f    = None
     gzf1 = None
     gzf2 = None
+    gzf3 = None
 
     try:
         f    = open(testfile, 'rb')

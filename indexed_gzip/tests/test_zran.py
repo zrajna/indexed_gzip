@@ -21,8 +21,7 @@ if not sys.platform.startswith("win"):
     pytestmark = pytest.mark.zran_test
 
     def test_file_funcs(testfile):
-        for no_fds in (True, False):
-            ctest_zran.test_file_funcs(testfile, no_fds)
+        ctest_zran.test_file_funcs(testfile)
 
     def test_init(testfile):
         for no_fds in (True, False):

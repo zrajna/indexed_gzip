@@ -33,10 +33,6 @@ def pytest_addoption(parser):
                      type=int,
                      help='Seed for random number generator')
 
-    parser.addoption('--no_fds',
-                     action='store_true',
-                     help='Don\'t send file descriptors to zran in the zran tests; send Python file-like objects instead.')
-
     parser.addoption('--testfile',
                      action='store',
                      help='Name of test file')
@@ -89,10 +85,6 @@ def seed(request):
     np.random.seed(seed)
     print('Seed for random number generator: {}'.format(seed))
     return seed
-
-@pytest.fixture
-def no_fds(request):
-    return request.config.getoption('--no_fds')
 
 
 @pytest.fixture

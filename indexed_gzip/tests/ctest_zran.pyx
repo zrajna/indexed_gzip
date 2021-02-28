@@ -1002,7 +1002,7 @@ def test_export_then_import(testfile):
         zran.zran_free(&index2)
 
 
-def test_export_import_no_points():
+def test_export_import_no_points(no_fds):
 
     cdef zran.zran_index_t index
     cdef void             *buffer

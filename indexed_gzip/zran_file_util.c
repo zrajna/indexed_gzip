@@ -136,7 +136,7 @@ size_t _fwrite_python(const void *ptr, size_t size, size_t nmemb, PyObject *f) {
         return 0;
     }
     Py_ssize_t len;
-    if ((len = PyLong_AsSize_t(data)) == -1) {
+    if ((len = PyLong_AsSsize_t(data)) == -1) {
         Py_DECREF(input);
         Py_DECREF(data);
         return 0;

@@ -831,7 +831,6 @@ int _zran_get_point_with_expand(zran_index_t  *index,
          * Expand the index
          */
         if (_zran_expand_index(index, expand) != 0) {
-            printf("failed 2");
             goto fail;
         }
 
@@ -1058,7 +1057,6 @@ int _zran_init_zlib_inflate(zran_index_t *index,
     if (point == NULL) seek_loc = 0;
     else               seek_loc = point->cmp_offset - (point->bits > 0);
 
-    // printf("fseek inflate: %zd, %d\n", seek_loc, SEEK_SET);
     if (fseek_(index->fd, index->f, seek_loc, SEEK_SET) != 0)
         goto fail;
 
@@ -2119,7 +2117,6 @@ int zran_seek(zran_index_t  *index,
         *point = seek_point;
     }
 
-    // printf("fseek zran_seek: %zd, %d\n", offset, SEEK_SET);
     if (fseek_(index->fd, index->f, offset, SEEK_SET) != 0)
         goto fail;
 
@@ -2648,7 +2645,7 @@ int zran_import_index(zran_index_t *index,
     /* Read magic bytes, and check for file errors and EOF. */
     f_ret = fread_(magic_bytes, sizeof(magic_bytes), 1, fd, f);
 
-    // if (feof_(fd, f, compressed_size))   goto eof;
+    if (feof_(fd, f, compressed_size))   goto eof;
     if (ferror_(fd, f)) goto read_error;
     if (f_ret != 1) goto read_error;
 

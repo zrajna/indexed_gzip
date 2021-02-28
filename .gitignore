@@ -1,4 +1,4 @@
-test.env
+*.env
 *.gz
 *.egg-info
 *.pyc

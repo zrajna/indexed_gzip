@@ -137,8 +137,7 @@ size_t _fwrite_python(const void *ptr, size_t size, size_t nmemb, PyObject *f) {
 
 fail:
     Py_DECREF(input);
-    if (data != NULL)
-        Py_DECREF(data);
+    Py_XDECREF(data);
     return 0;
 }
 

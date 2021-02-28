@@ -12,8 +12,6 @@ from cpython.ref cimport PyObject
 
 cdef extern from "zran_file_util.h":
 
-    int is_readonly(FILE *fd, PyObject *f)
-
     size_t _fread_python(void *ptr, size_t size, size_t nmemb, PyObject *f)
     
     uint64_t _ftell_python(PyObject *f)

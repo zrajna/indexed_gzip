@@ -14,9 +14,6 @@
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
 
-/* Check if file is read-only */
-int is_readonly(FILE *fd, PyObject *f);
-
 /*
  * These internal methods are used to apply file operations on
  * Python file-like objects that are passed to zran.

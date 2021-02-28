@@ -19,19 +19,34 @@
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
 
-#include "zran.h"
-#include "zran_file_util.h"
-
 #ifdef _WIN32
 #include "windows.h"
 #include "io.h"
+static int is_readonly(FILE *fd, PyObject *f)
+{
+    /* Can't find a way to do this correctly under Windows and
+       the check is not required anyway since the underlying
+       Python module checks it already */
+    return 1;
+}
 #else
+#include <fcntl.h>
+/* Check if file is read-only */
+static int is_readonly(FILE *fd, PyObject *f)
+{
+    return fd != NULL ? (fcntl(fileno(fd), F_GETFL) & O_ACCMODE) == O_RDONLY : 1;
+}
+
+
 static uint32_t max(uint32_t a, uint32_t b) {
 
   if (a > b) return a;
   else       return b;
 }
 #endif
+
+#include "zran.h"
+#include "zran_file_util.h"
 
 #ifdef NO_C99
 static double round(double val)

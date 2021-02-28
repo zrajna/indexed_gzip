@@ -22,22 +22,9 @@
 #define FTELL _ftelli64
 #include "windows.h"
 #include "io.h"
-int is_readonly(FILE *fd, PyObject *f)
-{
-    /* Can't find a way to do this correctly under Windows and
-       the check is not required anyway since the underlying
-       Python module checks it already */
-    return 1;
-}
 #else
-#include <fcntl.h>
 #define FSEEK fseeko
 #define FTELL ftello
-/* Check if file is read-only */
-int is_readonly(FILE *fd, PyObject *f)
-{
-    return fd != NULL ? (fcntl(fileno(fd), F_GETFL) & O_ACCMODE) == O_RDONLY : 1;
-}
 #endif
 
 /*

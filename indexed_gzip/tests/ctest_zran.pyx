@@ -37,7 +37,8 @@ from libc.stdio  cimport (SEEK_SET,
 
 from libc.string cimport memset, memcmp
 
-from cpython.exc cimport PyErr_Clear
+from cpython.exc cimport (PyErr_Clear,
+                          PyErr_SetString)
 from cpython.mem cimport (PyMem_Malloc,
                           PyMem_Realloc,
                           PyMem_Free)
@@ -217,16 +218,14 @@ cdef class ReadBuffer:
             os.close( self.mmap_fd)
             os.remove(self.mmap_path)
 
-def test_file_funcs(testfile):
-    """Tests Python wrapper C functions."""
-    def error_fn(*args, **kwargs):
-        raise Exception("Error")
+def error_fn(*args, **kwargs):
+    raise Exception("Error")
 
-    def return_fn(return_value):
-        return lambda *args, **kwargs: return_value
+def return_fn(return_value):
+    return lambda *args, **kwargs: return_value
 
-
-    # fread
+def test_fread():
+    """Tests Python wrapper C function for fread."""
     f = BytesIO(b"abc")
     cdef char buf[3]
     elems_read = zran_file_util._fread_python(buf, 1, 3, <PyObject*>f)
@@ -242,21 +241,20 @@ def test_file_funcs(testfile):
         assert zran_file_util._ferror_python(<PyObject*>f) == 1
         PyErr_Clear()
 
-    # ftell
+def test_ftell():
     f = BytesIO(b"abc")
     assert zran_file_util._ftell_python(<PyObject*>f) == 0
     f.seek(2)
     assert zran_file_util._ftell_python(<PyObject*>f) == 2
     assert zran_file_util._ferror_python(<PyObject*>f) == 0
 
-    # ftell error conditions
     for fn in [error_fn, return_fn(None)]:
         f.tell = fn
         assert zran_file_util._ftell_python(<PyObject*>f) == -1
         assert zran_file_util._ferror_python(<PyObject*>f) == 1
         PyErr_Clear()
 
-    # fseek
+def test_fseek():
     f = BytesIO(b"abc")
     zran_file_util._fseek_python(<PyObject*>f, 1, SEEK_SET)
     assert f.tell() == 1
@@ -266,14 +264,13 @@ def test_file_funcs(testfile):
     assert f.tell() == 100
     assert zran_file_util._ferror_python(<PyObject*>f) == 0
 
-    # fseek error conditions
     for fn in [error_fn]:
         f.seek = fn
         assert zran_file_util._fseek_python(<PyObject*>f, 1, SEEK_SET) == -1
         assert zran_file_util._ferror_python(<PyObject*>f) == 1
         PyErr_Clear()
 
-    # feof
+def test_feof():
     f = BytesIO(b"abc")
     f.seek(0)
     assert zran_file_util._feof_python(<PyObject*>f, 3) == 0
@@ -281,23 +278,26 @@ def test_file_funcs(testfile):
     assert zran_file_util._feof_python(<PyObject*>f, 3) == 1
     assert zran_file_util._ferror_python(<PyObject*>f) == 0
 
-    # ferror
+def test_ferror():
     f = BytesIO(b"abc")
     assert zran_file_util._ferror_python(<PyObject*>f) == 0
+    PyErr_SetString(ValueError, "Error")
+    assert zran_file_util._ferror_python(<PyObject*>f) == 1
+    PyErr_Clear()
+    assert zran_file_util._ferror_python(<PyObject*>f) == 0
 
-    # fflush
+def test_fflush():
     f = BytesIO(b"abc")
     zran_file_util._fflush_python(<PyObject*>f)
     assert zran_file_util._ferror_python(<PyObject*>f) == 0
 
-    # fflush error conditions
     for fn in [error_fn]:
         f.flush = fn
         assert zran_file_util._fflush_python(<PyObject*>f) == -1
         assert zran_file_util._ferror_python(<PyObject*>f) == 1
         PyErr_Clear()
 
-    # fwrite
+def test_fwrite():
     f = BytesIO(b"abc")
     cdef char* inp = 'de'
     elems_written = zran_file_util._fwrite_python(inp, 1, 2, <PyObject*>f)
@@ -307,7 +307,6 @@ def test_file_funcs(testfile):
     f.seek(0)
     assert f.read() == b"dec"
 
-    # fwrite error conditions
     # In Python 2, .write() returns None, so it isn't supposed to cause an error.
     for fn in [error_fn, return_fn(None)] if sys.version_info[0] >= 3 else [error_fn]:
         f.write = fn
@@ -316,6 +315,7 @@ def test_file_funcs(testfile):
         assert zran_file_util._ferror_python(<PyObject*>f) == 1
         PyErr_Clear()
 
+def test_getc():
     # getc
     f = BytesIO(b"dbc")
     assert zran_file_util._getc_python(<PyObject*>f) == ord(b"d")

@@ -17,11 +17,31 @@ if not sys.platform.startswith("win"):
 
     from . import ctest_zran
 
-
     pytestmark = pytest.mark.zran_test
 
-    def test_file_funcs(testfile):
-        ctest_zran.test_file_funcs(testfile)
+    def test_fread():
+        ctest_zran.test_fread()
+
+    def test_ftell():
+        ctest_zran.test_ftell()
+
+    def test_fseek():
+        ctest_zran.test_fseek()
+
+    def test_feof():
+        ctest_zran.test_feof()
+
+    def test_ferror():
+        ctest_zran.test_ferror()
+
+    def test_fflush():
+        ctest_zran.test_fflush()
+
+    def test_fwrite():
+        ctest_zran.test_fwrite()
+
+    def test_getc():
+        ctest_zran.test_getc()
 
     def test_init(testfile):
         for no_fds in (True, False):
@@ -52,15 +72,15 @@ if not sys.platform.startswith("win"):
             ctest_zran.test_seek_beyond_end(testfile, no_fds, nelems)
 
     def test_sequential_seek_to_end(testfile, nelems, niters):
-        for no_fds in (True, False):    
+        for no_fds in (True, False):
             ctest_zran.test_sequential_seek_to_end(testfile, no_fds, nelems, niters)
 
     def test_random_seek(testfile, nelems, niters, seed):
-        for no_fds in (True, False):    
+        for no_fds in (True, False):
             ctest_zran.test_random_seek(testfile, no_fds, nelems, niters, seed)
 
     def test_read_all(testfile, nelems, use_mmap):
-        for no_fds in (True, False):    
+        for no_fds in (True, False):
             ctest_zran.test_read_all(testfile, no_fds, nelems, use_mmap)
 
     @pytest.mark.slow_test

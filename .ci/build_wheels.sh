@@ -16,7 +16,7 @@ export CIBW_ENVIRONMENT_WINDOWS="ZLIB_HOME='$ZLIB_HOME'"
 export CIBW_TEST_REQUIRES="cython pytest pytest-cov coverage numpy nibabel"
 
 # Disable pypy builds
-export CIBW_SKIP="pp* cp27-*"
+export CIBW_SKIP="pp*"
 
 # Pytest makes it *very* awkward to run tests
 # from an installed package, and still find/

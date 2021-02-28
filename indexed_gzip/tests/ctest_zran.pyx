@@ -234,7 +234,7 @@ def test_fread():
     assert buf[0:3] == b"abc"
     assert zran_file_util._ferror_python(<PyObject*>f) == 0
 
-    # fread error conditions: if f.read raises an exception or returns invalid values
+    # fread error conditions:
     for fn in [error_fn, return_fn(None)]:
         f.read = fn
         assert zran_file_util._fread_python(buf, 1, 3, <PyObject*>f) == 0
@@ -248,6 +248,7 @@ def test_ftell():
     assert zran_file_util._ftell_python(<PyObject*>f) == 2
     assert zran_file_util._ferror_python(<PyObject*>f) == 0
 
+    # ftell error conditions
     for fn in [error_fn, return_fn(None)]:
         f.tell = fn
         assert zran_file_util._ftell_python(<PyObject*>f) == -1
@@ -264,6 +265,7 @@ def test_fseek():
     assert f.tell() == 100
     assert zran_file_util._ferror_python(<PyObject*>f) == 0
 
+    # fseek error conditions
     for fn in [error_fn]:
         f.seek = fn
         assert zran_file_util._fseek_python(<PyObject*>f, 1, SEEK_SET) == -1
@@ -291,6 +293,7 @@ def test_fflush():
     zran_file_util._fflush_python(<PyObject*>f)
     assert zran_file_util._ferror_python(<PyObject*>f) == 0
 
+    # fflush error conditions
     for fn in [error_fn]:
         f.flush = fn
         assert zran_file_util._fflush_python(<PyObject*>f) == -1
@@ -307,7 +310,9 @@ def test_fwrite():
     f.seek(0)
     assert f.read() == b"dec"
 
-    # In Python 2, .write() returns None, so it isn't supposed to cause an error.
+    # fwrite error conditions
+    # In Python 2, .write() returns None, so its return value
+    # is ignored by _fwrite_python and can't cause an error.
     for fn in [error_fn, return_fn(None)] if sys.version_info[0] >= 3 else [error_fn]:
         f.write = fn
         result = zran_file_util._fwrite_python(inp, 1, 2, <PyObject*>f)
@@ -316,7 +321,6 @@ def test_fwrite():
         PyErr_Clear()
 
 def test_getc():
-    # getc
     f = BytesIO(b"dbc")
     assert zran_file_util._getc_python(<PyObject*>f) == ord(b"d")
     assert zran_file_util._ferror_python(<PyObject*>f) == 0

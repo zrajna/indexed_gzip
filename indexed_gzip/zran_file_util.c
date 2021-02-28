@@ -45,26 +45,25 @@ size_t _fread_python(void *ptr, size_t size, size_t nmemb, PyObject *f) {
     return (size_t) len / size;
 
 fail:
-    Py_DECREF(data);
+    Py_XDECREF(data);
     return 0;
 }
 
 /*
  * Implements a method analogous to ftell that is performed on Python file-like objects.
  */
-uint64_t _ftell_python(PyObject *f) {
+long int _ftell_python(PyObject *f) {
     PyObject *data;
-    uint64_t result;
+    unsigned long int result;
     if ((data = PyObject_CallMethod(f, "tell", NULL)) == NULL)
         goto fail;
-    // TODO: Add error handling for this statement using PyErr_Occurred
-    result = PyLong_AsUnsignedLong(data);
-
+    if ((result = PyLong_AsUnsignedLong(data)) == (unsigned long)-1 && PyErr_Occurred())
+        goto fail;
     Py_DECREF(data);
     return result;
 
 fail:
-    Py_DECREF(data);
+    Py_XDECREF(data);
     return -1;
 }
 
@@ -79,14 +78,14 @@ int _fseek_python(PyObject *f, long int offset, int whence) {
     return 0;
 
 fail:
-    Py_DECREF(data);
+    Py_XDECREF(data);
     return -1;
 }
 
 /*
  * Implements a method analogous to feof that is performed on Python file-like objects.
  */
-int _feof_python(PyObject *f, uint64_t size) {
+int _feof_python(PyObject *f, long int size) {
     return _ftell_python(f) == size;
 }
 
@@ -94,8 +93,7 @@ int _feof_python(PyObject *f, uint64_t size) {
  * Implements a method analogous to ferror that is performed on Python file-like objects.
  */
 int _ferror_python(PyObject *f) {
-    // TODO: implement better error handling for Python, using PyErr_Occurred.
-    return 0;
+    return PyErr_Occurred() ? 1 : 0;
 }
 
 /*
@@ -108,7 +106,7 @@ int _fflush_python(PyObject *f) {
     return 0;
 
 fail:
-    Py_DECREF(data);
+    Py_XDECREF(data);
     return -1;
 }
 
@@ -124,8 +122,8 @@ size_t _fwrite_python(const void *ptr, size_t size, size_t nmemb, PyObject *f) {
     if ((data = PyObject_CallMethod(f, "write", "(O)", input)) == NULL)
         goto fail;
     #if PY_MAJOR_VERSION >= 3
-    // TODO: error handling with PyError_Occurred
-    len = PyLong_AsUnsignedLong(data);
+    if ((len = PyLong_AsUnsignedLong(data)) == (unsigned long)-1 && PyErr_Occurred())
+        goto fail;
     #else
     // In Python 2, a file object's write() method does not return the number of
     // bytes written, so let's just assume that everything has been written properly.
@@ -136,7 +134,7 @@ size_t _fwrite_python(const void *ptr, size_t size, size_t nmemb, PyObject *f) {
     return (size_t) len / size;
 
 fail:
-    Py_DECREF(input);
+    Py_XDECREF(input);
     Py_XDECREF(data);
     return 0;
 }
@@ -147,7 +145,8 @@ fail:
 int _getc_python(PyObject *f) {
     char buf [1];
     if (_fread_python(buf, 1, 1, f) == 0) {
-        // TODO: set an error indicator that can be retrieved from _ferror_python.
+        // Set an error indicator that can be retrieved from _ferror_python.
+        PyErr_SetString(PyExc_ValueError, "getc_ failed");
         return -1;
     }
     return (int) buf[0];
@@ -170,7 +169,7 @@ int fseek_(FILE *fd, PyObject *f, long int offset, int whence) {
 /*
  * Calls ftell on fd if specified, otherwise the Python-specific method on f.
  */
-uint64_t ftell_(FILE *fd, PyObject *f) {
+long int ftell_(FILE *fd, PyObject *f) {
     return fd != NULL ? FTELL(fd): _ftell_python(f);
 }
 
@@ -184,7 +183,7 @@ size_t fread_(void *ptr, size_t size, size_t nmemb, FILE *fd, PyObject *f) {
 /*
  * Calls feof on fd if specified, otherwise the Python-specific method on f.
  */
-int feof_(FILE *fd, PyObject *f, uint64_t size) {
+int feof_(FILE *fd, PyObject *f, long int size) {
     return fd != NULL ? feof(fd): _feof_python(f, size);
 }
 

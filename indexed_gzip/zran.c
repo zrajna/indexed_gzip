@@ -1658,7 +1658,9 @@ static int _zran_inflate(zran_index_t *index,
              * size is an exact multiple of
              # the read buffer size.
              */
-            if ((ftell_(index->fd, index->f) >= index->compressed_size) &&
+            long int pos = ftell_(index->fd, index->f);
+            if (pos == -1) goto fail;
+            if ((uint64_t) pos >= index->compressed_size &&
                 strm->avail_in <= 8) {
 
                 zran_log("End of file, stopping inflation\n");

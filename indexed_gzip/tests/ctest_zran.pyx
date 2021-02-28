@@ -37,6 +37,7 @@ from libc.stdio  cimport (SEEK_SET,
 
 from libc.string cimport memset, memcmp
 
+from cpython.exc cimport PyErr_Clear
 from cpython.mem cimport (PyMem_Malloc,
                           PyMem_Realloc,
                           PyMem_Free)
@@ -61,7 +62,6 @@ cimport indexed_gzip.zran as zran
 cimport indexed_gzip.zran_file_util as zran_file_util
 
 np.import_array()
-
 
 cdef read_element(zran.zran_index_t *index, element, nelems, seek=True):
 
@@ -219,6 +219,13 @@ cdef class ReadBuffer:
 
 def test_file_funcs(testfile):
     """Tests Python wrapper C functions."""
+    def error_fn(*args, **kwargs):
+        raise Exception("Error")
+
+    def return_fn(return_value):
+        return lambda *args, **kwargs: return_value
+
+
     # fread
     f = BytesIO(b"abc")
     cdef char buf[3]
@@ -226,13 +233,29 @@ def test_file_funcs(testfile):
     assert elems_read == 3
     assert f.tell() == 3
     assert buf[0:3] == b"abc"
+    assert zran_file_util._ferror_python(<PyObject*>f) == 0
+
+    # fread error conditions: if f.read raises an exception or returns invalid values
+    for fn in [error_fn, return_fn(None)]:
+        f.read = fn
+        assert zran_file_util._fread_python(buf, 1, 3, <PyObject*>f) == 0
+        assert zran_file_util._ferror_python(<PyObject*>f) == 1
+        PyErr_Clear()
 
     # ftell
     f = BytesIO(b"abc")
     assert zran_file_util._ftell_python(<PyObject*>f) == 0
     f.seek(2)
     assert zran_file_util._ftell_python(<PyObject*>f) == 2
-    
+    assert zran_file_util._ferror_python(<PyObject*>f) == 0
+
+    # ftell error conditions
+    for fn in [error_fn, return_fn(None)]:
+        f.tell = fn
+        assert zran_file_util._ftell_python(<PyObject*>f) == -1
+        assert zran_file_util._ferror_python(<PyObject*>f) == 1
+        PyErr_Clear()
+
     # fseek
     f = BytesIO(b"abc")
     zran_file_util._fseek_python(<PyObject*>f, 1, SEEK_SET)
@@ -241,6 +264,14 @@ def test_file_funcs(testfile):
     assert f.tell() == 2
     zran_file_util._fseek_python(<PyObject*>f, 100, SEEK_SET)
     assert f.tell() == 100
+    assert zran_file_util._ferror_python(<PyObject*>f) == 0
+
+    # fseek error conditions
+    for fn in [error_fn]:
+        f.seek = fn
+        assert zran_file_util._fseek_python(<PyObject*>f, 1, SEEK_SET) == -1
+        assert zran_file_util._ferror_python(<PyObject*>f) == 1
+        PyErr_Clear()
 
     # feof
     f = BytesIO(b"abc")
@@ -248,6 +279,7 @@ def test_file_funcs(testfile):
     assert zran_file_util._feof_python(<PyObject*>f, 3) == 0
     f.seek(3)
     assert zran_file_util._feof_python(<PyObject*>f, 3) == 1
+    assert zran_file_util._ferror_python(<PyObject*>f) == 0
 
     # ferror
     f = BytesIO(b"abc")
@@ -256,6 +288,14 @@ def test_file_funcs(testfile):
     # fflush
     f = BytesIO(b"abc")
     zran_file_util._fflush_python(<PyObject*>f)
+    assert zran_file_util._ferror_python(<PyObject*>f) == 0
+
+    # fflush error conditions
+    for fn in [error_fn]:
+        f.flush = fn
+        assert zran_file_util._fflush_python(<PyObject*>f) == -1
+        assert zran_file_util._ferror_python(<PyObject*>f) == 1
+        PyErr_Clear()
 
     # fwrite
     f = BytesIO(b"abc")
@@ -263,13 +303,30 @@ def test_file_funcs(testfile):
     elems_written = zran_file_util._fwrite_python(inp, 1, 2, <PyObject*>f)
     assert elems_written == 2
     assert f.tell() == 2
+    assert zran_file_util._ferror_python(<PyObject*>f) == 0
     f.seek(0)
     assert f.read() == b"dec"
+
+    # fwrite error conditions
+    # In Python 2, .write() returns None, so it isn't supposed to cause an error.
+    for fn in [error_fn, return_fn(None)] if sys.version_info[0] >= 3 else [error_fn]:
+        f.write = fn
+        result = zran_file_util._fwrite_python(inp, 1, 2, <PyObject*>f)
+        assert result == 0, result
+        assert zran_file_util._ferror_python(<PyObject*>f) == 1
+        PyErr_Clear()
 
     # getc
     f = BytesIO(b"dbc")
     assert zran_file_util._getc_python(<PyObject*>f) == ord(b"d")
+    assert zran_file_util._ferror_python(<PyObject*>f) == 0
 
+    # getc error conditions
+    for fn in [error_fn, return_fn(None), return_fn(b"")]:
+        f.read = fn
+        assert zran_file_util._getc_python(<PyObject*>f) == -1
+        assert zran_file_util._ferror_python(<PyObject*>f) == 1
+        PyErr_Clear()
 
 def test_init(testfile, no_fds):
     """Tests a bunch of permutations of the parameters to zran_init. """

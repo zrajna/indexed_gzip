@@ -36,7 +36,7 @@ int is_readonly(FILE *fd, PyObject *f)
 /* Check if file is read-only */
 int is_readonly(FILE *fd, PyObject *f)
 {
-    return fd ? (fcntl(fileno(fd), F_GETFL) & O_ACCMODE) == O_RDONLY : 1;
+    return fd != NULL ? (fcntl(fileno(fd), F_GETFL) & O_ACCMODE) == O_RDONLY : 1;
 }
 #endif
 
@@ -160,54 +160,54 @@ int _getc_python(PyObject *f) {
  * Calls ferror on fd if specified, otherwise the Python-specific method on f.
  */
 int ferror_(FILE *fd, PyObject *f) {
-    return fd ? ferror(fd): _ferror_python(f);
+    return fd != NULL ? ferror(fd): _ferror_python(f);
 }
 
 /*
  * Calls fseek on fd if specified, otherwise the Python-specific method on f.
  */
 int fseek_(FILE *fd, PyObject *f, long int offset, int whence) {
-    return fd ? FSEEK(fd, offset, whence): _fseek_python(f, offset, whence);
+    return fd != NULL ? FSEEK(fd, offset, whence): _fseek_python(f, offset, whence);
 }
 
 /*
  * Calls ftell on fd if specified, otherwise the Python-specific method on f.
  */
 uint64_t ftell_(FILE *fd, PyObject *f) {
-    return fd ? FTELL(fd): _ftell_python(f);
+    return fd != NULL ? FTELL(fd): _ftell_python(f);
 }
 
 /*
  * Calls fread on fd if specified, otherwise the Python-specific method on f.
  */
 size_t fread_(void *ptr, size_t size, size_t nmemb, FILE *fd, PyObject *f) {
-    return fd ? fread(ptr, size, nmemb, fd): _fread_python(ptr, size, nmemb, f);
+    return fd != NULL ? fread(ptr, size, nmemb, fd): _fread_python(ptr, size, nmemb, f);
 }
 
 /*
  * Calls feof on fd if specified, otherwise the Python-specific method on f.
  */
 int feof_(FILE *fd, PyObject *f, uint64_t size) {
-    return fd ? feof(fd): _feof_python(f, size);
+    return fd != NULL ? feof(fd): _feof_python(f, size);
 }
 
 /*
  * Calls fflush on fd if specified, otherwise the Python-specific method on f.
  */
 int fflush_(FILE *fd, PyObject *f) {
-    return fd ? fflush(fd): _fflush_python(f);
+    return fd != NULL ? fflush(fd): _fflush_python(f);
 }
 
 /*
  * Calls fwrite on fd if specified, otherwise the Python-specific method on f.
  */
 size_t fwrite_(const void *ptr, size_t size, size_t nmemb, FILE *fd, PyObject *f) {
-    return fd ? fwrite(ptr, size, nmemb, fd): _fwrite_python(ptr, size, nmemb, f);
+    return fd != NULL ? fwrite(ptr, size, nmemb, fd): _fwrite_python(ptr, size, nmemb, f);
 }
 
 /*
  * Calls getc on fd if specified, otherwise the Python-specific method on f.
  */
 int getc_(FILE *fd, PyObject *f) {
-    return fd ? getc(fd): _getc_python(f);
+    return fd != NULL ? getc(fd): _getc_python(f);
 }

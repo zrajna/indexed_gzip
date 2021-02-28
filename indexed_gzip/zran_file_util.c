@@ -145,8 +145,8 @@ fail:
 int _getc_python(PyObject *f) {
     char buf [1];
     if (_fread_python(buf, 1, 1, f) == 0) {
-        // Set an error indicator that can be retrieved from _ferror_python.
-        PyErr_SetString(PyExc_ValueError, "getc_ failed");
+        // Reached EOF, or an error (in which case the error indicator is set).
+        // Either way, we should return -1.
         return -1;
     }
     return (int) buf[0];

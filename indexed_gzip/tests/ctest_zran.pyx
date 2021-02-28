@@ -324,9 +324,16 @@ def test_getc():
     f = BytesIO(b"dbc")
     assert zran_file_util._getc_python(<PyObject*>f) == ord(b"d")
     assert zran_file_util._ferror_python(<PyObject*>f) == 0
+    assert zran_file_util._getc_python(<PyObject*>f) == ord(b"b")
+    assert zran_file_util._ferror_python(<PyObject*>f) == 0
+    assert zran_file_util._getc_python(<PyObject*>f) == ord(b"c")
+    assert zran_file_util._ferror_python(<PyObject*>f) == 0
+    assert zran_file_util._getc_python(<PyObject*>f) == -1 # reached EOF
+    assert zran_file_util._ferror_python(<PyObject*>f) == 0
+    assert zran_file_util._feof_python(<PyObject*>f, 3) == 1
 
     # getc error conditions
-    for fn in [error_fn, return_fn(None), return_fn(b"")]:
+    for fn in [error_fn, return_fn(None)]:
         f.read = fn
         assert zran_file_util._getc_python(<PyObject*>f) == -1
         assert zran_file_util._ferror_python(<PyObject*>f) == 1

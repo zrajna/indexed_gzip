@@ -268,7 +268,7 @@ def test_file_funcs(testfile):
 
     # getc
     f = BytesIO(b"dbc")
-    assert zran_file_util._getc_python(<PyObject*>f) == ord(b"d"), zran_file_util._getc_python(<PyObject*>f)
+    assert zran_file_util._getc_python(<PyObject*>f) == ord(b"d")
 
 
 def test_init(testfile, no_fds):

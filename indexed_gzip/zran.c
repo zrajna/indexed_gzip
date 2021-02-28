@@ -1100,8 +1100,9 @@ int _zran_init_zlib_inflate(zran_index_t *index,
 
             ret = getc_(index->fd, index->f);
 
-            if (ret == -1)
+            if (ret == -1 && ferror_(index->fd, index->f)) {
                 goto fail;
+            }
 
             if (inflatePrime(stream,
                              point->bits, ret >> (8 - point->bits)) != Z_OK)

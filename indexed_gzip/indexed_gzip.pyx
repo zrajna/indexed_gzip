@@ -603,8 +603,12 @@ cdef class _IndexedGzipFile:
         if whence not in (SEEK_SET, SEEK_CUR, SEEK_END):
             raise ValueError('Invalid value for whence: {}'.format(whence))
 
-        with self.__file_handle():
-            ret = zran.zran_seek(index, off, c_whence, NULL)
+        if index.fd == NULL:
+            with self.__file_handle():
+                ret = zran.zran_seek(index, off, c_whence, NULL)
+        else:
+            with self.__file_handle(), nogil:
+                ret = zran.zran_seek(index, off, c_whence, NULL)
 
         if ret < 0:
             raise ZranError('zran_seek returned error: {}'.format(ret))
@@ -657,7 +661,12 @@ cdef class _IndexedGzipFile:
                 # read some bytes into the correct
                 # buffer location
                 buffer = <char *>buf.buffer + offset
-                ret = zran.zran_read(index, buffer, bufsz)
+
+                if index.fd == NULL:
+                    ret = zran.zran_read(index, buffer, bufsz)
+                else:
+                    with nogil:
+                        ret = zran.zran_read(index, buffer, bufsz)
 
                 # see how the read went
                 if ret == zran.ZRAN_READ_FAIL:
@@ -722,8 +731,12 @@ cdef class _IndexedGzipFile:
         try:
 
             vbuf = <void *>pbuf.buf
-            with self.__file_handle():
-                ret = zran.zran_read(index, vbuf, bufsz)
+            if index.fd == NULL:
+                with self.__file_handle():
+                    ret = zran.zran_read(index, vbuf, bufsz)
+            else:
+                with self.__file_handle(), nogil:
+                    ret = zran.zran_read(index, vbuf, bufsz)
 
         # release the py_buffer
         finally:

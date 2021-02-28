@@ -55,12 +55,19 @@ cdef extern from "zran.h":
         ZRAN_IMPORT_UNKNOWN_FORMAT = -7
 
     size_t _fread_python(void *ptr, size_t size, size_t nmemb, PyObject *f)
+    
     long int _ftell_python(PyObject *f)
+    
     int _fseek_python(PyObject *f, long int offset, int whence)
+    
     int _feof_python(PyObject *f, int64_t size)
+    
     int _ferror_python(PyObject *f)
+    
     int _fflush_python(PyObject *f)
+    
     size_t _fwrite_python(const void *ptr, size_t size, size_t nmemb, PyObject *f)
+    
     int _getc_python(PyObject *f)
 
     bint zran_init(zran_index_t *index,

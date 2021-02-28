@@ -219,8 +219,6 @@ cdef class ReadBuffer:
 
 def test_file_funcs(testfile):
     """Tests Python wrapper C functions."""
-    pass
-    """
     # fread
     f = BytesIO(b"abc")
     cdef char buf[3]
@@ -271,7 +269,6 @@ def test_file_funcs(testfile):
     # getc
     f = BytesIO(b"dbc")
     assert zran_file_util._getc_python(<PyObject*>f) == ord(b"d"), zran_file_util._getc_python(<PyObject*>f)
-    """
 
 
 def test_init(testfile, no_fds):

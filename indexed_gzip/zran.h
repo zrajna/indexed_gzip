@@ -183,6 +183,7 @@ struct _zran_point {
     uint8_t  *data;
 };
 
+
 /*
  * Initialise a zran_index_t struct for use with the given file.
  *
@@ -366,9 +367,9 @@ enum {
  *     file.
  */
 int zran_export_index(
-  zran_index_t  *index, /* The index                  */
-  FILE          *fd,    /* Open handle to export file */
-  PyObject      *f     /* Open handle to export file object */
+  zran_index_t  *index, /* The index                         */
+  FILE          *fd,    /* Open handle to export file        */
+  PyObject      *f      /* Open handle to export file object */
 );
 
 /* Return codes for zran_import_index. */
@@ -417,9 +418,9 @@ enum {
  *   - ZRAN_IMPORT_UNKNOWN_FORMAT to indicate given file is of unknown format.
  */
 int zran_import_index(
-  zran_index_t  *index, /* The index                  */
-  FILE          *fd,    /* Open handle to import file */
-  PyObject      *f     /* Open handle to export file object */
+  zran_index_t  *index, /* The index                         */
+  FILE          *fd,    /* Open handle to import file        */
+  PyObject      *f      /* Open handle to import file object */
 );
 
 #endif /* __ZRAN_H__ */

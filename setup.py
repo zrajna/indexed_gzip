@@ -175,7 +175,8 @@ else:           pyx_ext = 'c'
 igzip_ext = Extension(
     'indexed_gzip.indexed_gzip',
     [op.join('indexed_gzip', 'indexed_gzip.{}'.format(pyx_ext)),
-     op.join('indexed_gzip', 'zran.c')] + extra_srcs,
+     op.join('indexed_gzip', 'zran.c'),
+     op.join('indexed_gzip', 'zran_file_util.c')] + extra_srcs,
     libraries=libs,
     library_dirs=lib_dirs,
     include_dirs=include_dirs,
@@ -200,7 +201,8 @@ if not windows:
     test_exts.append(Extension(
         'indexed_gzip.tests.ctest_zran',
         [op.join('indexed_gzip', 'tests', 'ctest_zran.{}'.format(pyx_ext)),
-         op.join('indexed_gzip', 'zran.c')] + extra_srcs,
+         op.join('indexed_gzip', 'zran.c'),
+         op.join('indexed_gzip', 'zran_file_util.c')] + extra_srcs,
         libraries=libs,
         library_dirs=lib_dirs,
         include_dirs=include_dirs,

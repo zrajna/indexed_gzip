@@ -364,7 +364,7 @@ cdef class _IndexedGzipFile:
             if fileobj is None:
                 fileobj = builtin_open(filename, mode)
             try:
-                fd  = fdopen(fileobj.fileno(), 'wb')
+                fd  = fdopen(fileobj.fileno(), mode)
             except io.UnsupportedOperation:
                 fd  = NULL
 

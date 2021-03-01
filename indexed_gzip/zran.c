@@ -512,15 +512,9 @@ int zran_init(zran_index_t *index,
     /*
      * Calculate the size of the compressed file
      */
-    if (fseek_(fd, f, 0, SEEK_END) != 0)
-        goto fail;
-
-    compressed_size = ftell_(fd, f);
+    compressed_size = fsize_(fd, f);
 
     if (compressed_size < 0)
-        goto fail;
-
-    if (fseek_(fd, f, 0, SEEK_SET) != 0)
         goto fail;
 
     /*

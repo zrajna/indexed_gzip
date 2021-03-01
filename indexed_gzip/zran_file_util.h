@@ -20,11 +20,11 @@
  */
 size_t _fread_python(void *ptr, size_t size, size_t nmemb, PyObject *f);
 
-long int _ftell_python(PyObject *f);
+int64_t _ftell_python(PyObject *f);
 
-int _fseek_python(PyObject *f, long int offset, int whence);
+int _fseek_python(PyObject *f, int64_t offset, int whence);
 
-int _feof_python(PyObject *f, long int size);
+int _feof_python(PyObject *f, int64_t size);
 
 int _ferror_python(PyObject *f);
 
@@ -41,13 +41,13 @@ int _getc_python(PyObject *f);
 
 int ferror_(FILE *fd, PyObject *f);
 
-int fseek_(FILE *fd, PyObject *f, long int offset, int whence);
+int fseek_(FILE *fd, PyObject *f, int64_t offset, int whence);
 
-long int ftell_(FILE *fd, PyObject *f);
+int64_t ftell_(FILE *fd, PyObject *f);
 
 size_t fread_(void *ptr, size_t size, size_t nmemb, FILE *fd, PyObject *f);
 
-int feof_(FILE *fd, PyObject *f, long int size);
+int feof_(FILE *fd, PyObject *f, int64_t size);
 
 int fflush_(FILE *fd, PyObject *f);
 

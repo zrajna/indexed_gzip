@@ -537,6 +537,7 @@ int zran_init(zran_index_t *index,
     index->f                    = f;
     index->flags                = flags;
     index->compressed_size      = compressed_size;
+    printf("index->compressed_size is %llu", compressed_size);
     index->uncompressed_size    = 0;
     index->spacing              = spacing;
     index->window_size          = window_size;
@@ -1658,7 +1659,7 @@ static int _zran_inflate(zran_index_t *index,
              * size is an exact multiple of
              # the read buffer size.
              */
-            long int pos = ftell_(index->fd, index->f);
+            int64_t pos = ftell_(index->fd, index->f);
             if (pos == -1) goto fail;
             if ((uint64_t) pos >= index->compressed_size &&
                 strm->avail_in <= 8) {

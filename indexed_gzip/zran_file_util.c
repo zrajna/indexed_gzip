@@ -52,9 +52,9 @@ fail:
 /*
  * Implements a method analogous to ftell that is performed on Python file-like objects.
  */
-long int _ftell_python(PyObject *f) {
+int64_t _ftell_python(PyObject *f) {
     PyObject *data;
-    unsigned long int result;
+    uint64_t result;
     if ((data = PyObject_CallMethod(f, "tell", NULL)) == NULL)
         goto fail;
     if ((result = PyLong_AsUnsignedLong(data)) == (unsigned long)-1 && PyErr_Occurred())
@@ -70,7 +70,7 @@ fail:
 /*
  * Implements a method analogous to fseek that is performed on Python file-like objects.
  */
-int _fseek_python(PyObject *f, long int offset, int whence) {
+int _fseek_python(PyObject *f, int64_t offset, int whence) {
     PyObject *data;
     if ((data = PyObject_CallMethod(f, "seek", "(l,i)", offset, whence)) == NULL)
         goto fail;
@@ -85,7 +85,7 @@ fail:
 /*
  * Implements a method analogous to feof that is performed on Python file-like objects.
  */
-int _feof_python(PyObject *f, long int size) {
+int _feof_python(PyObject *f, int64_t size) {
     return _ftell_python(f) == size;
 }
 
@@ -162,14 +162,14 @@ int ferror_(FILE *fd, PyObject *f) {
 /*
  * Calls fseek on fd if specified, otherwise the Python-specific method on f.
  */
-int fseek_(FILE *fd, PyObject *f, long int offset, int whence) {
+int fseek_(FILE *fd, PyObject *f, int64_t offset, int whence) {
     return fd != NULL ? FSEEK(fd, offset, whence): _fseek_python(f, offset, whence);
 }
 
 /*
  * Calls ftell on fd if specified, otherwise the Python-specific method on f.
  */
-long int ftell_(FILE *fd, PyObject *f) {
+int64_t ftell_(FILE *fd, PyObject *f) {
     return fd != NULL ? FTELL(fd): _ftell_python(f);
 }
 
@@ -183,7 +183,7 @@ size_t fread_(void *ptr, size_t size, size_t nmemb, FILE *fd, PyObject *f) {
 /*
  * Calls feof on fd if specified, otherwise the Python-specific method on f.
  */
-int feof_(FILE *fd, PyObject *f, long int size) {
+int feof_(FILE *fd, PyObject *f, int64_t size) {
     return fd != NULL ? feof(fd): _feof_python(f, size);
 }
 

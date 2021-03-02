@@ -537,7 +537,6 @@ int zran_init(zran_index_t *index,
     index->f                    = f;
     index->flags                = flags;
     index->compressed_size      = compressed_size;
-    printf("index->compressed_size is %llu", compressed_size);
     index->uncompressed_size    = 0;
     index->spacing              = spacing;
     index->window_size          = window_size;

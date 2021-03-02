@@ -199,15 +199,15 @@ struct _zran_point {
  *     ZRAN_AUTO_BUILD: Build the index automatically on demand.
  */
 int  zran_init(
-  zran_index_t *index,        /* The index                          */
-  FILE         *fd,           /* Open handle to the compressed file */
-  PyObject     *f,            /* Open handle to export file object  */
+  zran_index_t *index,        /* The index                                  */
+  FILE         *fd,           /* Open handle to the compressed file         */
+  PyObject     *f,            /* Open handle to the compressed file object  */
   uint32_t      spacing,      /* Distance in bytes between
-                                 index seek points                  */
+                                 index seek points                          */
   uint32_t      window_size,  /* Number of uncompressed bytes
-                                 to store with each point           */
-  uint32_t      readbuf_size, /* Number of bytes to read at a time  */
-  uint16_t      flags         /* Flags controlling index behaviour  */
+                                 to store with each point                   */
+  uint32_t      readbuf_size, /* Number of bytes to read at a time          */
+  uint16_t      flags         /* Flags controlling index behaviour          */
 );
 
 

@@ -5,6 +5,8 @@
 *.so
 *.tmp
 *.gz_temp
+.coverage*
+*.pyd
 zlib-*
 build
 

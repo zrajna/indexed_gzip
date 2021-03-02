@@ -207,31 +207,3 @@ size_t fwrite_(const void *ptr, size_t size, size_t nmemb, FILE *fd, PyObject *f
 int getc_(FILE *fd, PyObject *f) {
     return fd != NULL ? getc(fd): _getc_python(f);
 }
-
-/*
- * Gets file size.
- */
-int64_t fsize_(FILE *fd, PyObject *f) {
-    int64_t size;
-    #ifdef _WIN32
-        if (fd != NULL) {
-            // Use another method to get the file size, because SEEK_END
-            // cannot be reliably used with _fseeki64 on Windows.
-            // See: https://wiki.sei.cmu.edu/confluence/display/c/FIO19-C.+Do+not+use+fseek%28%29+and+ftell%28%29+to+compute+the+size+of+a+regular+file
-            return _filelengthi64(fd);
-        }
-    #endif
-    // Seek to the end to get file size,
-    // then seek back to the beginning.
-    if (fseek_(fd, f, 0, SEEK_END) != 0)
-        goto fail;
-    size = ftell_(fd, f);
-    if (size < -1)
-        goto fail;
-    if (fseek_(fd, f, 0, SEEK_SET) != 0)
-        goto fail;
-    return size;
- 
-fail:
-    return -1;
-}

@@ -43,5 +43,3 @@ cdef extern from "zran_file_util.h":
     size_t fwrite_(const void *ptr, size_t size, size_t nmemb, FILE *fd, PyObject *f)
 
     int getc_(FILE *fd, PyObject *f)
-
-    int64_t fsize_(FILE *fd, PyObject *f)

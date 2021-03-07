@@ -218,14 +218,18 @@ cdef class ReadBuffer:
             os.close( self.mmap_fd)
             os.remove(self.mmap_path)
 
+
 def error_fn(*args, **kwargs):
     raise Exception("Error")
+
 
 def return_fn(return_value):
     return lambda *args, **kwargs: return_value
 
+
 def test_fread():
     """Tests Python wrapper C function for fread."""
+
     f = BytesIO(b"abc")
     cdef char buf[3]
     elems_read = zran_file_util._fread_python(buf, 1, 3, <PyObject*>f)
@@ -241,7 +245,9 @@ def test_fread():
         assert zran_file_util._ferror_python(<PyObject*>f) == 1
         PyErr_Clear()
 
+
 def test_ftell():
+
     f = BytesIO(b"abc")
     assert zran_file_util._ftell_python(<PyObject*>f) == 0
     f.seek(2)
@@ -255,7 +261,9 @@ def test_ftell():
         assert zran_file_util._ferror_python(<PyObject*>f) == 1
         PyErr_Clear()
 
+
 def test_fseek():
+
     f = BytesIO(b"abc")
     zran_file_util._fseek_python(<PyObject*>f, 1, SEEK_SET)
     assert f.tell() == 1
@@ -272,7 +280,9 @@ def test_fseek():
         assert zran_file_util._ferror_python(<PyObject*>f) == 1
         PyErr_Clear()
 
+
 def test_feof():
+
     f = BytesIO(b"abc")
     f.seek(0)
     assert zran_file_util._feof_python(<PyObject*>f, 3) == 0
@@ -280,7 +290,9 @@ def test_feof():
     assert zran_file_util._feof_python(<PyObject*>f, 3) == 1
     assert zran_file_util._ferror_python(<PyObject*>f) == 0
 
+
 def test_ferror():
+
     f = BytesIO(b"abc")
     assert zran_file_util._ferror_python(<PyObject*>f) == 0
     PyErr_SetString(ValueError, "Error")
@@ -288,7 +300,9 @@ def test_ferror():
     PyErr_Clear()
     assert zran_file_util._ferror_python(<PyObject*>f) == 0
 
+
 def test_fflush():
+
     f = BytesIO(b"abc")
     zran_file_util._fflush_python(<PyObject*>f)
     assert zran_file_util._ferror_python(<PyObject*>f) == 0
@@ -300,7 +314,9 @@ def test_fflush():
         assert zran_file_util._ferror_python(<PyObject*>f) == 1
         PyErr_Clear()
 
+
 def test_fwrite():
+
     f = BytesIO(b"abc")
     cdef char* inp = 'de'
     elems_written = zran_file_util._fwrite_python(inp, 1, 2, <PyObject*>f)
@@ -320,7 +336,9 @@ def test_fwrite():
         assert zran_file_util._ferror_python(<PyObject*>f) == 1
         PyErr_Clear()
 
+
 def test_getc():
+
     f = BytesIO(b"dbc")
     assert zran_file_util._getc_python(<PyObject*>f) == ord(b"d")
     assert zran_file_util._ferror_python(<PyObject*>f) == 0
@@ -338,6 +356,7 @@ def test_getc():
         assert zran_file_util._getc_python(<PyObject*>f) == -1
         assert zran_file_util._ferror_python(<PyObject*>f) == 1
         PyErr_Clear()
+
 
 def test_init(testfile, no_fds):
     """Tests a bunch of permutations of the parameters to zran_init. """

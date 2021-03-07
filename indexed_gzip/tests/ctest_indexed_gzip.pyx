@@ -38,8 +38,10 @@ from libc.stdio cimport (SEEK_SET,
                          SEEK_CUR,
                          SEEK_END)
 
+
 def error_fn(*args, **kwargs):
     raise Exception("Error")
+
 
 def read_element(gzf, element, seek=True):
 

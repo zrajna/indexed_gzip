@@ -269,6 +269,7 @@ cdef class _IndexedGzipFile:
     cdef object pyfid
     """A reference to the python file handle. """
 
+
     cdef bint finalized
     """Flag which is set to ``True`` if the ``_IndexedGzipFile`` has been
     closed. Further operations will fail if ``True``.

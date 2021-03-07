@@ -269,10 +269,6 @@ cdef class _IndexedGzipFile:
     cdef object pyfid
     """A reference to the python file handle. """
 
-    cdef object _pyfid_tmp
-    """A temporary reference to the python file handle, used for accounting
-    when ``drop_handles`` is equal to ``True``. """
-
     cdef bint finalized
     """Flag which is set to ``True`` if the ``_IndexedGzipFile`` has been
     closed. Further operations will fail if ``True``.
@@ -426,7 +422,13 @@ cdef class _IndexedGzipFile:
             # If a file handle already exists,
             # return it. This clause makes this
             # context manager reentrant.
-            if self.index.fd is not NULL or self.pyfid is not None:
+            if self.index.fd is not NULL:
+                yield
+            
+            # If a file-like object exists (without an associated
+            # file descriptor, since self.index.fd is NULL),
+            # also return it.
+            elif self.pyfid is not None:
                 yield
 
             # otherwise we open a new
@@ -435,15 +437,11 @@ cdef class _IndexedGzipFile:
 
                 try:
                     self.index.fd = fopen(self.filename.encode(), 'rb')
-                    self._pyfid_tmp = builtin_open(self.filename, 'rb')
-                    self.index.f = <PyObject*> self._pyfid_tmp
                     yield
 
                 finally:
                     fclose(self.index.fd)
-                    self._pyfid_tmp.close()
                     self.index.fd = NULL
-                    self.index.f = <PyObject*>None
 
         return proxy()
 

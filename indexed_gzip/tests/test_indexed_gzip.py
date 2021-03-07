@@ -51,6 +51,9 @@ def test_init_success_cases_drop_handles(concat):
 def test_accept_filename_or_fileobj(testfile, nelems):
     ctest_indexed_gzip.test_accept_filename_or_fileobj(testfile, nelems)
 
+def test_prioritize_fd_over_f(testfile, nelems):
+    ctest_indexed_gzip.test_prioritize_fd_over_f(testfile, nelems)
+
 def test_create_from_open_handle(testfile, nelems, seed):
     ctest_indexed_gzip.test_create_from_open_handle(
         testfile, nelems, seed, False, False)
@@ -158,6 +161,7 @@ def test_size_multiple_of_readbuf():
 def test_picklable():
     ctest_indexed_gzip.test_picklable()
 
+@pytest.mark.slow_test
 def test_copyable():
     ctest_indexed_gzip.test_copyable()
 

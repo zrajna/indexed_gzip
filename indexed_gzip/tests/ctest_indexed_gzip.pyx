@@ -38,6 +38,8 @@ from libc.stdio cimport (SEEK_SET,
                          SEEK_CUR,
                          SEEK_END)
 
+def error_fn(*args, **kwargs):
+    raise Exception("Error")
 
 def read_element(gzf, element, seek=True):
 
@@ -242,6 +244,28 @@ def test_accept_filename_or_fileobj(testfile, nelems):
         if gzf1 is not None: gzf1.close()
         if f    is not None: f   .close()
 
+def test_prioritize_fd_over_f(testfile, nelems):
+    """When a fileobj with an associated fileno is passed to IndexedGzipFile,
+    the fileobj's file descriptor (fd) should be utilized by zran.c
+    instead of the file-like object specified by fileobj (f).
+    """
+    
+    f    = None
+    gzf  = None
+
+    try:
+        f       = open(testfile, 'rb')
+        f.read  = error_fn  # If the file-like object were directly used by zran.c, reading would raise an error.
+        gzf     = igzip._IndexedGzipFile(fileobj=f)
+
+        element  = np.random.randint(0, nelems, 1)
+        readval  = read_element(gzf, element)
+
+        assert readval == element
+
+    finally:
+        if gzf is not None:     gzf.close()
+        if f   is not None:     f   .close()
 
 def test_handles_not_dropped(testfile, nelems, seed):
 

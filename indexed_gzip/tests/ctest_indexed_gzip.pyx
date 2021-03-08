@@ -251,6 +251,10 @@ def test_prioritize_fd_over_f(testfile, nelems):
     the fileobj's file descriptor (fd) should be utilized by zran.c
     instead of the file-like object specified by fileobj (f).
     """
+    if sys.version_info[0] < 3:
+        # We can't set the .read attribute in Python 2
+        # because it's read-only, so skip it.
+        return
     
     f    = None
     gzf  = None

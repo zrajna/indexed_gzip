@@ -54,10 +54,10 @@ fail:
  */
 int64_t _ftell_python(PyObject *f) {
     PyObject *data;
-    uint64_t result;
+    int64_t result;
     if ((data = PyObject_CallMethod(f, "tell", NULL)) == NULL)
         goto fail;
-    if ((result = PyLong_AsUnsignedLong(data)) == (unsigned long)-1 && PyErr_Occurred())
+    if ((result = PyLong_AsLong(data)) == -1 && PyErr_Occurred())
         goto fail;
     Py_DECREF(data);
     return result;

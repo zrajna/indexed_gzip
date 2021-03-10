@@ -86,7 +86,7 @@ fail:
  * Implements a method analogous to feof that is performed on Python file-like objects.
  * This method requires the file size to be input, because there is no other way to tell if a Python file-like is at EOF without reading it.
  */
-int _feof_python(PyObject *f, int64_t size) {
+int _feof_python(PyObject *f, uint64_t size) {
     return _ftell_python(f) == size;
 }
 

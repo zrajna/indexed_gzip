@@ -117,13 +117,13 @@ fail:
 size_t _fwrite_python(const void *ptr, size_t size, size_t nmemb, PyObject *f) {
     PyObject *input;
     PyObject *data = NULL;
-    unsigned long len;
+    long len;
     if ((input = PyBytes_FromStringAndSize(ptr, size * nmemb)) == NULL)
         goto fail;
     if ((data = PyObject_CallMethod(f, "write", "(O)", input)) == NULL)
         goto fail;
     #if PY_MAJOR_VERSION >= 3
-    if ((len = PyLong_AsUnsignedLong(data)) == (unsigned long)-1 && PyErr_Occurred())
+    if ((len = PyLong_AsLong(data)) == -1 && PyErr_Occurred())
         goto fail;
     #else
     // In Python 2, a file object's write() method does not return the number of

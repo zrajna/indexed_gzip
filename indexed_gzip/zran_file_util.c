@@ -28,7 +28,7 @@
 #endif
 
 /** An attribute used to store EOF status of a file. */
-const char * eof_attribute_name = "__indexed_gzip_eof";
+const char *eof_attribute_name = "__indexed_gzip_eof";
 
 /*
  * Implements a method analogous to fread that is performed on Python file-like objects.

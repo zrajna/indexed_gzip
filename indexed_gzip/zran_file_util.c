@@ -27,8 +27,6 @@
 #define FTELL ftello
 #endif
 
-/** An attribute used to store EOF status of a file. */
-const char *eof_attribute_name = "__indexed_gzip_eof";
 
 /*
  * Implements a method analogous to fread that is performed on Python file-like objects.
@@ -37,16 +35,11 @@ size_t _fread_python(void *ptr, size_t size, size_t nmemb, PyObject *f) {
     PyObject *data;
     char *buf;
     Py_ssize_t len;
-    int eof;
     if ((data = PyObject_CallMethod(f, "read", "(n)", size * nmemb)) == NULL)
         goto fail;
     if ((buf = PyBytes_AsString(data)) == NULL)
         goto fail;
     if ((len = PyBytes_Size(data)) == -1)
-        goto fail;
-    // If nothing was read, set the EOF attribute on the file.
-    eof = size * nmemb > 0 && len == 0;
-    if (PyObject_SetAttrString(f, eof_attribute_name, eof ? Py_True: Py_False) == -1)
         goto fail;
     memmove(ptr, buf, (size_t) len);
     Py_DECREF(data);
@@ -92,24 +85,10 @@ fail:
 
 /*
  * Implements a method analogous to feof that is performed on Python file-like objects.
- * Checks the end-of-file indicator on this file, which should have been set by _fread_python.
+ * If f_ret, the number of bytes returned by the last read, is zero, then we're at EOF.
  */
-int _feof_python(PyObject *f) {
-    PyObject *data;
-    int eof;
-    if (!PyObject_HasAttrString(f, eof_attribute_name)) {
-        // EOF indicator hasn't been set.
-        return 0;
-    }
-    if ((data = PyObject_GetAttrString(f, eof_attribute_name)) == NULL)
-        goto fail;
-    eof = PyObject_IsTrue(data);
-    Py_DECREF(data);
-    return eof;
-
-fail:
-    Py_XDECREF(data);
-    return 0;
+int _feof_python(PyObject *f, size_t f_ret) {
+    return f_ret == 0;
 }
 
 /*
@@ -205,9 +184,11 @@ size_t fread_(void *ptr, size_t size, size_t nmemb, FILE *fd, PyObject *f) {
 
 /*
  * Calls feof on fd if specified, otherwise the Python-specific method on f.
+ * If fd is not specified, requires f_ret, the number of bytes read on the last
+ * read, to determine if the file is at EOF.
  */
-int feof_(FILE *fd, PyObject *f) {
-    return fd != NULL ? feof(fd): _feof_python(f);
+int feof_(FILE *fd, PyObject *f, size_t f_ret) {
+    return fd != NULL ? feof(fd): _feof_python(f, f_ret);
 }
 
 /*

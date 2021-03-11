@@ -285,14 +285,10 @@ def test_feof():
 
     f = BytesIO(b"abc")
     f.seek(0)
-    assert zran_file_util._feof_python(<PyObject*>f) == 0
-    f.seek(3)
-    # Even when we seek to the end of the file,
     # the EOF indicator shouldn't be set...
-    assert zran_file_util._feof_python(<PyObject*>f) == 0
-    # ...until the file is attempted to be read:
-    assert zran_file_util._getc_python(<PyObject*>f) == -1
-    assert zran_file_util._feof_python(<PyObject*>f) == 1
+    assert zran_file_util._feof_python(<PyObject*>f, 2) == 0
+    # ...unless f_read is zero.
+    assert zran_file_util._feof_python(<PyObject*>f, 0) == 1
     assert zran_file_util._ferror_python(<PyObject*>f) == 0
 
 
@@ -353,7 +349,7 @@ def test_getc():
     assert zran_file_util._ferror_python(<PyObject*>f) == 0
     assert zran_file_util._getc_python(<PyObject*>f) == -1 # reached EOF
     assert zran_file_util._ferror_python(<PyObject*>f) == 0
-    assert zran_file_util._feof_python(<PyObject*>f) == 1
+    assert zran_file_util._feof_python(<PyObject*>f, 0) == 1
 
     # getc error conditions
     for fn in [error_fn, return_fn(None)]:

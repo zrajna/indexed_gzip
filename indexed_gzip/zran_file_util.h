@@ -32,7 +32,7 @@ int _fseek_python(PyObject *f, int64_t offset, int whence);
 /*
  * Implements a method analogous to feof that is performed on Python file-like objects.
  */
-int _feof_python(PyObject *f, uint64_t size);
+int _feof_python(PyObject *f);
 
 /*
  * Implements a method analogous to ferror that is performed on Python file-like objects.
@@ -77,7 +77,7 @@ size_t fread_(void *ptr, size_t size, size_t nmemb, FILE *fd, PyObject *f);
 /*
  * Calls feof on fd if specified, otherwise the Python-specific method on f.
  */
-int feof_(FILE *fd, PyObject *f, int64_t size);
+int feof_(FILE *fd, PyObject *f);
 
 /*
  * Calls fflush on fd if specified, otherwise the Python-specific method on f.

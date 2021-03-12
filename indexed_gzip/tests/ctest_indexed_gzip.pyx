@@ -25,7 +25,7 @@ import                    tempfile
 import                    contextlib
 
 import numpy as np
-
+from io import BytesIO
 import pytest
 
 import indexed_gzip as igzip
@@ -37,6 +37,10 @@ from . import tempdir
 from libc.stdio cimport (SEEK_SET,
                          SEEK_CUR,
                          SEEK_END)
+
+
+def error_fn(*args, **kwargs):
+    raise Exception("Error")
 
 
 def read_element(gzf, element, seek=True):
@@ -190,9 +194,11 @@ def test_init_success_cases(concat, drop):
         gf3.close()
 
 
-def test_create_from_open_handle(testfile, nelems, seed, drop):
+def test_create_from_open_handle(testfile, nelems, seed, drop, file_like_object):
 
     f   = open(testfile, 'rb')
+    if file_like_object:
+        f = BytesIO(f.read())
     gzf = igzip._IndexedGzipFile(fileobj=f, drop_handles=drop)
 
     assert gzf.fileobj() is f
@@ -217,24 +223,55 @@ def test_accept_filename_or_fileobj(testfile, nelems):
     f    = None
     gzf1 = None
     gzf2 = None
+    gzf3 = None
 
     try:
         f    = open(testfile, 'rb')
         gzf1 = igzip._IndexedGzipFile(testfile)
         gzf2 = igzip._IndexedGzipFile(f)
+        gzf3 = igzip._IndexedGzipFile(fileobj=BytesIO(open(testfile, 'rb').read()))
 
         element  = np.random.randint(0, nelems, 1)
         readval1 = read_element(gzf1, element)
         readval2 = read_element(gzf2, element)
+        readval3 = read_element(gzf3, element)
 
         assert readval1 == element
         assert readval2 == element
+        assert readval3 == element
 
     finally:
+        if gzf3 is not None: gzf3.close()
         if gzf2 is not None: gzf2.close()
         if gzf1 is not None: gzf1.close()
         if f    is not None: f   .close()
 
+def test_prioritize_fd_over_f(testfile, nelems):
+    """When a fileobj with an associated fileno is passed to IndexedGzipFile,
+    the fileobj's file descriptor (fd) should be utilized by zran.c
+    instead of the file-like object specified by fileobj (f).
+    """
+    if sys.version_info[0] < 3:
+        # We can't set the .read attribute in Python 2
+        # because it's read-only, so skip it.
+        return
+    
+    f    = None
+    gzf  = None
+
+    try:
+        f       = open(testfile, 'rb')
+        f.read  = error_fn  # If the file-like object were directly used by zran.c, reading would raise an error.
+        gzf     = igzip._IndexedGzipFile(fileobj=f)
+
+        element  = np.random.randint(0, nelems, 1)
+        readval  = read_element(gzf, element)
+
+        assert readval == element
+
+    finally:
+        if gzf is not None:     gzf.close()
+        if f   is not None:     f   .close()
 
 def test_handles_not_dropped(testfile, nelems, seed):
 
@@ -729,6 +766,17 @@ def test_import_export_index():
 
             with open(idxfname, 'rb') as idxf:
                 f.import_index(fileobj=idxf)
+            f.seek(65535 * 8)
+            val = np.frombuffer(f.read(8), dtype=np.uint64)
+            assert val[0] == 65535
+
+        # Test exporting to / importing from a file-like object
+        idxf = BytesIO()
+        with igzip._IndexedGzipFile(fname) as f:
+            f.export_index(fileobj=idxf)
+        idxf.seek(0)
+        with igzip._IndexedGzipFile(fname) as f:
+            f.import_index(fileobj=idxf)
             f.seek(65535 * 8)
             val = np.frombuffer(f.read(8), dtype=np.uint64)
             assert val[0] == 65535

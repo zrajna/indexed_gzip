@@ -33,6 +33,8 @@ from cpython.buffer cimport (PyObject_GetBuffer,
                              PyBUF_ANY_CONTIGUOUS,
                              PyBUF_SIMPLE)
 
+from cpython.ref cimport PyObject
+
 cimport indexed_gzip.zran as zran
 
 import io
@@ -330,7 +332,7 @@ cdef class _IndexedGzipFile:
            (fileobj is not None and filename is not None):
             raise ValueError('One of fileobj or filename must be specified')
 
-        if fileobj is not None and fileobj.mode != 'rb':
+        if fileobj is not None and getattr(fileobj, 'mode', 'rb') != 'rb':
             raise ValueError('The gzip file must be opened in '
                              'read-only binary ("rb") mode')
 
@@ -358,7 +360,10 @@ cdef class _IndexedGzipFile:
         if not drop_handles:
             if fileobj is None:
                 fileobj = builtin_open(filename, mode)
-            fd = fdopen(fileobj.fileno(), 'rb')
+            try:
+                fd  = fdopen(fileobj.fileno(), 'rb')
+            except io.UnsupportedOperation:
+                fd  = NULL
 
 
         self.spacing          = spacing
@@ -371,6 +376,7 @@ cdef class _IndexedGzipFile:
         self.own_file         = own_file
         self.pyfid            = fileobj
         self.index.fd         = fd
+        self.index.f          = <PyObject*>fileobj
 
         if self.auto_build: flags = zran.ZRAN_AUTO_BUILD
         else:               flags = 0
@@ -378,6 +384,7 @@ cdef class _IndexedGzipFile:
         with self.__file_handle():
             if zran.zran_init(index=&self.index,
                               fd=self.index.fd,
+                              f=<PyObject*>self.index.f if self.index.fd == NULL else NULL,
                               spacing=spacing,
                               window_size=window_size,
                               readbuf_size=readbuf_size,
@@ -417,6 +424,12 @@ cdef class _IndexedGzipFile:
             # return it. This clause makes this
             # context manager reentrant.
             if self.index.fd is not NULL:
+                yield
+            
+            # If a file-like object exists (without an associated
+            # file descriptor, since self.index.fd is NULL),
+            # also return it.
+            elif self.pyfid is not None:
                 yield
 
             # otherwise we open a new
@@ -488,6 +501,7 @@ cdef class _IndexedGzipFile:
 
         zran.zran_free(&self.index)
 
+        self.index.f   = NULL
         self.index.fd  = NULL
         self.filename  = None
         self.pyfid     = None
@@ -588,8 +602,12 @@ cdef class _IndexedGzipFile:
         if whence not in (SEEK_SET, SEEK_CUR, SEEK_END):
             raise ValueError('Invalid value for whence: {}'.format(whence))
 
-        with self.__file_handle(), nogil:
-            ret = zran.zran_seek(index, off, c_whence, NULL)
+        if index.fd == NULL:
+            with self.__file_handle():
+                ret = zran.zran_seek(index, off, c_whence, NULL)
+        else:
+            with self.__file_handle(), nogil:
+                ret = zran.zran_seek(index, off, c_whence, NULL)
 
         if ret < 0:
             raise ZranError('zran_seek returned error: {}'.format(ret))
@@ -642,8 +660,12 @@ cdef class _IndexedGzipFile:
                 # read some bytes into the correct
                 # buffer location
                 buffer = <char *>buf.buffer + offset
-                with nogil:
+
+                if index.fd == NULL:
                     ret = zran.zran_read(index, buffer, bufsz)
+                else:
+                    with nogil:
+                        ret = zran.zran_read(index, buffer, bufsz)
 
                 # see how the read went
                 if ret == zran.ZRAN_READ_FAIL:
@@ -708,8 +730,12 @@ cdef class _IndexedGzipFile:
         try:
 
             vbuf = <void *>pbuf.buf
-            with self.__file_handle(), nogil:
-                ret = zran.zran_read(index, vbuf, bufsz)
+            if index.fd == NULL:
+                with self.__file_handle():
+                    ret = zran.zran_read(index, vbuf, bufsz)
+            else:
+                with self.__file_handle(), nogil:
+                    ret = zran.zran_read(index, vbuf, bufsz)
 
         # release the py_buffer
         finally:
@@ -881,8 +907,11 @@ cdef class _IndexedGzipFile:
                     'File should be opened in writeable binary mode.')
 
         try:
-            fd  = fdopen(fileobj.fileno(), 'wb')
-            ret = zran.zran_export_index(&self.index, fd)
+            try:
+                fd  = fdopen(fileobj.fileno(), 'wb')
+            except io.UnsupportedOperation:
+                fd  = NULL
+            ret = zran.zran_export_index(&self.index, fd, <PyObject*>fileobj if fd == NULL else NULL)
             if ret != zran.ZRAN_EXPORT_OK:
                 raise ZranError('export_index returned error: {}'.format(ret))
 
@@ -923,8 +952,11 @@ cdef class _IndexedGzipFile:
                     'File should be opened read-only binary mode.')
 
         try:
-            fd  = fdopen(fileobj.fileno(), 'rb')
-            ret = zran.zran_import_index(&self.index, fd)
+            try:
+                fd  = fdopen(fileobj.fileno(), 'rb')
+            except io.UnsupportedOperation:
+                fd  = NULL
+            ret = zran.zran_import_index(&self.index, fd, <PyObject*>fileobj if fd == NULL else NULL)
             if ret != zran.ZRAN_IMPORT_OK:
                 raise ZranError('import_index returned error: {}'.format(ret))
 

@@ -13,6 +13,8 @@
 #include <stdlib.h>
 #include <stdint.h>
 
+#define PY_SSIZE_T_CLEAN
+#include <Python.h>
 
 struct _zran_index;
 struct _zran_point;
@@ -41,6 +43,11 @@ struct _zran_index {
      * Handle to the compressed file.
      */
     FILE         *fd;
+
+    /*
+     * Handle to the compressed file object.
+     */
+    PyObject     *f;
 
     /*
      * Size of the compressed file. This
@@ -192,14 +199,15 @@ struct _zran_point {
  *     ZRAN_AUTO_BUILD: Build the index automatically on demand.
  */
 int  zran_init(
-  zran_index_t *index,        /* The index                          */
-  FILE         *fd,           /* Open handle to the compressed file */
+  zran_index_t *index,        /* The index                                  */
+  FILE         *fd,           /* Open handle to the compressed file         */
+  PyObject     *f,            /* Open handle to the compressed file object  */
   uint32_t      spacing,      /* Distance in bytes between
-                                 index seek points                  */
+                                 index seek points                          */
   uint32_t      window_size,  /* Number of uncompressed bytes
-                                 to store with each point           */
-  uint32_t      readbuf_size, /* Number of bytes to read at a time  */
-  uint16_t      flags         /* Flags controlling index behaviour  */
+                                 to store with each point                   */
+  uint32_t      readbuf_size, /* Number of bytes to read at a time          */
+  uint16_t      flags         /* Flags controlling index behaviour          */
 );
 
 
@@ -359,8 +367,9 @@ enum {
  *     file.
  */
 int zran_export_index(
-  zran_index_t  *index, /* The index                  */
-  FILE          *fd     /* Open handle to export file */
+  zran_index_t  *index, /* The index                         */
+  FILE          *fd,    /* Open handle to export file        */
+  PyObject      *f      /* Open handle to export file object */
 );
 
 /* Return codes for zran_import_index. */
@@ -409,8 +418,9 @@ enum {
  *   - ZRAN_IMPORT_UNKNOWN_FORMAT to indicate given file is of unknown format.
  */
 int zran_import_index(
-  zran_index_t  *index, /* The index                  */
-  FILE          *fd     /* Open handle to import file */
+  zran_index_t  *index, /* The index                         */
+  FILE          *fd,    /* Open handle to import file        */
+  PyObject      *f      /* Open handle to import file object */
 );
 
 #endif /* __ZRAN_H__ */

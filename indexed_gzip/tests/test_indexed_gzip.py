@@ -48,16 +48,27 @@ def test_init_success_cases(concat):
 def test_init_success_cases_drop_handles(concat):
     ctest_indexed_gzip.test_init_success_cases(concat, True)
 
-def test_create_from_open_handle(testfile, nelems, seed):
-    ctest_indexed_gzip.test_create_from_open_handle(
-        testfile, nelems, seed, False)
-
 def test_accept_filename_or_fileobj(testfile, nelems):
     ctest_indexed_gzip.test_accept_filename_or_fileobj(testfile, nelems)
 
+def test_prioritize_fd_over_f(testfile, nelems):
+    ctest_indexed_gzip.test_prioritize_fd_over_f(testfile, nelems)
+
+def test_create_from_open_handle(testfile, nelems, seed):
+    ctest_indexed_gzip.test_create_from_open_handle(
+        testfile, nelems, seed, False, False)
+
 def test_create_from_open_handle_drop_handles(testfile, nelems, seed):
     ctest_indexed_gzip.test_create_from_open_handle(
-        testfile, nelems, seed, True)
+        testfile, nelems, seed, True, False)
+
+def test_create_from_file_like_obj(testfile, nelems, seed):
+    ctest_indexed_gzip.test_create_from_open_handle(
+        testfile, nelems, seed, False, True)
+
+def test_create_from_file_like_obj_drop_handles(testfile, nelems, seed):
+    ctest_indexed_gzip.test_create_from_open_handle(
+        testfile, nelems, seed, True, True)
 
 def test_handles_not_dropped(testfile, nelems, seed):
     ctest_indexed_gzip.test_handles_not_dropped(testfile, nelems, seed)

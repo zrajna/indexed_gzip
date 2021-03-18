@@ -423,7 +423,7 @@ cdef class _IndexedGzipFile:
             # context manager reentrant.
             if self.index.fd is not NULL:
                 yield
-            
+
             # If a file-like object exists (without an associated
             # file descriptor, since self.index.fd is NULL),
             # also return it.
@@ -505,7 +505,8 @@ cdef class _IndexedGzipFile:
         self.pyfid     = None
         self.finalized = True
 
-        log.debug('%s.close()', type(self).__name__)
+        if log is not None:
+            log.debug('%s.close()', type(self).__name__)
 
 
     @property

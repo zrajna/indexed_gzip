@@ -2,8 +2,8 @@
  * zran_file_util.c - file utilities used in zran.c to manipulate either
  * Python file-like objects or file descriptors.
  *
- *
- * Author: Paul McCarthy <pauldmccarthy@gmail.com>
+ * Functions which interact with Python file-likes will acquire and release
+ * the GIL as needeed.
  */
 
 #include <math.h>
@@ -27,122 +27,190 @@
 #define FTELL ftello
 #endif
 
+/*
+ * The zran functions are typically called with the GIL released. These
+ * macros are used to temporarily (re-)acquire and release the GIL when
+ * interacting with Python file-like objects.
+ */
+#define _ZRAN_FILE_UTIL_ACQUIRE_GIL \
+    PyGILState_STATE s;             \
+    s = PyGILState_Ensure();
+
+#define _ZRAN_FILE_UTIL_RELEASE_GIL \
+    PyGILState_Release(s);
+
 
 /*
- * Implements a method analogous to fread that is performed on Python file-like objects.
+ * Implements a method analogous to fread that is performed on Python
+ * file-like objects.
  */
 size_t _fread_python(void *ptr, size_t size, size_t nmemb, PyObject *f) {
-    PyObject *data;
-    char *buf;
+
+    PyObject  *data;
+    char      *buf;
     Py_ssize_t len;
+
+    _ZRAN_FILE_UTIL_ACQUIRE_GIL
+
     if ((data = PyObject_CallMethod(f, "read", "(n)", size * nmemb)) == NULL)
         goto fail;
     if ((buf = PyBytes_AsString(data)) == NULL)
         goto fail;
     if ((len = PyBytes_Size(data)) == -1)
         goto fail;
+
     memmove(ptr, buf, (size_t) len);
+
     Py_DECREF(data);
+    _ZRAN_FILE_UTIL_RELEASE_GIL
     return (size_t) len / size;
 
 fail:
     Py_XDECREF(data);
+    _ZRAN_FILE_UTIL_RELEASE_GIL
     return 0;
 }
 
 /*
- * Implements a method analogous to ftell that is performed on Python file-like objects.
+ * Implements a method analogous to ftell that is performed on Python
+ * file-like objects.
  */
 int64_t _ftell_python(PyObject *f) {
     PyObject *data;
-    int64_t result;
-    if ((data = PyObject_CallMethod(f, "tell", NULL)) == NULL)
+    int64_t   result;
+
+    _ZRAN_FILE_UTIL_ACQUIRE_GIL
+
+    data = PyObject_CallMethod(f, "tell", NULL);
+    if (data == NULL)
         goto fail;
-    if ((result = PyLong_AsLong(data)) == -1 && PyErr_Occurred())
+
+    result = PyLong_AsLong(data);
+    if (result == -1 && PyErr_Occurred())
         goto fail;
+
     Py_DECREF(data);
+    _ZRAN_FILE_UTIL_RELEASE_GIL
     return result;
 
 fail:
     Py_XDECREF(data);
+    _ZRAN_FILE_UTIL_RELEASE_GIL
     return -1;
 }
 
 /*
- * Implements a method analogous to fseek that is performed on Python file-like objects.
+ * Implements a method analogous to fseek that is performed on Python
+ * file-like objects.
  */
 int _fseek_python(PyObject *f, int64_t offset, int whence) {
+
     PyObject *data;
-    if ((data = PyObject_CallMethod(f, "seek", "(l,i)", offset, whence)) == NULL)
+
+    _ZRAN_FILE_UTIL_ACQUIRE_GIL
+
+    data = PyObject_CallMethod(f, "seek", "(l,i)", offset, whence);
+    if (data == NULL)
         goto fail;
+
     Py_DECREF(data);
+    _ZRAN_FILE_UTIL_RELEASE_GIL
     return 0;
 
 fail:
     Py_XDECREF(data);
+    _ZRAN_FILE_UTIL_RELEASE_GIL
     return -1;
 }
 
 /*
- * Implements a method analogous to feof that is performed on Python file-like objects.
- * If f_ret, the number of bytes returned by the last read, is zero, then we're at EOF.
+ * Implements a method analogous to feof that is performed on Python file-like
+ * objects.  If f_ret, the number of bytes returned by the last read, is zero,
+ * then we're at EOF.
  */
 int _feof_python(PyObject *f, size_t f_ret) {
     return f_ret == 0;
 }
 
 /*
- * Implements a method analogous to ferror that is performed on Python file-like objects.
+ * Implements a method analogous to ferror that is performed on Python
+ * file-like objects.
  */
 int _ferror_python(PyObject *f) {
-    return PyErr_Occurred() ? 1 : 0;
+    int result;
+
+    _ZRAN_FILE_UTIL_ACQUIRE_GIL
+    result = PyErr_Occurred();
+    _ZRAN_FILE_UTIL_RELEASE_GIL
+
+    if (result != NULL) return 1;
+    else                return 0;
 }
 
 /*
- * Implements a method analogous to fflush that is performed on Python file-like objects.
+ * Implements a method analogous to fflush that is performed on Python
+ * file-like objects.
  */
 int _fflush_python(PyObject *f) {
     PyObject *data;
+
+    _ZRAN_FILE_UTIL_ACQUIRE_GIL
     if ((data = PyObject_CallMethod(f, "flush", NULL)) == NULL) goto fail;
+
     Py_DECREF(data);
+    _ZRAN_FILE_UTIL_RELEASE_GIL
     return 0;
 
 fail:
     Py_XDECREF(data);
+    _ZRAN_FILE_UTIL_RELEASE_GIL
     return -1;
 }
 
 /*
- * Implements a method analogous to fwrite that is performed on Python file-like objects.
+ * Implements a method analogous to fwrite that is performed on Python
+ * file-like objects.
  */
-size_t _fwrite_python(const void *ptr, size_t size, size_t nmemb, PyObject *f) {
+size_t _fwrite_python(const void *ptr,
+                      size_t      size,
+                      size_t      nmemb,
+                      PyObject   *f) {
+
     PyObject *input;
     PyObject *data = NULL;
-    long len;
+    long      len;
+
+    _ZRAN_FILE_UTIL_ACQUIRE_GIL
     if ((input = PyBytes_FromStringAndSize(ptr, size * nmemb)) == NULL)
         goto fail;
     if ((data = PyObject_CallMethod(f, "write", "(O)", input)) == NULL)
         goto fail;
+
     #if PY_MAJOR_VERSION >= 3
     if ((len = PyLong_AsLong(data)) == -1 && PyErr_Occurred())
         goto fail;
     #else
-    // In Python 2, a file object's write() method does not return the number of
-    // bytes written, so let's just assume that everything has been written properly.
+    // In Python 2, a file object's write() method does not return the number
+    // of bytes written, so let's just assume that everything has been written
+    // properly.
     len = size * nmemb;
     #endif
+
     Py_DECREF(input);
     Py_DECREF(data);
+    _ZRAN_FILE_UTIL_RELEASE_GIL
     return (size_t) len / size;
 
 fail:
     Py_XDECREF(input);
     Py_XDECREF(data);
+    _ZRAN_FILE_UTIL_RELEASE_GIL
     return 0;
 }
 
 /*
- * Implements a method analogous to getc that is performed on Python file-like objects.
+ * Implements a method analogous to getc that is performed on Python file-like
+ * objects.
  */
 int _getc_python(PyObject *f) {
     char buf;
@@ -158,28 +226,33 @@ int _getc_python(PyObject *f) {
  * Calls ferror on fd if specified, otherwise the Python-specific method on f.
  */
 int ferror_(FILE *fd, PyObject *f) {
-    return fd != NULL ? ferror(fd): _ferror_python(f);
+    return fd != NULL ? ferror(fd) : _ferror_python(f);
 }
 
 /*
  * Calls fseek on fd if specified, otherwise the Python-specific method on f.
  */
 int fseek_(FILE *fd, PyObject *f, int64_t offset, int whence) {
-    return fd != NULL ? FSEEK(fd, offset, whence): _fseek_python(f, offset, whence);
+    return fd != NULL
+        ? FSEEK(fd, offset, whence)
+        : _fseek_python(f, offset, whence);
 }
 
 /*
  * Calls ftell on fd if specified, otherwise the Python-specific method on f.
  */
 int64_t ftell_(FILE *fd, PyObject *f) {
-    return fd != NULL ? FTELL(fd): _ftell_python(f);
+    return fd != NULL ? FTELL(fd) : _ftell_python(f);
 }
 
 /*
  * Calls fread on fd if specified, otherwise the Python-specific method on f.
  */
 size_t fread_(void *ptr, size_t size, size_t nmemb, FILE *fd, PyObject *f) {
-    return fd != NULL ? fread(ptr, size, nmemb, fd): _fread_python(ptr, size, nmemb, f);
+
+  return fd != NULL
+      ? fread(ptr, size, nmemb, fd)
+      : _fread_python(ptr, size, nmemb, f);
 }
 
 /*
@@ -201,8 +274,14 @@ int fflush_(FILE *fd, PyObject *f) {
 /*
  * Calls fwrite on fd if specified, otherwise the Python-specific method on f.
  */
-size_t fwrite_(const void *ptr, size_t size, size_t nmemb, FILE *fd, PyObject *f) {
-    return fd != NULL ? fwrite(ptr, size, nmemb, fd): _fwrite_python(ptr, size, nmemb, f);
+size_t fwrite_(const void *ptr,
+               size_t      size,
+               size_t      nmemb,
+               FILE       *fd,
+               PyObject   *f) {
+    return fd != NULL
+        ? fwrite(ptr, size, nmemb, fd)
+        : _fwrite_python(ptr, size, nmemb, f);
 }
 
 /*

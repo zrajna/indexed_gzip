@@ -118,6 +118,26 @@ data = myfile.read(1048576)
 ```
 
 
+## Using with in-memory data
+
+You can use `indexed_gzip` with any Python file-like object. For example:
+
+```python
+
+import io
+import indexed_gzip as igzip
+
+# Load some gzip data from somewhere
+with open('my_file.gz') as f:
+    data = f.read()
+
+# Create an IndexedGzipFile based on the
+# in-memory data buffer
+gzf = igzip.IndexedGzipFile(fileobj=io.BytesIO(data))
+uncompressed = gzf.read(1048576)
+```
+
+
 ## Using with `nibabel`
 
 
@@ -132,8 +152,8 @@ image = nib.load('big_image.nii.gz')
 ```
 
 
-If you are using `nibabel` 2.2.x, you need to explicitly set the `keep_file_open`
-flag:
+If you are using `nibabel` 2.2.x, you need to explicitly set the
+`keep_file_open` flag:
 
 
 ```python
@@ -202,10 +222,10 @@ fobj = igzip.IndexedGzipFile('big_file.gz', index_file='big_file.gzidx')
 ## Write support
 
 
-`indexed_gzip` does not currently have any support for writing. Currently if you
-wish to write to a file, you will need to save the file by alternate means (e.g.
-via `gzip` or `nibabel`), and then re-create a new `IndexedGzipFile` instance.
-For example:
+`indexed_gzip` does not currently have any support for writing. Currently if
+you wish to write to a file, you will need to save the file by alternate means
+(e.g.  via `gzip` or `nibabel`), and then re-create a new `IndexedGzipFile`
+instance.  For example:
 
 
 ```python
@@ -275,16 +295,16 @@ Initial work on `indexed_gzip` took place at
 [FMRIB Centre](https://www.ndcn.ox.ac.uk/divisions/fmrib/), at the
 University of Oxford, UK.
 
-
 Many thanks to the following contributors (listed chronologically):
 
- - Zalan Rajna (@zrajna): bug fixes (#2)
- - Martin Craig (@mcraig-ibme): porting `indexed_gzip` to Windows (#3)
+ - Zalan Rajna (@zrajna): Bug fixes (#2)
+ - Martin Craig (@mcraig-ibme): Porting `indexed_gzip` to Windows (#3)
  - Chris Markiewicz (@effigies): Option to drop file handles (#6)
  - Omer Ozarslan (@ozars): Index import/export (#8)
  - @DarioDaF: Windows overflow bug (#30)
  - Sławomir Zborowski (@szborows): `seek_points` method (#35), README fixes
    (#34)
+ - Ashwin Ramaswami (@epicfaace): Support for in-memory file objects (#55)
 
 
 ## License

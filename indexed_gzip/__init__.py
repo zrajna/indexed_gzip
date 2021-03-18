@@ -2,8 +2,6 @@
 #
 # __init__.py - The indexed_gzip namespace.
 #
-# Author: Paul McCarthy <pauldmccarthy@gmail.com>
-#
 """The indexed_gzip namespace. """
 
 
@@ -21,4 +19,4 @@ versions of ``nibabel``.
 """
 
 
-__version__ = '1.4.0'
+__version__ = '1.5.0'

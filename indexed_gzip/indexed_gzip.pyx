@@ -2,8 +2,6 @@
 #
 # The IndexedGzipFile class.
 #
-# Author: Paul McCarthy <pauldmccarthy@gmail.com>
-#
 
 """This module provides the :class:`IndexedGzipFile` class, a drop-in
 replacement for the built-in ``gzip.GzipFile`` class, for faster read-only
@@ -37,14 +35,14 @@ from cpython.ref cimport PyObject
 
 cimport indexed_gzip.zran as zran
 
-import io
-import os
-import pickle
-import logging
-import tempfile
-import warnings
-import threading
-import contextlib
+import            io
+import            os
+import os.path as op
+import            pickle
+import            logging
+import            warnings
+import            threading
+import            contextlib
 
 
 builtin_open = open
@@ -180,19 +178,9 @@ class IndexedGzipFile(io.BufferedReader):
             index = None
 
         else:
-            # zran.c:zran_export_index requires a file
-            # descriptor, so we give it a tempoorary
-            # file, and then read the bytes into memory.
-            tmpfile = None
-            try:
-                tmpfile = tempfile.NamedTemporaryFile(delete=False)
-                tmpfile.close()
-                self.export_index(tmpfile.name)
-                with builtin_open(tmpfile.name, 'rb') as f:
-                    index = f.read()
-            finally:
-                if tmpfile is not None:
-                    os.remove(tmpfile.name)
+            index = io.BytesIO()
+            self.export_index(fileobj=index)
+            index = index.getvalue()
 
         state = {
             'filename'         : fobj.filename,
@@ -346,6 +334,14 @@ cdef class _IndexedGzipFile:
             fileobj  = filename
             filename = None
 
+        # If __file_handle is called on a file
+        # that doesn't exist, it passes the
+        # path directly to fopen, which causes
+        # a segmentation faullt on linux. So
+        # let's check before that happens.
+        if (filename is not None) and (not op.isfile(filename)):
+            raise ValueError('File {} does not exist'.format(filename))
+
         mode     = 'rb'
         own_file = fileobj is None
 
@@ -365,7 +361,6 @@ cdef class _IndexedGzipFile:
             except io.UnsupportedOperation:
                 fd  = NULL
 
-
         self.spacing          = spacing
         self.window_size      = window_size
         self.readbuf_size     = readbuf_size
@@ -375,16 +370,18 @@ cdef class _IndexedGzipFile:
         self.filename         = filename
         self.own_file         = own_file
         self.pyfid            = fileobj
-        self.index.fd         = fd
-        self.index.f          = <PyObject*>fileobj
 
         if self.auto_build: flags = zran.ZRAN_AUTO_BUILD
         else:               flags = 0
 
+        # Set index.fd here just for the initial
+        # call, as __file_handle may otherwise
+        # manipulate it incorrectly
+        self.index.fd = fd
         with self.__file_handle():
             if zran.zran_init(index=&self.index,
                               fd=self.index.fd,
-                              f=<PyObject*>self.index.f if self.index.fd == NULL else NULL,
+                              f=<PyObject*>fileobj,
                               spacing=spacing,
                               window_size=window_size,
                               readbuf_size=readbuf_size,
@@ -425,7 +422,7 @@ cdef class _IndexedGzipFile:
             # context manager reentrant.
             if self.index.fd is not NULL:
                 yield
-            
+
             # If a file-like object exists (without an associated
             # file descriptor, since self.index.fd is NULL),
             # also return it.
@@ -435,7 +432,6 @@ cdef class _IndexedGzipFile:
             # otherwise we open a new
             # file handle on each access
             else:
-
                 try:
                     self.index.fd = fopen(self.filename.encode(), 'rb')
                     yield
@@ -507,7 +503,8 @@ cdef class _IndexedGzipFile:
         self.pyfid     = None
         self.finalized = True
 
-        log.debug('%s.close()', type(self).__name__)
+        if log is not None:
+            log.debug('%s.close()', type(self).__name__)
 
 
     @property
@@ -602,12 +599,8 @@ cdef class _IndexedGzipFile:
         if whence not in (SEEK_SET, SEEK_CUR, SEEK_END):
             raise ValueError('Invalid value for whence: {}'.format(whence))
 
-        if index.fd == NULL:
-            with self.__file_handle():
-                ret = zran.zran_seek(index, off, c_whence, NULL)
-        else:
-            with self.__file_handle(), nogil:
-                ret = zran.zran_seek(index, off, c_whence, NULL)
+        with self.__file_handle(), nogil:
+            ret = zran.zran_seek(index, off, c_whence, NULL)
 
         if ret < 0:
             raise ZranError('zran_seek returned error: {}'.format(ret))
@@ -661,21 +654,20 @@ cdef class _IndexedGzipFile:
                 # buffer location
                 buffer = <char *>buf.buffer + offset
 
-                if index.fd == NULL:
+                with nogil:
                     ret = zran.zran_read(index, buffer, bufsz)
-                else:
-                    with nogil:
-                        ret = zran.zran_read(index, buffer, bufsz)
 
                 # see how the read went
                 if ret == zran.ZRAN_READ_FAIL:
-                    raise ZranError('zran_read returned error ({})'.format(ret))
+                    raise ZranError('zran_read returned error '
+                                    '({})'.format(ret))
 
                 # This will happen if the current
                 # seek point is not covered by the
                 # index, and auto-build is disabled
                 elif ret == zran.ZRAN_READ_NOT_COVERED:
-                    raise NotCoveredError('Index does not cover current offset')
+                    raise NotCoveredError('Index does not cover '
+                                          'current offset')
 
                 # No bytes were read, and there are
                 # no more bytes to read. This will
@@ -730,12 +722,8 @@ cdef class _IndexedGzipFile:
         try:
 
             vbuf = <void *>pbuf.buf
-            if index.fd == NULL:
-                with self.__file_handle():
-                    ret = zran.zran_read(index, vbuf, bufsz)
-            else:
-                with self.__file_handle(), nogil:
-                    ret = zran.zran_read(index, vbuf, bufsz)
+            with self.__file_handle(), nogil:
+                ret = zran.zran_read(index, vbuf, bufsz)
 
         # release the py_buffer
         finally:
@@ -907,11 +895,14 @@ cdef class _IndexedGzipFile:
                     'File should be opened in writeable binary mode.')
 
         try:
+            # Pass both the Python file object and
+            # file descriptor (if this is an actual
+            # file) to the zran_export_index function
             try:
-                fd  = fdopen(fileobj.fileno(), 'wb')
+                fd = fdopen(fileobj.fileno(), 'wb')
             except io.UnsupportedOperation:
-                fd  = NULL
-            ret = zran.zran_export_index(&self.index, fd, <PyObject*>fileobj if fd == NULL else NULL)
+                fd = NULL
+            ret = zran.zran_export_index(&self.index, fd, <PyObject*>fileobj)
             if ret != zran.ZRAN_EXPORT_OK:
                 raise ZranError('export_index returned error: {}'.format(ret))
 
@@ -952,11 +943,14 @@ cdef class _IndexedGzipFile:
                     'File should be opened read-only binary mode.')
 
         try:
+            # Pass both the Python file object and
+            # file descriptor (if this is an actual
+            # file) to the zran_import_index function
             try:
-                fd  = fdopen(fileobj.fileno(), 'rb')
+                fd = fdopen(fileobj.fileno(), 'rb')
             except io.UnsupportedOperation:
-                fd  = NULL
-            ret = zran.zran_import_index(&self.index, fd, <PyObject*>fileobj if fd == NULL else NULL)
+                fd = NULL
+            ret = zran.zran_import_index(&self.index, fd, <PyObject*>fileobj)
             if ret != zran.ZRAN_IMPORT_OK:
                 raise ZranError('import_index returned error: {}'.format(ret))
 
@@ -1034,20 +1028,8 @@ def unpickle(state):
     gzobj = IndexedGzipFile(**state)
 
     if index is not None:
-        tmpfile = None
-        try:
-            # zran.c:zran_import_index requires an
-            # actual file with a file descriptor,
-            # so we write the index data out to a
-            # temp file, and then pass the file in.
-            tmpfile = tempfile.NamedTemporaryFile(delete=False)
-            tmpfile.write(index)
-            tmpfile.close()
-            gzobj.import_index(tmpfile.name)
+        gzobj.import_index(fileobj=io.BytesIO(index))
 
-        finally:
-            if tmpfile is not None:
-                os.remove(tmpfile.name)
     gzobj.seek(tell)
 
     return gzobj

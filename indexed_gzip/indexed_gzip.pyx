@@ -363,7 +363,6 @@ cdef class _IndexedGzipFile:
             except io.UnsupportedOperation:
                 fd  = NULL
 
-
         self.spacing          = spacing
         self.window_size      = window_size
         self.readbuf_size     = readbuf_size
@@ -373,16 +372,18 @@ cdef class _IndexedGzipFile:
         self.filename         = filename
         self.own_file         = own_file
         self.pyfid            = fileobj
-        self.index.fd         = fd
-        self.index.f          = <PyObject*>fileobj
 
         if self.auto_build: flags = zran.ZRAN_AUTO_BUILD
         else:               flags = 0
 
+        # Set index.fd here just for the initial
+        # call, as __file_handle may otherwise
+        # manipulate it incorrectly
+        self.index.fd = fd
         with self.__file_handle():
             if zran.zran_init(index=&self.index,
                               fd=self.index.fd,
-                              f=<PyObject*>self.index.f if self.index.fd == NULL else NULL,
+                              f=<PyObject*>fileobj,
                               spacing=spacing,
                               window_size=window_size,
                               readbuf_size=readbuf_size,
@@ -433,7 +434,6 @@ cdef class _IndexedGzipFile:
             # otherwise we open a new
             # file handle on each access
             else:
-
                 try:
                     self.index.fd = fopen(self.filename.encode(), 'rb')
                     yield
@@ -661,13 +661,15 @@ cdef class _IndexedGzipFile:
 
                 # see how the read went
                 if ret == zran.ZRAN_READ_FAIL:
-                    raise ZranError('zran_read returned error ({})'.format(ret))
+                    raise ZranError('zran_read returned error '
+                                    '({})'.format(ret))
 
                 # This will happen if the current
                 # seek point is not covered by the
                 # index, and auto-build is disabled
                 elif ret == zran.ZRAN_READ_NOT_COVERED:
-                    raise NotCoveredError('Index does not cover current offset')
+                    raise NotCoveredError('Index does not cover '
+                                          'current offset')
 
                 # No bytes were read, and there are
                 # no more bytes to read. This will
@@ -899,7 +901,7 @@ cdef class _IndexedGzipFile:
                 fd  = fdopen(fileobj.fileno(), 'wb')
             except io.UnsupportedOperation:
                 fd  = NULL
-            ret = zran.zran_export_index(&self.index, fd, <PyObject*>fileobj if fd == NULL else NULL)
+            ret = zran.zran_export_index(&self.index, fd, <PyObject*>fileobj)
             if ret != zran.ZRAN_EXPORT_OK:
                 raise ZranError('export_index returned error: {}'.format(ret))
 
@@ -944,7 +946,7 @@ cdef class _IndexedGzipFile:
                 fd  = fdopen(fileobj.fileno(), 'rb')
             except io.UnsupportedOperation:
                 fd  = NULL
-            ret = zran.zran_import_index(&self.index, fd, <PyObject*>fileobj if fd == NULL else NULL)
+            ret = zran.zran_import_index(&self.index, fd, <PyObject*>fileobj)
             if ret != zran.ZRAN_IMPORT_OK:
                 raise ZranError('import_index returned error: {}'.format(ret))
 

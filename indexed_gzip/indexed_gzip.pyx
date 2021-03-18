@@ -886,10 +886,13 @@ cdef class _IndexedGzipFile:
                     'File should be opened in writeable binary mode.')
 
         try:
+            # Pass both the Python file object and
+            # file descriptor (if this is an actual
+            # file) to the zran_export_index function
             try:
-                fd  = fdopen(fileobj.fileno(), 'wb')
+                fd = fdopen(fileobj.fileno(), 'wb')
             except io.UnsupportedOperation:
-                fd  = NULL
+                fd = NULL
             ret = zran.zran_export_index(&self.index, fd, <PyObject*>fileobj)
             if ret != zran.ZRAN_EXPORT_OK:
                 raise ZranError('export_index returned error: {}'.format(ret))
@@ -931,10 +934,13 @@ cdef class _IndexedGzipFile:
                     'File should be opened read-only binary mode.')
 
         try:
+            # Pass both the Python file object and
+            # file descriptor (if this is an actual
+            # file) to the zran_import_index function
             try:
-                fd  = fdopen(fileobj.fileno(), 'rb')
+                fd = fdopen(fileobj.fileno(), 'rb')
             except io.UnsupportedOperation:
-                fd  = NULL
+                fd = NULL
             ret = zran.zran_import_index(&self.index, fd, <PyObject*>fileobj)
             if ret != zran.ZRAN_IMPORT_OK:
                 raise ZranError('import_index returned error: {}'.format(ret))

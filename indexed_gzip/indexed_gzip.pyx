@@ -178,19 +178,8 @@ class IndexedGzipFile(io.BufferedReader):
             index = None
 
         else:
-            # zran.c:zran_export_index requires a file
-            # descriptor, so we give it a tempoorary
-            # file, and then read the bytes into memory.
-            tmpfile = None
-            try:
-                tmpfile = tempfile.NamedTemporaryFile(delete=False)
-                tmpfile.close()
-                self.export_index(tmpfile.name)
-                with builtin_open(tmpfile.name, 'rb') as f:
-                    index = f.read()
-            finally:
-                if tmpfile is not None:
-                    os.remove(tmpfile.name)
+            index = io.BytesIO()
+            self.export_index(fileobj=index)
 
         state = {
             'filename'         : fobj.filename,
@@ -1024,20 +1013,8 @@ def unpickle(state):
     gzobj = IndexedGzipFile(**state)
 
     if index is not None:
-        tmpfile = None
-        try:
-            # zran.c:zran_import_index requires an
-            # actual file with a file descriptor,
-            # so we write the index data out to a
-            # temp file, and then pass the file in.
-            tmpfile = tempfile.NamedTemporaryFile(delete=False)
-            tmpfile.write(index)
-            tmpfile.close()
-            gzobj.import_index(tmpfile.name)
+        gzobj.import_index(fileobj=index)
 
-        finally:
-            if tmpfile is not None:
-                os.remove(tmpfile.name)
     gzobj.seek(tell)
 
     return gzobj

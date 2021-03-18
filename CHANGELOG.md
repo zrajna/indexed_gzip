@@ -1,6 +1,12 @@
 # `indexed_gzip` changelog
 
 
+## 1.5.0 (March 18th 2021)
+
+
+* Added support for in-memory file objects (#55).
+
+
 ## 1.4.0 (January 2nd 2021)
 
 

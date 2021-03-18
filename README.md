@@ -275,16 +275,16 @@ Initial work on `indexed_gzip` took place at
 [FMRIB Centre](https://www.ndcn.ox.ac.uk/divisions/fmrib/), at the
 University of Oxford, UK.
 
-
 Many thanks to the following contributors (listed chronologically):
 
- - Zalan Rajna (@zrajna): bug fixes (#2)
- - Martin Craig (@mcraig-ibme): porting `indexed_gzip` to Windows (#3)
+ - Zalan Rajna (@zrajna): Bug fixes (#2)
+ - Martin Craig (@mcraig-ibme): Porting `indexed_gzip` to Windows (#3)
  - Chris Markiewicz (@effigies): Option to drop file handles (#6)
  - Omer Ozarslan (@ozars): Index import/export (#8)
  - @DarioDaF: Windows overflow bug (#30)
  - Sławomir Zborowski (@szborows): `seek_points` method (#35), README fixes
    (#34)
+ - Ashwin Ramaswami (@epicfaace): Support for in-memory file objects (#55)
 
 
 ## License

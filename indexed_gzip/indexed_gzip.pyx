@@ -181,6 +181,7 @@ class IndexedGzipFile(io.BufferedReader):
         else:
             index = io.BytesIO()
             self.export_index(fileobj=index)
+            index = index.getvalue()
 
         state = {
             'filename'         : fobj.filename,
@@ -1028,7 +1029,7 @@ def unpickle(state):
     gzobj = IndexedGzipFile(**state)
 
     if index is not None:
-        gzobj.import_index(fileobj=index)
+        gzobj.import_index(fileobj=io.BytesIO(index))
 
     gzobj.seek(tell)
 

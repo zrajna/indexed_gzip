@@ -1,10 +1,12 @@
 # `indexed_gzip` changelog
 
 
-## 1.5.0 (March 18th 2021)
+## 1.5.0 (March 19th 2021)
 
 
 * Added support for in-memory file objects (#55).
+* Fixed a bug whereby a segmentation fault could occur if an `IndexedGzipFile`
+  was created with a path to a non-existent file (#56).
 
 
 ## 1.4.0 (January 2nd 2021)

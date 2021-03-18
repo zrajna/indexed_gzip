@@ -35,14 +35,15 @@ from cpython.ref cimport PyObject
 
 cimport indexed_gzip.zran as zran
 
-import io
-import os
-import pickle
-import logging
-import tempfile
-import warnings
-import threading
-import contextlib
+import            io
+import            os
+import os.path as op
+import            pickle
+import            logging
+import            tempfile
+import            warnings
+import            threading
+import            contextlib
 
 
 builtin_open = open
@@ -332,6 +333,14 @@ cdef class _IndexedGzipFile:
         if  hasattr(filename, 'read'):
             fileobj  = filename
             filename = None
+
+        # If __file_handle is called on a file
+        # that doesn't exist, it passes the
+        # path directly to fopen, which causes
+        # a segmentation faullt on linux. So
+        # let's check before that happens.
+        if (filename is not None) and (not op.isfile(filename)):
+            raise ValueError('File {} does not exist'.format(filename))
 
         mode     = 'rb'
         own_file = fileobj is None

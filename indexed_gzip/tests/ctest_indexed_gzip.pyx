@@ -33,6 +33,7 @@ import indexed_gzip as igzip
 from . import gen_test_data
 from . import check_data_valid
 from . import tempdir
+from . import compress
 
 from libc.stdio cimport (SEEK_SET,
                          SEEK_CUR,
@@ -754,7 +755,7 @@ def test_import_export_index():
             with open(idxfname, 'wb') as idxf:
                 f.export_index(fileobj=idxf)
 
-        # Check that it works
+        # Check that we can read it back
         with igzip._IndexedGzipFile(fname) as f:
 
             # Should raise if wrong permissions
@@ -858,8 +859,9 @@ def test_picklable():
 
     with tempdir():
         data = np.random.randint(1, 1000, (10000, 10000), dtype=np.uint32)
-        with gzip.open(fname, 'wb') as f:
+        with open(fname+'.bin', 'wb') as f:
             f.write(data.tobytes())
+        compress(fname+'.bin', fname)
         del f
 
         gzf        = igzip.IndexedGzipFile(fname)
@@ -900,8 +902,9 @@ def test_copyable():
 
     with tempdir():
         data = np.random.randint(1, 1000, (10000, 10000), dtype=np.uint32)
-        with gzip.open(fname, 'wb') as f:
+        with open(fname+'.bin', 'wb') as f:
             f.write(data.tobytes())
+        compress(fname+'.bin', fname)
         del f
 
         gzf        = igzip.IndexedGzipFile(fname)

@@ -6,8 +6,6 @@
  * Alder, which ships with the zlib source code. It allows the creation
  * of an index into a compressed file, which is used to improve the speed
  * of random seek/read access to the uncompressed data.
- *
- * Author: Paul McCarthy <pauldmccarthy@gmail.com>
  */
 
 #include <stdlib.h>

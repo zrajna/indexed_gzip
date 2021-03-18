@@ -2,8 +2,6 @@
 #
 # The IndexedGzipFile class.
 #
-# Author: Paul McCarthy <pauldmccarthy@gmail.com>
-#
 
 """This module provides the :class:`IndexedGzipFile` class, a drop-in
 replacement for the built-in ``gzip.GzipFile`` class, for faster read-only

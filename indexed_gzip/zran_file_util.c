@@ -1,9 +1,6 @@
 /*
  * zran_file_util.c - file utilities used in zran.c to manipulate either
  * Python file-like objects or file descriptors.
- *
- *
- * Author: Paul McCarthy <pauldmccarthy@gmail.com>
  */
 
 #include <math.h>

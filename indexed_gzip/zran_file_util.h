@@ -4,8 +4,6 @@
 /*
  * File utilities used to manipulate either
  * Python file-like objects or file descriptors.
- *
- * Author: Paul McCarthy <pauldmccarthy@gmail.com>
  */
 
 #include <stdlib.h>

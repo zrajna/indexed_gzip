@@ -2,8 +2,6 @@
 #
 # __init__.py - The indexed_gzip namespace.
 #
-# Author: Paul McCarthy <pauldmccarthy@gmail.com>
-#
 """The indexed_gzip namespace. """
 
 

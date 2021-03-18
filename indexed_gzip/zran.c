@@ -5,8 +5,6 @@
  *
  * This module was originally based on the zran example, written by Mark
  * Alder, which ships with the zlib source code.
- *
- * Author: Paul McCarthy <pauldmccarthy@gmail.com>
  */
 
 #include <math.h>

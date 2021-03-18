@@ -40,7 +40,6 @@ import            os
 import os.path as op
 import            pickle
 import            logging
-import            tempfile
 import            warnings
 import            threading
 import            contextlib

@@ -1,6 +1,12 @@
 # `indexed_gzip` changelog
 
 
+## 1.5.1 (March 19th 2021)
+
+
+* Minor adjustments to some unit tests.
+
+
 ## 1.5.0 (March 19th 2021)
 
 

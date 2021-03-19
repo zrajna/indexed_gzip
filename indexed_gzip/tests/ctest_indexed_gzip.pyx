@@ -193,6 +193,9 @@ def test_init_success_cases(concat, drop):
         gf1.close()
         gf2.close()
         gf3.close()
+        del gf1
+        del gf2
+        del gf3
 
 
 def test_create_from_open_handle(testfile, nelems, seed, drop, file_like_object):
@@ -208,7 +211,6 @@ def test_create_from_open_handle(testfile, nelems, seed, drop, file_like_object)
     element = np.random.randint(0, nelems, 1)
     readval = read_element(gzf, element)
 
-
     gzf.close()
 
     try:
@@ -218,6 +220,9 @@ def test_create_from_open_handle(testfile, nelems, seed, drop, file_like_object)
 
     finally:
         f.close()
+        del gzf
+        del f
+
 
 def test_accept_filename_or_fileobj(testfile, nelems):
 
@@ -246,6 +251,11 @@ def test_accept_filename_or_fileobj(testfile, nelems):
         if gzf2 is not None: gzf2.close()
         if gzf1 is not None: gzf1.close()
         if f    is not None: f   .close()
+        del f
+        del gzf1
+        del gzf2
+        del gzf3
+
 
 def test_prioritize_fd_over_f(testfile, nelems):
     """When a fileobj with an associated fileno is passed to IndexedGzipFile,
@@ -256,7 +266,7 @@ def test_prioritize_fd_over_f(testfile, nelems):
         # We can't set the .read attribute in Python 2
         # because it's read-only, so skip it.
         return
-    
+
     f    = None
     gzf  = None
 
@@ -271,8 +281,11 @@ def test_prioritize_fd_over_f(testfile, nelems):
         assert readval == element
 
     finally:
-        if gzf is not None:     gzf.close()
-        if f   is not None:     f   .close()
+        if gzf is not None: gzf.close()
+        if f   is not None: f  .close()
+        del f
+        del gzf
+
 
 def test_handles_not_dropped(testfile, nelems, seed):
 

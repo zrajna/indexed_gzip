@@ -337,7 +337,7 @@ cdef class _IndexedGzipFile:
         # If __file_handle is called on a file
         # that doesn't exist, it passes the
         # path directly to fopen, which causes
-        # a segmentation faullt on linux. So
+        # a segmentation fault on linux. So
         # let's check before that happens.
         if (filename is not None) and (not op.isfile(filename)):
             raise ValueError('File {} does not exist'.format(filename))

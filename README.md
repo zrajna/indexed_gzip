@@ -111,8 +111,7 @@ myfile = igzip.IndexedGzipFile('big_file.gz')
 some_offset_into_uncompressed_data = 234195
 
 # The index will be automatically
-# built on-demand when seeking or
-# reading.
+# built on-demand when seeking.
 myfile.seek(some_offset_into_uncompressed_data)
 data = myfile.read(1048576)
 ```

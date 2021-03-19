@@ -1,6 +1,12 @@
 # `indexed_gzip` changelog
 
 
+## 1.5.2 (March 19th 2021)
+
+
+* Not providing binary wheels for Python 2.7 on 32 bit Windows.
+
+
 ## 1.5.1 (March 19th 2021)
 
 

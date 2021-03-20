@@ -46,7 +46,7 @@
  */
 size_t _fread_python(void *ptr, size_t size, size_t nmemb, PyObject *f) {
 
-    PyObject  *data;
+    PyObject  *data = NULL;
     char      *buf;
     Py_ssize_t len;
 
@@ -76,7 +76,7 @@ fail:
  * file-like objects.
  */
 int64_t _ftell_python(PyObject *f) {
-    PyObject *data;
+    PyObject *data = NULL;
     int64_t   result;
 
     _ZRAN_FILE_UTIL_ACQUIRE_GIL
@@ -105,10 +105,10 @@ fail:
  */
 int _fseek_python(PyObject *f, int64_t offset, int whence) {
 
-    PyObject *data;
-    PyObject *seek_fn_name;
-    PyObject *whence_;
-    PyObject *offset_;
+    PyObject *data = NULL;
+    PyObject *seek_fn_name = NULL;
+    PyObject *whence_ = NULL;
+    PyObject *offset_ = NULL;
 
     _ZRAN_FILE_UTIL_ACQUIRE_GIL
 
@@ -173,7 +173,7 @@ int _ferror_python(PyObject *f) {
  * file-like objects.
  */
 int _fflush_python(PyObject *f) {
-    PyObject *data;
+    PyObject *data = NULL;
 
     _ZRAN_FILE_UTIL_ACQUIRE_GIL
     if ((data = PyObject_CallMethod(f, "flush", NULL)) == NULL) goto fail;
@@ -197,7 +197,7 @@ size_t _fwrite_python(const void *ptr,
                       size_t      nmemb,
                       PyObject   *f) {
 
-    PyObject *input;
+    PyObject *input = NULL;
     PyObject *data = NULL;
     long      len;
 

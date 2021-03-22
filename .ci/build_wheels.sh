@@ -18,6 +18,9 @@ export CIBW_TEST_REQUIRES="cython pytest pytest-cov coverage numpy nibabel"
 # Disable pypy builds
 export CIBW_SKIP="pp*"
 
+# Build wheels for x86_64 and for ARM64
+export CIBW_ARCHS_LINUX="auto aarch64"
+
 # Pytest makes it *very* awkward to run tests
 # from an installed package, and still find/
 # interpret a conftest.py file correctly. Also

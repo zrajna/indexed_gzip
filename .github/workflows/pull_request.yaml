@@ -88,3 +88,44 @@ jobs:
         run:  bash ./.ci/build_dev_indexed_gzip.sh "$ENV_DIR"
       - name: Run tests
         run:  bash  ./.ci/run_tests.sh "$ENV_DIR"
+
+
+  build_wheels:
+    name: Build ${{ matrix.os }} wheels
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: ["ubuntu-18.04"]
+
+    env:
+      PLATFORM: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        name: Install Python
+        with:
+          python-version: '3.7'
+
+      - name: Install Visual C++ for Python 2.7
+        if: runner.os == 'Windows'
+        run: |
+          choco install vcpython27 -f -y
+
+      - name: Download zlib
+        if:   ${{ matrix.os == 'windows-latest' }}
+        run:  bash ./.ci/download_zlib.sh
+
+      - name: Set up QEMU
+        if: runner.os == 'Linux'
+        uses: docker/setup-qemu-action@v1
+        with:
+          platforms: all
+
+      - name: Build wheels
+        run:  bash ./.ci/build_wheels.sh
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: wheels
+          path: ./dist/*.whl

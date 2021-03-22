@@ -160,7 +160,7 @@ else:
     # rather than use system-provided zlib
     if ZLIB_HOME is None:
         libs.append('z')
-    extra_compile_args += ['-Wall', '-std=c99', '-Wno-unused-function']
+    extra_compile_args += ['-Wall', '-Wno-unused-function']
 
 if testing:
     compiler_directives['linetrace'] = True

@@ -61,11 +61,11 @@ jobs:
         extra-args:     ["", "--concat"]
 
     env:
-      USING_OS_VENV:  1
-      PYTHON_VERSION: ${{ matrix.python-version }}
-      TEST_SUITE:     "not slow_test"
-      EXTRA_ARGS:     ${{ matrix.extra-args }}
-      ENV_DIR:        ./test.env
+      USING_OS_PYTHON: 1
+      PYTHON_VERSION:  ${{ matrix.python-version }}
+      TEST_SUITE:      "not slow_test"
+      EXTRA_ARGS:      ${{ matrix.extra-args }}
+      ENV_DIR:         ./test.env
 
     steps:
       - name: Install git

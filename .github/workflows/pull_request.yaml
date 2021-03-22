@@ -48,3 +48,41 @@ jobs:
         run:  bash ./.ci/build_dev_indexed_gzip.sh "$ENV_DIR"
       - name: Run tests
         run:  bash  ./.ci/run_tests.sh "$ENV_DIR"
+
+
+
+  # Quick tests on 32 bit platform
+  test-32bit:
+    runs-on: ubuntu-latest
+    container: i386/ubuntu
+    strategy:
+      matrix:
+        python-version: [2.7, 3.8]
+        extra-args:     ["", "--concat"]
+
+    env:
+      PYTHON_VERSION: ${{ matrix.python-version }}
+      TEST_SUITE:     "not slow_test"
+      EXTRA_ARGS:     ${{ matrix.extra-args }}
+      ENV_DIR:        ./test.env
+
+    steps:
+      - name: Install build tools
+        run:  apt-get install -y build-essential
+      - uses: actions/checkout@v2
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+          architecture: x86
+      - name: Create test environment
+        run:  bash ./.ci/create_test_env.sh "$ENV_DIR"
+      - name: Log test environment
+        run: |
+          source ./.ci/activate_env.sh "$ENV_DIR"
+          python -V
+          pip freeze
+      - name: Build indexed_gzip
+        run:  bash ./.ci/build_dev_indexed_gzip.sh "$ENV_DIR"
+      - name: Run tests
+        run:  bash  ./.ci/run_tests.sh "$ENV_DIR"

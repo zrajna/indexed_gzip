@@ -56,6 +56,12 @@ jobs:
         if:   ${{ matrix.os == 'windows-latest' }}
         run:  bash ./.ci/download_zlib.sh
 
+      - name: Set up QEMU for emulated (e.g. ARM) builds
+        if: runner.os == 'Linux'
+        uses: docker/setup-qemu-action@v1
+        with:
+          platforms: all
+
       - name: Build wheels
         run:  bash ./.ci/build_wheels.sh
 

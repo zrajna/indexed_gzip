@@ -83,3 +83,78 @@ jobs:
         run:  bash ./.ci/build_dev_indexed_gzip.sh "$ENV_DIR"
       - name: Run tests
         run:  bash  ./.ci/run_tests.sh "$ENV_DIR"
+
+
+  build_macos_wheels:
+    name: Build macos wheels
+    runs-on: macos-latest
+
+    env:
+      PLATFORM: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        name: Install Python
+        with:
+          python-version: '3.7'
+
+      - name: Build wheels
+        run:  bash ./.ci/build_wheels.sh
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: wheels
+          path: ./dist/*.whl
+
+  build_windows_wheels:
+    name: Build Windows wheels
+    runs-on: windows-latest
+
+    env:
+      PLATFORM: windows-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        name: Install Python
+        with:
+          python-version: '3.7'
+      - name: Install Visual C++ for Python 2.7
+        run: |
+          choco install vcpython27 -f -y
+      - name: Download zlib
+        run:  bash ./.ci/download_zlib.sh
+      - name: Build wheels
+        run:  bash ./.ci/build_wheels.sh
+      - uses: actions/upload-artifact@v2
+        with:
+          name: wheels
+          path: ./dist/*.whl
+
+  build_linux_wheels:
+    name: Build Linux ${{ matrix.arch }} eels
+    runs-on: ubuntu-latest
+
+    matrix:
+      arch: ["x86_64", "i686", "aarch64"]
+
+    env:
+      PLATFORM:         ubuntu-latest
+      CIBW_ARCHS_LINUX: ${{ matrix.arch }}
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        name: Install Python
+        with:
+          python-version: '3.7'
+      - name: Set up QEMU for emulated (e.g. ARM) builds
+        if:   ${{ matrix.arch == 'aarch64' }}
+        uses: docker/setup-qemu-action@v1
+      - name: Build wheels
+        run:  bash ./.ci/build_wheels.sh
+      - uses: actions/upload-artifact@v2
+        with:
+          name: wheels
+          path: ./dist/*.whl

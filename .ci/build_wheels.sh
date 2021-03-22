@@ -18,9 +18,6 @@ export CIBW_TEST_REQUIRES="cython pytest pytest-cov coverage numpy nibabel"
 # Disable pypy builds
 export CIBW_SKIP="pp*"
 
-# Build wheels for x86_64 and for ARM64
-export CIBW_ARCHS_LINUX="auto aarch64"
-
 # Build x86/M1 and universal wheels on macos
 export CIBW_ARCHS_MACOS="x86_64 arm64 universal2"
 

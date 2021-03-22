@@ -37,5 +37,5 @@ else
 fi
 
 source $thisdir/activate_env.sh "$envdir"
-pip install --upgrade pip setuptools
-pip install wheel cython pytest coverage pytest-cov "$NUMPY" "$NIBABEL"
+pip install wheel setuptools
+pip install cython pytest coverage pytest-cov "$NUMPY" "$NIBABEL"

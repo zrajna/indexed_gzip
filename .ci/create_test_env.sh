@@ -23,6 +23,8 @@ else
   NIBABEL="nibabel"
 fi
 
+pip"$PYTHON_VERSION" install virtualenv
+
 if [[ "$PYTHON_VERSION" == "2.7" ]]; then
   virtualenv "$envdir"
 else
@@ -30,5 +32,5 @@ else
 fi
 
 source $thisdir/activate_env.sh "$envdir"
-pip install --upgrade pip wheel virtualenv
+pip install --upgrade pip setuptools
 pip install wheel cython pytest coverage pytest-cov "$NUMPY" "$NIBABEL"

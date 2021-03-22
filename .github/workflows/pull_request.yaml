@@ -54,7 +54,7 @@ jobs:
   # Quick tests on 32 bit platform
   test-32bit:
     runs-on: ubuntu-latest
-    container: i386/ubuntu
+    container: i386/ubuntu:18.04
     strategy:
       matrix:
         python-version: [2.7, 3.8]
@@ -67,16 +67,9 @@ jobs:
       ENV_DIR:        ./test.env
 
     steps:
-      - name: Install build tools
-        run:  |
-          apt-get update
-          apt-get install -y build-essential git
+      - name: Install system dependencies
+        run:  bash ./.ci/install_32bit_dependencies.sh
       - uses: actions/checkout@v1
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v2
-        with:
-          python-version: ${{ matrix.python-version }}
-          architecture: x86
       - name: Create test environment
         run:  bash ./.ci/create_test_env.sh "$ENV_DIR"
       - name: Log test environment

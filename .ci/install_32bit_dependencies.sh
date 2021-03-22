@@ -9,7 +9,7 @@ apt-get install -y                 \
 if [ "$PYTHON_VERSION" == "2.7" ]; then
   PACKAGES="python-pip python-virtualenv"
 else
-  PACKAGES="python3-pip python3-venv"
+  PACKAGES="python3-pip python-${PYTHON_VERSION}-venv"
 fi
 
 add-apt-repository -y ppa:deadsnakes/ppa

@@ -70,7 +70,7 @@ jobs:
       - name: Install build tools
         run:  |
           apt-get update
-          apt-get install -y build-essential
+          apt-get install -y build-essential git
       - uses: actions/checkout@v2
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2

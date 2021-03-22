@@ -90,7 +90,8 @@ jobs:
     runs-on: macos-latest
 
     env:
-      PLATFORM: ${{ matrix.os }}
+      PLATFORM:         ${{ matrix.os }}
+      CIBW_ARCHS_MACOS: "x86_64 arm64 universal2"
 
     steps:
       - uses: actions/checkout@v2
@@ -108,11 +109,16 @@ jobs:
           path: ./dist/*.whl
 
   build_windows_wheels:
-    name: Build Windows wheels
+    name: Build Windows ${{ matrix.arch }} wheels
     runs-on: windows-latest
 
+    strategy:
+      matrix:
+        arch: ["AMD64", "x86"]
+
     env:
-      PLATFORM: windows-latest
+      PLATFORM:           windows-latest
+      CIBW_ARCHS_WINDOWS: ${{ matrix.arch }}
 
     steps:
       - uses: actions/checkout@v2
@@ -133,6 +139,7 @@ jobs:
           path: ./dist/*.whl
 
   build_linux_wheels:
+    # Typo left in for hilarity
     name: Build Linux ${{ matrix.arch }} eels
     runs-on: ubuntu-latest
 

@@ -30,7 +30,7 @@ fi
 
 if [[ "$PYTHON_VERSION" == "2.7" ]]; then
   virtualenv "$envdir"
-else if [[ "$USING_OS_PYTHON" == "1" ]]; then
+elif [[ "$USING_OS_PYTHON" == "1" ]]; then
   python"$PYTHON_VERSION" -m venv "$envdir"
 else
   python -m venv "$envdir"

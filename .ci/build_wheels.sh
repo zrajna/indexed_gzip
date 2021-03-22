@@ -22,7 +22,7 @@ export CIBW_SKIP="pp*"
 export CIBW_ARCHS_LINUX="auto aarch64"
 
 # Build x86/M1 and universal wheels on macos
-export CIBW_ARCHS_LINUX="x86_64 arm64 universal2"
+export CIBW_ARCHS_MACOS="x86_64 arm64 universal2"
 
 # Pytest makes it *very* awkward to run tests
 # from an installed package, and still find/

@@ -81,8 +81,9 @@ jobs:
     name: Build Linux ${{ matrix.arch }} eels
     runs-on: ubuntu-latest
 
-    matrix:
-      arch: ["x86_64", "i686", "aarch64"]
+    strategy:
+      matrix:
+        arch: ["x86_64", "i686", "aarch64"]
 
     env:
       PLATFORM:         ubuntu-latest

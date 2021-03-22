@@ -5,6 +5,7 @@
 #
 
 set -e
+set -x
 
 envdir="$1"
 thisdir=$(cd $(dirname "$0") && pwd)
@@ -23,7 +24,9 @@ else
   NIBABEL="nibabel"
 fi
 
-pip"$PYTHON_VERSION" install virtualenv
+if [[ "$USING_OS_VENV" != "1" ]]; then
+  pip"$PYTHON_VERSION" install virtualenv
+fi
 
 if [[ "$PYTHON_VERSION" == "2.7" ]]; then
   virtualenv "$envdir"

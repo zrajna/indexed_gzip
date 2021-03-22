@@ -67,9 +67,11 @@ jobs:
       ENV_DIR:        ./test.env
 
     steps:
+      - name: Install git
+        run:  apt-get update -y && apt-get install -y git
+      - uses: actions/checkout@v1
       - name: Install system dependencies
         run:  bash ./.ci/install_32bit_dependencies.sh
-      - uses: actions/checkout@v1
       - name: Create test environment
         run:  bash ./.ci/create_test_env.sh "$ENV_DIR"
       - name: Log test environment

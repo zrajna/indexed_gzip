@@ -1,8 +1,6 @@
 #!/usr/bin/env bash
 
-apt-get update -y
-apt-get install -y build-essential git software-properties-common
-
+apt-get install -y build-essential software-properties-common
 add-apt-repository -y ppa:deadsnakes/ppa
 apt-get update -y
 

@@ -1,16 +1,26 @@
 # `indexed_gzip` changelog
 
 
+## 1.5.3 (March 23rd 2021)
+
+
+* Restored wheel building for Python 2.7 on 32 bit Windows (#64, #66).
+* Now building wheels for `aarch64` on Linux, and `amd64`/`universal2` on
+  macOS (#66).
+* Fixed some un-initialised pointers (#65).
+* Fixed a bug in the use of `PyErr_Occurred` (#63).
+
+
 ## 1.5.2 (March 19th 2021)
 
 
-* Not providing binary wheels for Python 2.7 on 32 bit Windows.
+* Not providing binary wheels for Python 2.7 on 32 bit Windows (#61).
 
 
 ## 1.5.1 (March 19th 2021)
 
 
-* Minor adjustments to some unit tests.
+* Minor adjustments to some unit test (#60).
 
 
 ## 1.5.0 (March 19th 2021)

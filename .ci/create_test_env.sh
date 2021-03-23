@@ -5,6 +5,7 @@
 #
 
 set -e
+set -x
 
 envdir="$1"
 thisdir=$(cd $(dirname "$0") && pwd)
@@ -23,14 +24,18 @@ else
   NIBABEL="nibabel"
 fi
 
-python -m pip install --upgrade pip wheel virtualenv
+if [[ "$USING_OS_PYTHON" != "1" ]]; then
+  pip install virtualenv
+fi
 
 if [[ "$PYTHON_VERSION" == "2.7" ]]; then
   virtualenv "$envdir"
+elif [[ "$USING_OS_PYTHON" == "1" ]]; then
+  python"$PYTHON_VERSION" -m venv "$envdir"
 else
   python -m venv "$envdir"
 fi
 
 source $thisdir/activate_env.sh "$envdir"
-
-pip install wheel cython pytest coverage pytest-cov "$NUMPY" "$NIBABEL"
+pip install wheel setuptools
+pip install cython pytest coverage pytest-cov "$NUMPY" "$NIBABEL"

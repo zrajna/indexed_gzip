@@ -303,7 +303,8 @@ Many thanks to the following contributors (listed chronologically):
  - @DarioDaF: Windows overflow bug (#30)
  - Sławomir Zborowski (@szborows): `seek_points` method (#35), README fixes
    (#34)
- - Ashwin Ramaswami (@epicfaace): Support for in-memory file objects (#55)
+ - Ashwin Ramaswami (@epicfaace): Support for in-memory file objects (#55),
+   bug fixes (#63, #64, #65).
 
 
 ## License

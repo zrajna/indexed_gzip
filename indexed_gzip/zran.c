@@ -1467,11 +1467,26 @@ static int _zran_inflate(zran_index_t *index,
             }
 
             /*
-             * No bytes read - we've reached EOF
+             * No bytes left to read -
+             * we've reached EOF
              */
             if (f_ret == 0) {
                 if (feof_(index->fd, index->f, f_ret)) {
+
+                    zran_log("End of file, stopping inflation\n");
+
                     return_val = ZRAN_INFLATE_EOF;
+
+                    /*
+                     * We now know how big the
+                     * uncompressed data is.
+                     */
+                    if (index->uncompressed_size == 0) {
+
+                        zran_log("Updating uncompressed data "
+                                 "size: %llu\n", uncmp_offset);
+                        index->uncompressed_size = uncmp_offset;
+                    }
                     break;
                 }
                 /*
@@ -1665,27 +1680,9 @@ static int _zran_inflate(zran_index_t *index,
              * the end of a file, and this
              * won't happen when the file
              * size is an exact multiple of
-             # the read buffer size.
+             * the read buffer size.
              */
-            if ((uint64_t) ftell_(index->fd, index->f) >= index->compressed_size &&
-                strm->avail_in <= 8) {
 
-                zran_log("End of file, stopping inflation\n");
-
-                return_val = ZRAN_INFLATE_EOF;
-
-                /*
-                 * We now know how big the
-                 * uncompressed data is.
-                 */
-                if (index->uncompressed_size == 0) {
-
-                    zran_log("Updating uncompressed data "
-                             "size: %llu\n", uncmp_offset);
-                    index->uncompressed_size = uncmp_offset;
-                }
-                break;
-            }
 
             /*
              * Some of the code above has decided that

@@ -725,28 +725,20 @@ int _zran_get_point_at(
         offset >= index->uncompressed_size)
         goto eof;
 
+    if (index->npoints == 0)
+        goto not_covered;
+
     zran_log("_zran_get_point_at(%llu, c=%u)\n", offset, compressed);
 
     /*
-     * Figure out how much of the compressed and
-     * uncompressed data the index currently covers.
-     *
-     * No points - no coverage.
+     * Figure out how much of the compressed
+     * and uncompressed data the index currently
+     * covers -  the offsets of the last point
+     * in the index.
      */
-    if (index->npoints == 0) {
-        cmp_max   = 0;
-        uncmp_max = 0;
-    }
-
-    /*
-     * Otherwise the offsets of the
-     * last point in the index.
-     */
-    else {
-        last      = &(index->list[index->npoints - 1]);
-        uncmp_max = last->uncmp_offset;
-        cmp_max   = last->cmp_offset;
-    }
+    last      = &(index->list[index->npoints - 1]);
+    uncmp_max = last->uncmp_offset;
+    cmp_max   = last->cmp_offset;
 
     if ( compressed && offset > cmp_max)   goto not_covered;
     if (!compressed && offset > uncmp_max) goto not_covered;
@@ -814,10 +806,6 @@ int _zran_get_point_with_expand(zran_index_t  *index,
              compressed,
              index->flags & ZRAN_AUTO_BUILD);
 
-    if ((index->flags & ZRAN_AUTO_BUILD) == 0) {
-        return _zran_get_point_at(index, offset, compressed, point);
-    }
-
     /*
      * See if there is an index point that
      * covers the specified offset. If there's
@@ -825,6 +813,10 @@ int _zran_get_point_with_expand(zran_index_t  *index,
      * until there is.
      */
     result = _zran_get_point_at(index, offset, compressed, point);
+
+    if ((index->flags & ZRAN_AUTO_BUILD) == 0) {
+        return result;
+    }
 
     while (result == ZRAN_GET_POINT_NOT_COVERED) {
 

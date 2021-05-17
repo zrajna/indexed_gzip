@@ -1620,7 +1620,8 @@ static int _zran_inflate(zran_index_t *index,
              */
             if (z_ret == Z_STREAM_END) {
 
-                zran_log("End of stream - searching for another stream\n");
+                zran_log("End of stream - performing CRC validation "
+                         "and searching for another stream\n");
 
                 /*
                  * _validate_stream reads and checks in the gzip
@@ -1635,17 +1636,21 @@ static int _zran_inflate(zran_index_t *index,
                 off = 0;
 
                 // todo only validate on first pass
+                /*
+                 * Check that the CRC and uncompressed size in
+                 * the fotoer match what we have calculated
+                 */
                 z_ret = _zran_validate_stream( index, strm, &off);
+
                 if (z_ret == ZRAN_VALIDATE_STREAM_INVALID) {
                     error_return_val = ZRAN_INFLATE_CRC_ERROR;
+                    goto fail;
                 }
-                if (z_ret != 0) {
+                else if (z_ret != 0) {
                     goto fail;
                 }
 
                 z_ret = _zran_find_next_stream(index, strm, &off);
-                if (z_ret != 0)
-                    goto fail;
 
                 cmp_offset      += off;
                 _total_consumed += off;
@@ -1659,6 +1664,9 @@ static int _zran_inflate(zran_index_t *index,
                  */
                 if (z_ret == ZRAN_FIND_STREAM_NOT_FOUND) {
                     break;
+                }
+                else if (z_ret != 0) {
+                    goto fail;
                 }
             }
 

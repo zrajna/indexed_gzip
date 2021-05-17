@@ -1988,7 +1988,7 @@ int _zran_expand_index(zran_index_t *index, uint64_t until)
          * or at a compress block boundary,
          * and index->spacing bytes have passed
          * since the last index point that was
-         * created, we'll create a  new index
+         * created, we'll create a new index
          * point at this location.
          */
         if (z_ret == ZRAN_INFLATE_EOF ||

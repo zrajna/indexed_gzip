@@ -26,8 +26,8 @@ typedef struct _zran_point zran_point_t;
  * They are specified as bit-masks, rather than bit locations.
  */
 enum {
-  ZRAN_AUTO_BUILD = 1,
-
+  ZRAN_AUTO_BUILD     = 1,
+  ZRAN_SKIP_CRC_CHECK = 2,
 };
 
 
@@ -141,6 +141,22 @@ struct _zran_index {
      */
     uint64_t      inflate_cmp_offset;
     uint64_t      inflate_uncmp_offset;
+
+    /*
+     * CRC-32 checksum and size (number of
+     * bytes, modulo 2^32) of the uncompressed
+     * data in the current gzip stream, not
+     * used if ZRAN_SKIP_CRC_CHECK is active.
+     * The CRC and size are incrementally
+     * calculated as data is read in. When the
+     * end of a gzip stream is reached, the
+     * calculated CRC and size are compared
+     * against the CRC and size in the gzip
+     * footer, and an error is returned if
+     * they don't match.
+     */
+    uint32_t      stream_crc32;
+    uint32_t      stream_size;
 };
 
 
@@ -194,7 +210,10 @@ struct _zran_point {
  *
  * The flags argument is a bit mask used to control the following options:
  *
- *     ZRAN_AUTO_BUILD: Build the index automatically on demand.
+ *     ZRAN_AUTO_BUILD:     Build the index automatically on demand.
+ *
+ *     ZRAN_SKIP_CRC_CHECK: Do not perform a CRC32 and file size check
+ *                          when the end of a GZIP stream is reached.
  */
 int  zran_init(
   zran_index_t *index,        /* The index                                  */

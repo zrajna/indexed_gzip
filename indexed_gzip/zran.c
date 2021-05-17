@@ -292,12 +292,39 @@ int ZRAN_FIND_STREAM_NOT_FOUND = -1;
  * Otherwise (if a compressed stream was not found), this function returns
  * ZRAN_FIND_STREAM_NOT_FOUND.
  *
- * The number of bytes that were read before the new stream was found is
- * stored in the provided offset pointer.
+ * The number of bytes that were skipped over before the new stream was found
+ * is added to the provided offset pointer.
  *
  * If an error occurs, ZRAN_FIND_STREAM_ERROR is returned.
  */
 static int _zran_find_next_stream(
+    zran_index_t *index,  /* The index                                      */
+    z_stream     *stream, /* The z_stream struct                            */
+    int          *offset  /* Used to store the number of bytes skipped over */
+);
+
+
+/* _zran_validate_stream return codes */
+int ZRAN_VALIDATE_STREAM_ERROR   = -2;
+int ZRAN_VALIDATE_STREAM_INVALID = -1;
+
+
+/*
+ * This function is called by _zran_inflate when the end of a gzip stream
+ * is reached. It reads the CRC32 and uncompressed file size from the
+ * end of the stream, and compares them to the CRC32 and size that was
+ * calculated by _zran_inflate (which are stored in index->stream_crc32 and
+ * index->stream_size),
+ *
+ * The number of bytes that were read before the new stream was found is
+ * added to the provided offset pointer.
+ *
+ * If ZRAN_SKIP_CRC_CHECK is active, this function returns immediately without
+ * doing anything.
+ *
+ * If an error occurs, ZRAN_VALIDATE_STREAM_ERROR is returned.
+ */
+static int _zran_validate_stream(
     zran_index_t *index,  /* The index                                      */
     z_stream     *stream, /* The z_stream struct                            */
     int          *offset  /* Used to store the number of bytes skipped over */
@@ -1169,7 +1196,6 @@ int _zran_find_next_stream(zran_index_t *index,
      * start with 0x1f8b.
      */
     int found = 0;
-    *offset   = 0;
 
     while (stream->avail_in >= 2) {
 
@@ -1224,6 +1250,51 @@ not_found:
 }
 
 
+/*
+ * Validate the CRC32 and size of a GZIP stream.
+ */
+static int _zran_validate_stream(zran_index_t *index,
+                                 z_stream     *stream,
+                                 int          *offset) {
+
+    uint32_t crc;
+    uint32_t size;
+
+    if (index->flags & ZRAN_SKIP_CRC_CHECK) {
+        return 0;
+    }
+
+    /*
+     * A gzip stream should end with an 8 byte footer,
+     * which contains the CRC32 of the uncompressed
+     * data, and the uncompressed size modulo 2^32.
+     */
+    if (stream->avail_in < 8) {
+        return ZRAN_VALIDATE_STREAM_ERROR;
+    }
+
+    crc  = ((stream->next_in[0] << 0)  +
+            (stream->next_in[1] << 8)  +
+            (stream->next_in[2] << 16) +
+            (stream->next_in[3] << 24));
+    size = ((stream->next_in[4] << 0)  +
+            (stream->next_in[5] << 8)  +
+            (stream->next_in[6] << 16) +
+            (stream->next_in[7] << 24));
+
+    stream->avail_in -= 8;
+    stream->next_in  += 8;
+    *offset           = 8;
+
+    if (index->stream_crc32 != crc || index->stream_size != size) {
+        return ZRAN_VALIDATE_STREAM_INVALID;
+    }
+
+    return 0;
+}
+
+
+
 /* The workhorse. Inflate/decompress data from the file. */
 static int _zran_inflate(zran_index_t *index,
                          z_stream     *strm,
@@ -1246,7 +1317,8 @@ static int _zran_inflate(zran_index_t *index,
     size_t f_ret;
     int    z_ret;
     int    off;
-    int    return_val = ZRAN_INFLATE_OK;
+    int    return_val       = ZRAN_INFLATE_OK;
+    int    error_return_val = ZRAN_INFLATE_ERROR;
 
     /*
      * Offsets into the compressed
@@ -1538,23 +1610,43 @@ static int _zran_inflate(zran_index_t *index,
         while (strm->avail_in > 0) {
 
             /*
-             * Re-initialise inflation if we have
-             * hit a new compressed stream.
+             * The last iteration found the
+             * end of a gzip stream. Validate
+             * the uncompressed data (size/
+             * CRC) against the gzip footer.
+             * Then then search for a new
+             * stream and, if we find one,
+             * re-initialise inflation
              */
             if (z_ret == Z_STREAM_END) {
 
                 zran_log("End of stream - searching for another stream\n");
 
-                z_ret = _zran_find_next_stream(index, strm, &off);
-
                 /*
-                 * _zran_find_next_stream will skip over
-                 * bytes in the input data while searching
-                 * for the next stream (e.g. the CRC32
-                 * and ISIZE fields at the end of a gzip
-                 * stream). It stores the number of skipped
-                 * bytes in the offset parameter.
+                 * _validate_stream reads and checks in the gzip
+                 * stream footer (the CRC32 and ISIZE fields at the
+                 * end of a gzip stream), and _find_next_stream will
+                 * skip over any remaining bytes (e.g. null padding
+                 * bytes) until eof, or a new stream is found.
+                 *
+                 * The number of bytes that were read/skipped over
+                 * are accumulated into off.
                  */
+                off = 0;
+
+                // todo only validate on first pass
+                z_ret = _zran_validate_stream( index, strm, &off);
+                if (z_ret == ZRAN_VALIDATE_STREAM_INVALID) {
+                    error_return_val = ZRAN_INFLATE_CRC_ERROR;
+                }
+                if (z_ret != 0) {
+                    goto fail;
+                }
+
+                z_ret = _zran_find_next_stream(index, strm, &off);
+                if (z_ret != 0)
+                    goto fail;
+
                 cmp_offset      += off;
                 _total_consumed += off;
 
@@ -1565,8 +1657,9 @@ static int _zran_inflate(zran_index_t *index,
                  * either case, break and let the outer
                  * loop deal with it.
                  */
-                if      (z_ret == ZRAN_FIND_STREAM_NOT_FOUND) break;
-                else if (z_ret != 0)                          goto fail;
+                if (z_ret == ZRAN_FIND_STREAM_NOT_FOUND) {
+                    break;
+                }
             }
 
             /*
@@ -1781,7 +1874,7 @@ fail:
         index->readbuf_end    = 0;
     }
 
-    return ZRAN_INFLATE_ERROR;
+    return error_return_val;
 }
 
 

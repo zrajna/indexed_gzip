@@ -1254,6 +1254,13 @@ static int _zran_inflate(zran_index_t *index,
     uint32_t _total_output   = 0;
 
     /*
+     * Number of bytes input/decompressed
+     * during a single call to zlib:inflate.
+     */
+    uint32_t bytes_consumed = 0;
+    uint32_t bytes_output   = 0;
+
+    /*
      * Index point to start from
      * (if ZRAN_INFLATE_USE_OFFSET
      * is active).
@@ -1557,14 +1564,13 @@ static int _zran_inflate(zran_index_t *index,
             }
 
             /*
-             * Optimistically update offsets -
-             * we will adjust them after the
-             * inflate call.
+             * Initialise counters to calculate
+             * how many bytes are input/uutput
+             * during this call to inflate.
              */
-            cmp_offset      += strm->avail_in;
-            uncmp_offset    += strm->avail_out;
-            _total_consumed += strm->avail_in;
-            _total_output   += strm->avail_out;
+            bytes_consumed = strm->avail_in;
+            bytes_output   = strm->avail_out;
+
 
             zran_log("Before inflate - avail_in=%u, avail_out=%u\n",
                      strm->avail_in, strm->avail_out);
@@ -1590,10 +1596,12 @@ static int _zran_inflate(zran_index_t *index,
              * Adjust our offsets according to what
              * was actually consumed/decompressed.
              */
-            cmp_offset      -= strm->avail_in;
-            uncmp_offset    -= strm->avail_out;
-            _total_consumed -= strm->avail_in;
-            _total_output   -= strm->avail_out;
+            bytes_consumed   = bytes_consumed - strm->avail_in;
+            bytes_output     = bytes_output   - strm->avail_out;
+            cmp_offset      += bytes_consumed;
+            _total_consumed += bytes_consumed;
+            uncmp_offset    += bytes_output;
+            _total_output   += bytes_output;
 
             /*
              * Now we need to figure out what just happened.

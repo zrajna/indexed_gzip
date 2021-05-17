@@ -154,8 +154,11 @@ struct _zran_index {
      * against the CRC and size in the gzip
      * footer, and an error is returned if
      * they don't match.
+     *
+     * (the zlib crc32 function returns
+     * an unsigned long, so we use u64)
      */
-    uint32_t      stream_crc32;
+    uint64_t      stream_crc32;
     uint32_t      stream_size;
 };
 

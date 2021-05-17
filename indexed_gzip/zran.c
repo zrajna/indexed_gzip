@@ -305,6 +305,7 @@ static int _zran_find_next_stream(
 
 
 /* _zran_inflate return codes */
+int ZRAN_INFLATE_CRC_ERROR      = -6;
 int ZRAN_INFLATE_ERROR          = -5;
 int ZRAN_INFLATE_NOT_COVERED    = -4;
 int ZRAN_INFLATE_OUTPUT_FULL    = -3;
@@ -449,6 +450,10 @@ uint32_t ZRAN_INFLATE_STOP_AT_BLOCK         = 64;
  *
  *   - ZRAN_INFLATE_EOF:            The end of file has been reached.
  *
+ *   - ZRAN_INFLATE_CRC_ERROR:      The CRC or uncompressed data size in the
+ *                                  GZIP footer does not match the CRC/size
+ *                                  that was calculated.
+ *
  *   - ZRAN_INFLATE_ERROR:          A critical error has occurred.
  */
 static int _zran_inflate(
@@ -557,6 +562,8 @@ int zran_init(zran_index_t *index,
     index->uncmp_seek_offset    = 0;
     index->inflate_cmp_offset   = 0;
     index->inflate_uncmp_offset = 0;
+    index->stream_size          = 0;
+    index->stream_crc32         = 0;
     index->list                 = point_list;
 
     return 0;
@@ -1200,6 +1207,12 @@ int _zran_find_next_stream(zran_index_t *index,
     if (inflateInit2(stream, index->log_window_size + 32) != Z_OK)
         goto fail;
 
+    /*
+     * Reset stream size/crc counters
+     */
+    index->stream_size  = 0;
+    index->stream_crc32 = 0;
+
     return 0;
 
 fail:
@@ -1563,7 +1576,6 @@ static int _zran_inflate(zran_index_t *index,
             bytes_consumed = strm->avail_in;
             bytes_output   = strm->avail_out;
 
-
             zran_log("Before inflate - avail_in=%u, avail_out=%u\n",
                      strm->avail_in, strm->avail_out);
 
@@ -1667,22 +1679,6 @@ static int _zran_inflate(zran_index_t *index,
 
                 break;
             }
-
-            /*
-             * End of file. The GZIP file
-             * footer takes up 8 bytes, which
-             * do not get processed by the
-             * inflate function.
-             *
-             * We use ftell rather than feof,
-             * as the EOF indicator only gets
-             * set on attempts to read past
-             * the end of a file, and this
-             * won't happen when the file
-             * size is an exact multiple of
-             * the read buffer size.
-             */
-
 
             /*
              * Some of the code above has decided that
@@ -2089,7 +2085,7 @@ int zran_seek(zran_index_t  *index,
      *
      * I am not currently taking into account
      * the overflow potential when converting
-     * from int64 to uint64.a
+     * from int64 to uint64.
      */
 
     /*

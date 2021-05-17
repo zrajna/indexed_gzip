@@ -849,7 +849,12 @@ int _zran_get_point_with_expand(zran_index_t  *index,
      */
     result = _zran_get_point_at(index, offset, compressed, point);
 
-    if ((index->flags & ZRAN_AUTO_BUILD) == 0) {
+    /*
+     * Don't expand the index if auto_build
+     * is not active, unless the requested
+     * offset is the beginning of the file.
+     */
+    if ((offset > 0) && ((index->flags & ZRAN_AUTO_BUILD) == 0)) {
         return result;
     }
 

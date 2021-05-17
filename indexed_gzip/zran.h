@@ -142,6 +142,17 @@ struct _zran_index {
     uint64_t      inflate_cmp_offset;
     uint64_t      inflate_uncmp_offset;
 
+
+    /*
+     * Total number of bytes that have been
+     * uncompressed so far - the farthest point
+     * in the uncompressed data that we have
+     * gotten to so far. This is updated as
+     * more data is read and uncompressed.
+     */
+    uint64_t      uncompressed_seen;
+
+
     /*
      * CRC-32 checksum and size (number of
      * bytes, modulo 2^32) of the uncompressed

@@ -562,6 +562,7 @@ int zran_init(zran_index_t *index,
     index->uncmp_seek_offset    = 0;
     index->inflate_cmp_offset   = 0;
     index->inflate_uncmp_offset = 0;
+    index->uncompressed_seen    = 0;
     index->stream_size          = 0;
     index->stream_crc32         = 0;
     index->list                 = point_list;
@@ -1606,6 +1607,32 @@ static int _zran_inflate(zran_index_t *index,
             _total_consumed += bytes_consumed;
             uncmp_offset    += bytes_output;
             _total_output   += bytes_output;
+
+            /*
+             * keep track of the farthest point we have
+             * gotten to in the uncompressed data (across
+             * all gzip streams), and update the size and
+             * crc of the current stream, so we can
+             * validate them against the size recorded in
+             * the footer later on.
+             */
+            if (uncmp_offset > index->uncompressed_seen) {
+
+                if (!(index->flags & ZRAN_SKIP_CRC_CHECK)) {
+                    /*
+                     * using bytes_output to store the number
+                     * of newly uncompressed bytes
+                     */
+                    bytes_output = uncmp_offset - index->uncompressed_seen;
+
+                    index->stream_size +=       bytes_output;
+                    index->stream_crc32 = crc32(index->stream_crc32,
+                                                strm->next_out - bytes_output,
+                                                bytes_output);
+                }
+
+                index->uncompressed_seen = uncmp_offset;
+            }
 
             /*
              * Now we need to figure out what just happened.

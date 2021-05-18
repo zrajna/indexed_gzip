@@ -372,13 +372,13 @@ def test_read_all(testfile, nelems, use_mmap, drop):
 
 
 def test_simple_read_with_null_padding():
-    
+
     with tempfile.NamedTemporaryFile() as file_in, tempfile.NamedTemporaryFile() as file_out:
         file_in.write(b"hello world")
         file_in.flush()
         compress(file_in.name, file_out.name)
         fileobj = BytesIO(open(file_out.name, "rb").read() + b"\0" * 100)
-    
+
     with igzip._IndexedGzipFile(fileobj=fileobj) as f:
         assert f.read() == b"hello world"
         f.seek(3)
@@ -390,13 +390,13 @@ def test_simple_read_with_null_padding():
 def test_read_with_null_padding(testfile, nelems):
 
     fileobj = BytesIO(open(testfile, "rb").read() + b"\0" * 100)
-    
+
     with igzip._IndexedGzipFile(fileobj=fileobj) as f:
         data = f.read(nelems * 8)
         # Read a bit further so we reach the zero-padded area.
         # This line should not throw an exception.
         f.read(1)
-    
+
     data = np.ndarray(shape=nelems, dtype=np.uint64, buffer=data)
 
     # Check that every value is valid
@@ -849,19 +849,37 @@ def test_wrapper_class():
             f.import_index(idxfname)
 
 
+def gcd(num):
+    if num <= 3:
+        return 1
+    candidates = list(range(int(np.ceil(np.sqrt(num))), 2, -2))
+    candidates.extend((2, 1))
+    for divisor in candidates:
+        if num % divisor == 0:
+            return divisor
+    return 1
+
+
 def test_size_multiple_of_readbuf():
 
     fname = 'test.gz'
 
     with tempdir():
-        data = np.random.randint(1, 1000, 10000, dtype=np.uint32)
 
-        with gzip.open(fname, 'wb') as f:
-            f.write(data.tobytes())
-        del f
-        f = None
+        while True:
 
-        fsize = op.getsize(fname)
+            data = np.random.randint(1, 1000, 50000, dtype=np.uint32)
+            with gzip.open(fname, 'wb') as f:
+                f.write(data.tobytes())
+            del f
+            f = None
+
+            # we need a non-prime file size
+            fsize = op.getsize(fname)
+            if gcd(fsize) != 1:
+                break
+
+        # readbuf size == file size
         bufsz = fsize
 
         with igzip.IndexedGzipFile(fname, readbuf_size=bufsz) as f:
@@ -870,18 +888,13 @@ def test_size_multiple_of_readbuf():
         f = None
 
         with igzip.IndexedGzipFile(fname, readbuf_size=bufsz) as f:
-            read = np.ndarray(shape=10000, dtype=np.uint32, buffer=f.read())
+            read = np.ndarray(shape=50000, dtype=np.uint32, buffer=f.read())
             assert np.all(read == data)
         del f
         f = None
 
-        # we're screwed if the
-        # file size is prime
-        for div in (2, 3, 5, 7, 11, 13, 17):
-            if div % fsize == 0:
-                break
-
-        bufsz = fsize / div
+        # Use a buf size that is a divisor of the file size
+        bufsz = gcd(fsize)
 
         with igzip.IndexedGzipFile(fname, readbuf_size=bufsz) as f:
             assert f.seek(fsize) == fsize
@@ -889,7 +902,7 @@ def test_size_multiple_of_readbuf():
         f = None
 
         with igzip.IndexedGzipFile(fname, readbuf_size=bufsz) as f:
-            read = np.ndarray(shape=10000, dtype=np.uint32, buffer=f.read())
+            read = np.ndarray(shape=50000, dtype=np.uint32, buffer=f.read())
             assert np.all(read == data)
         del f
         f = None

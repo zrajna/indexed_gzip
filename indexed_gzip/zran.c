@@ -2274,10 +2274,10 @@ int zran_seek(zran_index_t  *index,
      */
     result = _zran_get_point_with_expand(index, offset, 0, &seek_point);
 
-    if (result == ZRAN_GET_POINT_CRC_ERROR)   goto crcerror;
-    if (result == ZRAN_GET_POINT_FAIL)        goto fail;
-    if (result == ZRAN_GET_POINT_NOT_COVERED) goto not_covered;
-    if (result == ZRAN_GET_POINT_EOF)         goto eof;
+    if      (result == ZRAN_GET_POINT_EOF)         goto eof;
+    else if (result == ZRAN_GET_POINT_NOT_COVERED) goto not_covered;
+    else if (result == ZRAN_GET_POINT_CRC_ERROR)   goto crcerror;
+    else if (result != ZRAN_GET_POINT_OK)          goto fail;
 
     index->uncmp_seek_offset = offset;
     offset                   = seek_point->cmp_offset;
@@ -2411,8 +2411,10 @@ int64_t zran_read(zran_index_t *index,
 
     if (ret == ZRAN_GET_POINT_EOF)         goto eof;
     if (ret == ZRAN_GET_POINT_NOT_COVERED) goto not_covered;
-    if (ret == ZRAN_GET_POINT_CRC_ERROR) {
-        error_return_val = ZRAN_READ_CRC_ERROR;
+    else if (ret != ZRAN_GET_POINT_OK) {
+        if (ret == ZRAN_GET_POINT_CRC_ERROR) {
+            error_return_val = ZRAN_READ_CRC_ERROR;
+        }
         goto fail;
     }
 

@@ -294,9 +294,10 @@ int ZRAN_FIND_STREAM_ERROR     = -2;
 int ZRAN_FIND_STREAM_NOT_FOUND = -1;
 
 /*
- * This function is used to search for concatenated compressed streams.  It
- * searches through the compressed data (pointed to by stream->next_in) to
- * find the location of the next compressed stream.
+ * This function is a sub-function of _zran_inflate, used to search for a new
+ * GZIP stream in a series of concatenated streams.  It searches through the
+ * compressed data (pointed to by stream->next_in) to find the location of the
+ * next compressed stream.
  *
  * If a new stream was found, the z_stream struct is re-initialised to
  * decompress data from the new stream. In this case, the function returns 0.
@@ -322,11 +323,11 @@ int ZRAN_VALIDATE_STREAM_INVALID = -1;
 
 
 /*
- * This function is called by _zran_inflate when the end of a gzip stream
- * is reached. It reads the CRC32 and uncompressed file size from the
- * end of the stream, and compares them to the CRC32 and size that was
- * calculated by _zran_inflate (which are stored in index->stream_crc32 and
- * index->stream_size),
+ * This function is a sub-function of _zran_inflate, called when the end of a
+ * gzip stream is reached. It reads the CRC32 and uncompressed file size from
+ * the end of the stream, and compares them to the CRC32 and size that was
+ * incrementally calculated by _zran_inflate (which are stored in
+ * index->stream_crc32 and index->stream_size),
  *
  * The number of bytes that were read before the new stream was found is
  * added to the provided offset pointer.
@@ -1269,9 +1270,7 @@ not_found:
 }
 
 
-/*
- * Validate the CRC32 and size of a GZIP stream.
- */
+/* Validate the CRC32 and size of a GZIP stream. */
 static int _zran_validate_stream(zran_index_t *index,
                                  z_stream     *stream,
                                  int          *offset) {
@@ -1279,6 +1278,7 @@ static int _zran_validate_stream(zran_index_t *index,
     uint32_t crc;
     uint32_t size;
 
+    /* CRC validation is disabled */
     if (index->flags & ZRAN_SKIP_CRC_CHECK) {
         return 0;
     }
@@ -1311,7 +1311,6 @@ static int _zran_validate_stream(zran_index_t *index,
 
     return 0;
 }
-
 
 
 /* The workhorse. Inflate/decompress data from the file. */
@@ -1654,19 +1653,21 @@ static int _zran_inflate(zran_index_t *index,
                  */
                 off = 0;
 
-                // todo only validate on first pass
                 /*
-                 * Check that the CRC and uncompressed size in
+                 * If we have not yet validated this stream,
+                 * check that the CRC and uncompressed size in
                  * the footer match what we have calculated
                  */
-                z_ret = _zran_validate_stream( index, strm, &off);
+                if (uncmp_offset > index->uncompressed_seen) {
+                    z_ret = _zran_validate_stream(index, strm, &off);
 
-                if (z_ret == ZRAN_VALIDATE_STREAM_INVALID) {
-                    error_return_val = ZRAN_INFLATE_CRC_ERROR;
-                    goto fail;
-                }
-                else if (z_ret != 0) {
-                    goto fail;
+                    if (z_ret == ZRAN_VALIDATE_STREAM_INVALID) {
+                        error_return_val = ZRAN_INFLATE_CRC_ERROR;
+                        goto fail;
+                    }
+                    else if (z_ret != 0) {
+                        goto fail;
+                    }
                 }
 
                 z_ret = _zran_find_next_stream(index, strm, &off);

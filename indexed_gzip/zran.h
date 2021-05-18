@@ -40,60 +40,61 @@ struct _zran_index {
     /*
      * Handle to the compressed file.
      */
-    FILE         *fd;
+    FILE *fd;
 
     /*
      * Handle to the compressed file object.
      */
-    PyObject     *f;
+    PyObject *f;
 
     /*
      * Size of the compressed file. This
      * is calculated in zran_init.
      */
-    uint64_t      compressed_size;
+    uint64_t compressed_size;
 
     /*
      * Size of the uncompressed data. This is
      * only updated when it becomes known.
      */
-    uint64_t      uncompressed_size;
+    uint64_t uncompressed_size;
 
     /*
      * Spacing size in bytes, relative to the
      * uncompressed data stream, between adjacent
      * index points.
      */
-    uint32_t      spacing;
+    uint32_t spacing;
 
     /*
      * Number of bytes of uncompressed data to store
      * for each index point. This must be a minimum
      * of 32768 bytes.
      */
-    uint32_t      window_size;
+    uint32_t window_size;
 
     /*
      * Base2 logarithm of the window size - it
      * is needed to initialise zlib inflation.
      */
-    uint32_t      log_window_size;
+    uint32_t log_window_size;
 
     /*
      * Size, in bytes, of buffer used to store
      * compressed data read from disk.
      */
-    uint32_t      readbuf_size;
+    uint32_t readbuf_size;
 
     /*
      * Number of index points that have been created.
      */
-    uint32_t      npoints;
+    uint32_t npoints;
 
     /*
-     * Number of index points that can be stored.
+     * Number of index points that can be stored -
+     * i.e. the amount allocated to the "list" field.
      */
-    uint32_t      size;
+    uint32_t size;
 
     /*
      * List of index points.
@@ -107,12 +108,12 @@ struct _zran_index {
      * of where the calling code thinks it
      * is in the (uncompressed) file.
      */
-    uint64_t      uncmp_seek_offset;
+    uint64_t uncmp_seek_offset;
 
     /*
      * Flags passed to zran_init
      */
-    uint16_t      flags;
+    uint16_t flags;
 
     /*
      * All of the fields after this point are used
@@ -123,25 +124,24 @@ struct _zran_index {
      * Reference to a file input
      * buffer of size readbuf_size.
      */
-    uint8_t      *readbuf;
+    uint8_t *readbuf;
 
     /*
      * An offset into readbuf.
      */
-    uint32_t      readbuf_offset;
+    uint32_t readbuf_offset;
 
     /*
      * The current end of the readbuf contents.
      */
-    uint32_t      readbuf_end;
+    uint32_t readbuf_end;
 
     /*
      * Current offsets into the uncompressed and
      * compressed data streams.
      */
-    uint64_t      inflate_cmp_offset;
-    uint64_t      inflate_uncmp_offset;
-
+    uint64_t inflate_cmp_offset;
+    uint64_t inflate_uncmp_offset;
 
     /*
      * Total number of bytes that have been
@@ -150,8 +150,7 @@ struct _zran_index {
      * gotten to so far. This is updated as
      * more data is read and uncompressed.
      */
-    uint64_t      uncompressed_seen;
-
+    uint64_t uncompressed_seen;
 
     /*
      * CRC-32 checksum and size (number of
@@ -169,8 +168,8 @@ struct _zran_index {
      * (the zlib crc32 function returns
      * an unsigned long, so we use u64)
      */
-    uint64_t      stream_crc32;
-    uint32_t      stream_size;
+    uint64_t stream_crc32;
+    uint32_t stream_size;
 };
 
 

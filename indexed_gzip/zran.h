@@ -227,6 +227,8 @@ struct _zran_point {
  *
  *     ZRAN_SKIP_CRC_CHECK: Do not perform a CRC32 and file size check
  *                          when the end of a GZIP stream is reached.
+ *                          This flag is automatically set when an index
+ *                          is imported from file using zran_import_index.
  */
 int  zran_init(
   zran_index_t *index,        /* The index                                  */
@@ -445,6 +447,10 @@ enum {
  *
  * Updating an index file is not supported currently. To update an index file,
  * first import it, create new checkpoints, and then export it again.
+ *
+ * CRC validation of uncompressed data from an imported index is not currently
+ * supported - this function will enable the ZRAN_SKIP_CRC_CHECK flag on the
+ * given zran_index_t struct.
  *
  * See zran_export_index for exporting.
  *

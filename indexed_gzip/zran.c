@@ -2862,7 +2862,8 @@ int zran_import_index(zran_index_t *index,
     uint32_t      npoints;
     zran_point_t *new_list = NULL;
 
-    // todo apply skip crc check flag
+    /* CRC validation is currently not possible on an imported index */
+    index->flags |= ZRAN_SKIP_CRC_CHECK;
 
     /* Check if file is read only. */
     if (!is_readonly(fd, f)) goto fail;

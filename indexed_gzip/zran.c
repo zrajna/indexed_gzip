@@ -1346,6 +1346,8 @@ int _zran_find_next_stream(zran_index_t *index,
      */
     int found = 0;
 
+    zran_log("Searching for a new stream\n");
+
     while (stream->avail_in >= 2) {
 
         if (stream->next_in[0] == 0x1f &&
@@ -1430,6 +1432,9 @@ static int _zran_validate_stream(zran_index_t *index,
             (stream->next_in[6] << 16) +
             (stream->next_in[7] << 24));
 
+    zran_log("Validating CRC32 and size [%8x == %8x, %u == %u]\n",
+             crc, index->stream_crc32, size, index->stream_size);
+
     stream->avail_in -= 8;
     stream->next_in  += 8;
     *offset          += 8;
@@ -1482,6 +1487,13 @@ static int _zran_inflate(zran_index_t *index,
      */
     uint32_t bytes_consumed = 0;
     uint32_t bytes_output   = 0;
+
+    /*
+     * Flag which is set during each iteration
+     * of the decompress loop, if we have just
+     * decompressed data for the first time.
+     */
+    uint8_t new_data = 0;
 
     /*
      * Index point to start from
@@ -1722,6 +1734,7 @@ static int _zran_inflate(zran_index_t *index,
             _total_consumed += bytes_consumed;
             uncmp_offset    += bytes_output;
             _total_output   += bytes_output;
+            new_data         = uncmp_offset > index->uncompressed_seen;
 
             /*
              * Now we need to figure out what just happened.
@@ -1764,7 +1777,7 @@ static int _zran_inflate(zran_index_t *index,
              * stream, so we can validate them against
              * the size recorded in the footer later on.
              */
-            if (uncmp_offset > index->uncompressed_seen) {
+            if (new_data) {
 
                 if (!(index->flags & ZRAN_SKIP_CRC_CHECK)) {
                     /*
@@ -1832,8 +1845,7 @@ static int _zran_inflate(zran_index_t *index,
              */
             if (z_ret == Z_STREAM_END) {
 
-                zran_log("End of stream - performing CRC validation "
-                         "and searching for another stream\n");
+                zran_log("End of gzip stream\n");
 
                 /*
                  * _validate_stream reads and checks in the gzip
@@ -1852,7 +1864,7 @@ static int _zran_inflate(zran_index_t *index,
                  * check that the CRC and uncompressed size in
                  * the footer match what we have calculated
                  */
-                if (uncmp_offset > index->uncompressed_seen) {
+                if (new_data) {
                     z_ret = _zran_validate_stream(index, strm, &off);
 
                     if (z_ret == ZRAN_VALIDATE_STREAM_INVALID) {

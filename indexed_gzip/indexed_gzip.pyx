@@ -1059,7 +1059,7 @@ class ZranError(IOError):
     pass
 
 
-class CrcError(IOError):
+class CrcError(OSError):
     """Exception raised by the :class:`_IndexedGzipFile` when a CRC/size
     validation check fails, which suggests that the GZIP data might be
     corrupt.

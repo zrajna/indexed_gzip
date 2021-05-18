@@ -267,6 +267,7 @@ int zran_build_index(
 
 /* Return codes for zran_seek. */
 enum {
+    ZRAN_SEEK_CRC_ERROR       = -2,
     ZRAN_SEEK_FAIL            = -1,
     ZRAN_SEEK_OK              =  0,
     ZRAN_SEEK_NOT_COVERED     =  1,
@@ -297,6 +298,10 @@ enum {
  *    - ZRAN_SEEK_EOF to indicate that the requested offset
  *      is past the end of the uncompressed stream.
  *
+ *    - ZRAN_SEEK_CRC_ERROR to indicate that the CRC or file size
+ *      stored in the footer of a GZIP stream does not match the
+ *      data.
+ *
  *    - ZRAN_SEEK_FAIL to indicate failure of some sort.
  */
 int zran_seek(
@@ -320,7 +325,8 @@ uint64_t zran_tell(
 enum {
     ZRAN_READ_NOT_COVERED = -1,
     ZRAN_READ_EOF         = -2,
-    ZRAN_READ_FAIL        = -3
+    ZRAN_READ_FAIL        = -3,
+    ZRAN_READ_CRC_ERROR   = -4
 };
 
 /*
@@ -337,6 +343,10 @@ enum {
  *
  *   - ZRAN_READ_EOF to indicate that the read could not be completed
  *     because the current uncompressed seek point is at EOF.
+ *
+ *   - ZRAN_SEEK_CRC_ERROR to indicate that the CRC or file size
+ *     stored in the footer of a GZIP stream does not match the
+ *     data.
  *
  *   - ZRAN_READ_FAIL to indicate that the read failed for some reason.
  */

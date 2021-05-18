@@ -1289,7 +1289,7 @@ static int _zran_validate_stream(zran_index_t *index,
 
     stream->avail_in -= 8;
     stream->next_in  += 8;
-    *offset           = 8;
+    *offset          += 8;
 
     if (index->stream_crc32 != crc || index->stream_size != size) {
         return ZRAN_VALIDATE_STREAM_INVALID;
@@ -1643,7 +1643,7 @@ static int _zran_inflate(zran_index_t *index,
                 // todo only validate on first pass
                 /*
                  * Check that the CRC and uncompressed size in
-                 * the fotoer match what we have calculated
+                 * the footer match what we have calculated
                  */
                 z_ret = _zran_validate_stream( index, strm, &off);
 
@@ -1677,7 +1677,7 @@ static int _zran_inflate(zran_index_t *index,
 
             /*
              * Initialise counters to calculate
-             * how many bytes are input/uutput
+             * how many bytes are input/output
              * during this call to inflate.
              */
             bytes_consumed = strm->avail_in;
@@ -2813,6 +2813,8 @@ int zran_import_index(zran_index_t *index,
     uint32_t      window_size;
     uint32_t      npoints;
     zran_point_t *new_list = NULL;
+
+    // todo apply skip crc check flag
 
     /* Check if file is read only. */
     if (!is_readonly(fd, f)) goto fail;

@@ -71,9 +71,6 @@ jobs:
         name: Install Python
         with:
           python-version: '3.7'
-      - name: Install Visual C++ for Python 2.7
-        run: |
-          choco install vcpython27 -f -y
       - name: Download zlib
         run:  bash ./.ci/download_zlib.sh
       - name: Build wheels

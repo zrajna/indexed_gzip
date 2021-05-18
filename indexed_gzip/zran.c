@@ -225,6 +225,11 @@ static int _zran_init_zlib_inflate(
 );
 
 
+/* Return codes for _zran_expand_index */
+int ZRAN_EXPAND_INDEX_FAIL      = -1;
+int ZRAN_EXPAND_INDEX_CRC_ERROR = -2;
+
+
 /*
  * Expands the index from its current end-point until the given offset (which
  * must be specified relative to the compressed data stream).
@@ -240,7 +245,9 @@ static int _zran_init_zlib_inflate(
  * be a long distance between block boundaries (longer than the desired index
  * point spacing).
  *
- * Returns 0 on success, non-0 on failure.
+ * Returns 0 on success. If a CRC check fails, returns
+ * ZRAN_EXPAND_INDEX_CRC_ERROR. For other types of failure, returns
+ * ZRAN_EXPAND_INDEX_FAIL.
  */
 static int _zran_expand_index(
     zran_index_t *index, /* The index                      */
@@ -1895,8 +1902,13 @@ fail:
  * Expands the index to encompass the
  * compressed offset specified by 'until'.
  */
-int _zran_expand_index(zran_index_t *index, uint64_t until)
-{
+int _zran_expand_index(zran_index_t *index, uint64_t until) {
+
+    /*
+     * Used to store return code when
+     * an error occurs.
+     */
+    int error_return_val = ZRAN_EXPAND_INDEX_FAIL;
 
     /*
      * Used to store and check return values
@@ -2107,6 +2119,9 @@ int _zran_expand_index(zran_index_t *index, uint64_t until)
          */
         else if (z_ret != ZRAN_INFLATE_EOF &&
                  z_ret != ZRAN_INFLATE_BLOCK_BOUNDARY) {
+            if (z_ret == ZRAN_INFLATE_CRC_ERROR) {
+                error_return_val = ZRAN_EXPAND_INDEX_CRC_ERROR;
+            }
             goto fail;
         }
 
@@ -2144,8 +2159,9 @@ int _zran_expand_index(zran_index_t *index, uint64_t until)
         }
 
         /* And if at EOF, we are done. */
-        if (z_ret == ZRAN_INFLATE_EOF)
+        if (z_ret == ZRAN_INFLATE_EOF) {
             break;
+        }
     }
 
     /*
@@ -2164,6 +2180,9 @@ int _zran_expand_index(zran_index_t *index, uint64_t until)
                           data);
 
     if (z_ret != ZRAN_INFLATE_OK && z_ret != ZRAN_INFLATE_EOF) {
+        if (z_ret == ZRAN_INFLATE_CRC_ERROR) {
+            error_return_val = ZRAN_EXPAND_INDEX_CRC_ERROR;
+        }
         goto fail;
     }
 
@@ -2184,8 +2203,7 @@ int _zran_expand_index(zran_index_t *index, uint64_t until)
 
 fail:
     free(data);
-
-    return -1;
+    return error_return_val;
 }
 
 
@@ -2299,6 +2317,12 @@ int64_t zran_read(zran_index_t *index,
 
     /* Used to store/check return values. */
     int ret;
+
+    /*
+     * Used to store error code for return
+     *   if an error occurs
+     */
+    int error_return_val = ZRAN_READ_FAIL;
 
     /*
      * Number of bytes we try to read, and
@@ -2457,8 +2481,12 @@ int64_t zran_read(zran_index_t *index,
          */
         if (ret != ZRAN_INFLATE_OUTPUT_FULL &&
             ret != ZRAN_INFLATE_EOF         &&
-            ret != ZRAN_INFLATE_OK)
+            ret != ZRAN_INFLATE_OK) {
+            if (ret == ZRAN_INFLATE_CRC_ERROR) {
+                error_return_val = ZRAN_READ_CRC_ERROR;
+            }
             goto fail;
+        }
 
         cmp_offset      += bytes_consumed;
         uncmp_offset    += bytes_output;
@@ -2544,8 +2572,12 @@ int64_t zran_read(zran_index_t *index,
                 break;
             }
         }
-        else if (ret != ZRAN_INFLATE_OK)
+        else if (ret != ZRAN_INFLATE_OK) {
+            if (ret == ZRAN_INFLATE_CRC_ERROR) {
+                error_return_val = ZRAN_READ_CRC_ERROR;
+            }
             goto fail;
+        }
 
         zran_log("Read %u bytes (%llu / %llu)\n",
                  bytes_output,
@@ -2569,6 +2601,9 @@ int64_t zran_read(zran_index_t *index,
                         discard);
 
     if (ret != ZRAN_INFLATE_OK && ret != ZRAN_INFLATE_EOF) {
+        if (ret == ZRAN_INFLATE_CRC_ERROR) {
+            error_return_val = ZRAN_READ_CRC_ERROR;
+        }
         goto fail;
     }
 
@@ -2588,13 +2623,12 @@ int64_t zran_read(zran_index_t *index,
 
 not_covered: return ZRAN_READ_NOT_COVERED;
 eof:         return ZRAN_READ_EOF;
-
 fail:
 
     if (discard != NULL)
         free(discard);
 
-    return ZRAN_READ_FAIL;
+    return error_return_val;
 }
 
 

@@ -335,7 +335,8 @@ enum {
  * the ZRAN_AUTO_BUILD flag, it is expanded as needed.
  *
  * Returns:
- *   - Number of bytes read for success.
+ *   - Number of bytes read for success, or one of the following codes,
+ *     all of which are negative.
  *
  *   - ZRAN_READ_NOT_COVERED to indicate that the index does not
  *     cover the requested region (will never happen if

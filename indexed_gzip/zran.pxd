@@ -29,6 +29,7 @@ cdef extern from "zran.h":
 
     enum:
         ZRAN_AUTO_BUILD           =  1,
+        ZRAN_SKIP_CRC_CHECK       =  2,
 
         ZRAN_SEEK_CRC_ERROR       = -2,
         ZRAN_SEEK_FAIL            = -1,

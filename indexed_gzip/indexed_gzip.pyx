@@ -100,6 +100,10 @@ class IndexedGzipFile(io.BufferedReader):
         :arg auto_build:       If ``True`` (the default), the index is
                                automatically built on calls to :meth:`seek`.
 
+        :arg skip_crc_check:   Defaults to ``False``. If ``True``, CRC/size
+                               validation of the uncompressed data is not
+                               performed.
+
         :arg spacing:          Number of bytes between index seek points.
 
         :arg window_size:      Number of bytes of uncompressed data stored with
@@ -237,6 +241,12 @@ cdef class _IndexedGzipFile:
     """
 
 
+    cdef readonly bint skip_crc_check
+    """Flag which is set to ``True`` if CRC/size validation of uncompressed
+    data is disabled.
+    """
+
+
     cdef readonly object filename
     """String containing path of file being indexed. Used to release and
     reopen file handles between seeks and reads.
@@ -274,7 +284,8 @@ cdef class _IndexedGzipFile:
                  readbuf_size=1048576,
                  readall_buf_size=16777216,
                  drop_handles=True,
-                 index_file=None):
+                 index_file=None,
+                 skip_crc_check=False):
         """Create an ``_IndexedGzipFile``. The file may be specified either
         with an open file handle (``fileobj``), or with a ``filename``. If the
         former, the file must have been opened in ``'rb'`` mode.
@@ -290,6 +301,12 @@ cdef class _IndexedGzipFile:
 
         :arg auto_build:       If ``True`` (the default), the index is
                                automatically built on calls to :meth:`seek`.
+
+        :arg skip_crc_check:   Defaults to ``False``. If ``True``, CRC/size
+                               validation of the uncompressed data is not
+                               performed. Automatically enabled if an
+                               ``index_file`` is provided, or if
+                               :meth:`import_index` is called.
 
         :arg spacing:          Number of bytes between index seek points.
 
@@ -366,13 +383,16 @@ cdef class _IndexedGzipFile:
         self.readbuf_size     = readbuf_size
         self.readall_buf_size = readall_buf_size
         self.auto_build       = auto_build
+        self.skip_crc_check   = skip_crc_check
         self.drop_handles     = drop_handles
         self.filename         = filename
         self.own_file         = own_file
         self.pyfid            = fileobj
 
-        if self.auto_build: flags = zran.ZRAN_AUTO_BUILD
-        else:               flags = 0
+        flags = 0
+
+        if auto_build:     flags |= zran.ZRAN_AUTO_BUILD
+        if skip_crc_check: flags |= zran.ZRAN_SKIP_CRC_CHECK
 
         # Set index.fd here just for the initial
         # call, as __file_handle may otherwise
@@ -960,6 +980,8 @@ cdef class _IndexedGzipFile:
             ret = zran.zran_import_index(&self.index, fd, <PyObject*>fileobj)
             if ret != zran.ZRAN_IMPORT_OK:
                 raise ZranError('import_index returned error: {}'.format(ret))
+
+            self.skip_crc_check = True
 
         finally:
             if close_file:

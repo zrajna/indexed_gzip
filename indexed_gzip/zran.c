@@ -123,10 +123,11 @@ static uint64_t _zran_index_limit(
 
 
 /* Return codes for _zran_get_point_at */
+int ZRAN_GET_POINT_CRC_ERROR   =  -2;
 int ZRAN_GET_POINT_FAIL        =  -1;
-int ZRAN_GET_POINT_OK          =  0;
-int ZRAN_GET_POINT_NOT_COVERED =  1;
-int ZRAN_GET_POINT_EOF         =  2;
+int ZRAN_GET_POINT_OK          =   0;
+int ZRAN_GET_POINT_NOT_COVERED =   1;
+int ZRAN_GET_POINT_EOF         =   2;
 
 /*
  * Searches for the zran_point which preceeds the given offset. The offset
@@ -168,9 +169,13 @@ static int _zran_get_point_at(
  * be expanded to encompass it.
  *
  * The input arguments and return values are identical to the
- * _zran_get_point_at function, however if the index has been initialised
- * with the ZRAN_AUTO_BUILD flag, this function will never return
- * ZRAN_GET_POINT_NOT_COVERED.
+ * _zran_get_point_at function, however:
+ *
+ *   - if the index has been initialised with the ZRAN_AUTO_BUILD flag, this
+ *     function will never return ZRAN_GET_POINT_NOT_COVERED.
+ *
+ *   - If a CRC validation error occurs while the index is being expanded,
+ *     ZRAN_GET_POINT_CRC_ERROR is returned.
  */
 static int _zran_get_point_with_expand(
     zran_index_t  *index,      /* The index                           */
@@ -894,9 +899,9 @@ int _zran_get_point_with_expand(zran_index_t  *index,
         /*
          * Expand the index
          */
-        if (_zran_expand_index(index, expand) != 0) {
-            goto fail;
-        }
+        result = _zran_expand_index(index, expand);
+        if      (result == ZRAN_EXPAND_INDEX_CRC_ERROR) { goto crcerror; }
+        else if (result != 0)                           { goto fail; }
 
         /*
          * Index has been expanded, so
@@ -921,6 +926,8 @@ int _zran_get_point_with_expand(zran_index_t  *index,
 
     return result;
 
+crcerror:
+    return ZRAN_GET_POINT_CRC_ERROR;
 fail:
     return ZRAN_GET_POINT_FAIL;
 }
@@ -2266,6 +2273,7 @@ int zran_seek(zran_index_t  *index,
      */
     result = _zran_get_point_with_expand(index, offset, 0, &seek_point);
 
+    if (result == ZRAN_GET_POINT_CRC_ERROR)   goto crcerror;
     if (result == ZRAN_GET_POINT_FAIL)        goto fail;
     if (result == ZRAN_GET_POINT_NOT_COVERED) goto not_covered;
     if (result == ZRAN_GET_POINT_EOF)         goto eof;
@@ -2294,6 +2302,7 @@ int zran_seek(zran_index_t  *index,
 
     return ZRAN_SEEK_OK;
 
+crcerror:        return ZRAN_SEEK_CRC_ERROR;
 fail:            return ZRAN_SEEK_FAIL;
 index_not_built: return ZRAN_SEEK_INDEX_NOT_BUILT;
 not_covered:     return ZRAN_SEEK_NOT_COVERED;
@@ -2401,6 +2410,10 @@ int64_t zran_read(zran_index_t *index,
 
     if (ret == ZRAN_GET_POINT_EOF)         goto eof;
     if (ret == ZRAN_GET_POINT_NOT_COVERED) goto not_covered;
+    if (ret == ZRAN_GET_POINT_CRC_ERROR) {
+        error_return_val = ZRAN_READ_CRC_ERROR;
+        goto fail;
+    }
 
     /*
      * We have to start decompressing from

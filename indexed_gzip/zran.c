@@ -212,9 +212,8 @@ static uint64_t _zran_estimate_offset(
 
 
 /*
- * Used by _zran_expand_index, and _zran_read. Seeks to the specified
- * compressed data offset, and initialises zlib to start
- * decompressing/inflating from said offset.
+ * Used by _zran_inflate. Seeks to the specified compressed data offset, and
+ * initialises zlib to start decompressing/inflating from said offset.
  *
  * Returns 0 for success, non-0 on failure.
  */
@@ -289,9 +288,32 @@ static int _zran_add_point(
 );
 
 
+/* _zran_read_data return codes */
+int ZRAN_READ_DATA_EOF   = -1;
+int ZRAN_READ_DATA_ERROR = -2;
+
+/*
+ * This function is a sub-function of _zran_inflate, used to read data from
+ * the input file to be passed to zlib:inflate for decompression.
+ *
+ * On success, returns 0.
+ *
+ * If there are no more bytes left to read from the input file (i.e. we are at
+ * EOF), ZRAN_READ_DATA_EOF is returned. If an error occurs, returns
+ * ZRAN_READ_DATA_ERROR.
+ */
+static int _zran_read_data_from_file(
+    zran_index_t *index,       /* The index                               */
+    z_stream     *stream,      /* The z_stream struct                     */
+    uint64_t      cmp_offset,  /* Current offset in the compressed data   */
+    uint64_t      uncmp_offset /* Current offset in the uncompressed data */
+);
+
+
 /* _zran_find_next_stream return codes */
 int ZRAN_FIND_STREAM_ERROR     = -2;
 int ZRAN_FIND_STREAM_NOT_FOUND = -1;
+
 
 /*
  * This function is a sub-function of _zran_inflate, used to search for a new
@@ -1203,6 +1225,113 @@ fail:
 
 
 /*
+ * Read data from the GZIP file, and copy it into the read buffer for
+ * decompression.
+ */
+static int _zran_read_data_from_file(zran_index_t *index,
+                                     z_stream     *stream,
+                                     uint64_t      cmp_offset,
+                                     uint64_t      uncmp_offset) {
+
+    size_t f_ret;
+
+    /*
+     * We read in more data when strm->avail_in < 2, because
+     * a GZIP header is 2 bytes long, and when searching for
+     * the next stream in a sequence of concatenated streams,
+     * the _zran_find_next_stream function might leave a byte
+     * in the input without finding a new stream.
+     */
+    if (stream->avail_in >= 2) {
+        return 0;
+    }
+
+    /*
+     * If there are any unprocessed bytes
+     * left over, put them at the beginning
+     * of the read buffer
+     */
+    if (stream->avail_in > 0) {
+        memcpy(index->readbuf, stream->next_in, stream->avail_in);
+    }
+
+    zran_log("Reading from file %llu [== %llu?] "
+             "[into readbuf offset %u]\n",
+             ftell_(index->fd, index->f), cmp_offset, stream->avail_in);
+
+    /*
+     * Read a block of compressed data
+     * (offsetting past any left over
+     * bytes that we may have copied to
+     * the beginning of the read buffer
+     * above).
+     */
+    f_ret = fread_(index->readbuf + stream->avail_in,
+                   1,
+                   index->readbuf_size - stream->avail_in,
+                   index->fd,
+                   index->f);
+
+    if (ferror_(index->fd, index->f)) {
+        goto fail;
+    }
+
+    /*
+     * No bytes left to read -
+     * we've reached EOF
+     */
+    if (f_ret == 0) {
+        if (feof_(index->fd, index->f, f_ret)) {
+
+            zran_log("End of file, stopping inflation\n");
+
+            /*
+             * We now know how big the
+             * uncompressed data is.
+             */
+            if (index->uncompressed_size == 0) {
+                zran_log("Updating uncompressed data "
+                         "size: %llu\n", uncmp_offset);
+                index->uncompressed_size = uncmp_offset;
+            }
+            goto eof;
+        }
+        /*
+         * Or something went wrong (this
+         * should never happen if ferror
+         * does the right thing).
+         */
+        else {
+            goto fail;
+        }
+    }
+
+    zran_log("Read %lu bytes from file [c=%llu, u=%llu] "
+             "[%02x %02x %02x %02x ...]\n",
+             f_ret, cmp_offset, uncmp_offset,
+             index->readbuf[stream->avail_in],
+             index->readbuf[stream->avail_in + 1],
+             index->readbuf[stream->avail_in + 2],
+             index->readbuf[stream->avail_in + 3]);
+
+    /*
+     * Tell zlib about the block
+     * of compressed data that we
+     * just read in.
+     */
+    index->readbuf_end = f_ret + stream->avail_in;
+    stream->avail_in  += f_ret;
+    stream->next_in    = index->readbuf;
+
+    return 0;
+eof:
+    return ZRAN_READ_DATA_EOF;
+fail:
+    return ZRAN_READ_DATA_ERROR;
+}
+
+
+/*
  * Identify the location of the next compressed stream (if the file
  * contains concatenated streams).
  */
@@ -1324,19 +1453,17 @@ static int _zran_inflate(zran_index_t *index,
                          uint8_t      *data) {
 
     /*
-     * Used to store and check return
-     * values. f_ret is for fread,
      * z_ret is for zlib/zran functions.
      * off is for storing offset of new
-     * stream (from _zran_find_next_stream).
-     * return_val is the return value for
-     * this function.
+     * stream (from _zran_validate_stream
+     * and _zran_find_next_stream).
+     * return_val/error_return_val is
+     * the return value for this function.
      */
-    size_t f_ret;
-    int    z_ret;
-    int    off;
-    int    return_val       = ZRAN_INFLATE_OK;
-    int    error_return_val = ZRAN_INFLATE_ERROR;
+    int z_ret;
+    int off;
+    int return_val       = ZRAN_INFLATE_OK;
+    int error_return_val = ZRAN_INFLATE_ERROR;
 
     /*
      * Offsets into the compressed
@@ -1529,95 +1656,21 @@ static int _zran_inflate(zran_index_t *index,
     while (strm->avail_out > 0) {
 
         /*
-         * We need to read in more data. We read in more
-         * data when strm->avail_in < 2, because a GZIP
-         * header is 2 bytes long, and when searching for
-         * the next stream in a sequence of concatenated
-         * streams, the _zran_find_next_stream function
-         * might leave a byte in the input without
-         * finding a new stream.
+         * Make sure the input buffer contains
+         * some data to be decompressed
          */
-        if (strm->avail_in < 2) {
+        z_ret = _zran_read_data_from_file(index,
+                                          strm,
+                                          cmp_offset,
+                                          uncmp_offset);
 
-            /*
-             * If there are any unprocessed bytes
-             * left over, put them at the beginning
-             * of the read buffer
-             */
-            if (strm->avail_in > 0) {
-                memcpy(index->readbuf, strm->next_in, strm->avail_in);
-            }
-
-            zran_log("Reading from file %llu [== %llu?] "
-                     "[into readbuf offset %u]\n",
-                     ftell_(index->fd, index->f), cmp_offset, strm->avail_in);
-
-            /*
-             * Read a block of compressed data
-             * (offsetting past any left over
-             * bytes that we may have copied to
-             * the beginning of the read buffer
-             * above).
-             */
-            f_ret = fread_(index->readbuf + strm->avail_in,
-                          1,
-                          index->readbuf_size - strm->avail_in,
-                          index->fd,
-                          index->f);
-
-            if (ferror_(index->fd, index->f)) {
-                goto fail;
-            }
-
-            /*
-             * No bytes left to read -
-             * we've reached EOF
-             */
-            if (f_ret == 0) {
-                if (feof_(index->fd, index->f, f_ret)) {
-
-                    zran_log("End of file, stopping inflation\n");
-
-                    return_val = ZRAN_INFLATE_EOF;
-
-                    /*
-                     * We now know how big the
-                     * uncompressed data is.
-                     */
-                    if (index->uncompressed_size == 0) {
-
-                        zran_log("Updating uncompressed data "
-                                 "size: %llu\n", uncmp_offset);
-                        index->uncompressed_size = uncmp_offset;
-                    }
-                    break;
-                }
-                /*
-                 * Or something went wrong (this
-                 * should never happen if ferror
-                 * does the right thing).
-                 */
-                else {
-                    goto fail;
-                }
-            }
-
-            zran_log("Read %lu bytes from file [c=%llu, u=%llu] "
-                     "[%02x %02x %02x %02x ...]\n",
-                     f_ret, cmp_offset, uncmp_offset,
-                     index->readbuf[strm->avail_in],
-                     index->readbuf[strm->avail_in + 1],
-                     index->readbuf[strm->avail_in + 2],
-                     index->readbuf[strm->avail_in + 3]);
-
-            /*
-             * Tell zlib about the block
-             * of compressed data that we
-             * just read in.
-             */
-            index->readbuf_end = f_ret + strm->avail_in;
-            strm->avail_in    += f_ret;
-            strm->next_in      = index->readbuf;
+        /* EOF - there is no more data left to read */
+        if (z_ret == ZRAN_READ_DATA_EOF) {
+            return_val = ZRAN_INFLATE_EOF;
+            break;
+        }
+        else if (z_ret != 0) {
+            goto fail;
         }
 
         /*

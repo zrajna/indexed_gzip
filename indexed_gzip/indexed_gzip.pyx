@@ -602,10 +602,7 @@ cdef class _IndexedGzipFile:
         with self.__file_handle(), nogil:
             ret = zran.zran_seek(index, off, c_whence, NULL)
 
-        if ret < 0:
-            raise ZranError('zran_seek returned error: {}'.format(ret))
-
-        elif ret == zran.ZRAN_SEEK_NOT_COVERED:
+        if ret == zran.ZRAN_SEEK_NOT_COVERED:
             raise NotCoveredError('Index does not cover '
                                   'offset {}'.format(offset))
 
@@ -613,8 +610,12 @@ cdef class _IndexedGzipFile:
             raise NotCoveredError('Index must be completely built '
                                   'in order to seek from SEEK_END')
 
+        elif ret == zran.ZRAN_SEEK_CRC_ERROR:
+            raise CrcError('CRC/size validation failed - '
+                           'the GZIP data might be corrupt')
+
         elif ret not in (zran.ZRAN_SEEK_OK, zran.ZRAN_SEEK_EOF):
-            raise ZranError('zran_seek returned unknown code: {}'.format(ret))
+            raise ZranError('zran_seek returned error: {}'.format(ret))
 
         offset = self.tell()
 
@@ -657,10 +658,13 @@ cdef class _IndexedGzipFile:
                 with nogil:
                     ret = zran.zran_read(index, buffer, bufsz)
 
-                # see how the read went
-                if ret == zran.ZRAN_READ_FAIL:
-                    raise ZranError('zran_read returned error '
-                                    '({})'.format(ret))
+                # No bytes were read, and there are
+                # no more bytes to read. This will
+                # happen when the seek point was at
+                # or beyond EOF when zran_read was
+                # called
+                if ret == zran.ZRAN_READ_EOF:
+                    break
 
                 # This will happen if the current
                 # seek point is not covered by the
@@ -669,13 +673,16 @@ cdef class _IndexedGzipFile:
                     raise NotCoveredError('Index does not cover '
                                           'current offset')
 
-                # No bytes were read, and there are
-                # no more bytes to read. This will
-                # happen when the seek point was at
-                # or beyond EOF when zran_read was
-                # called
-                elif ret == zran.ZRAN_READ_EOF:
-                    break
+                # CRC or size check failed - data
+                # might be corrupt
+                elif ret == zran.ZRAN_READ_CRC_ERROR:
+                    raise CrcError('CRC/size validation failed - '
+                                   'the GZIP data might be corrupt')
+
+                # Unknown error
+                elif ret < 0:
+                    raise ZranError('zran_read returned error '
+                                    '({})'.format(ret))
 
                 nread  += ret
                 offset += ret
@@ -1048,6 +1055,14 @@ class NotCoveredError(ValueError):
 class ZranError(IOError):
     """Exception raised by the :class:`_IndexedGzipFile` when the ``zran``
     library signals an error.
+    """
+    pass
+
+
+class CrcError(IOError):
+    """Exception raised by the :class:`_IndexedGzipFile` when a CRC/size
+    validation check fails, which suggests that the GZIP data might be
+    corrupt.
     """
     pass
 

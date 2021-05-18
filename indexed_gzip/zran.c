@@ -1674,20 +1674,161 @@ static int _zran_inflate(zran_index_t *index,
         }
 
         /*
-         * Decompress the block until it is
-         * gone (or we've read enough bytes)
+         * Decompress data until there's no data
+         * left, or we've read enough bytes
          */
         z_ret = Z_OK;
         while (strm->avail_in > 0) {
 
             /*
-             * The last iteration found the
-             * end of a gzip stream. Validate
-             * the uncompressed data (size/
-             * CRC) against the gzip footer.
-             * Then then search for a new
-             * stream and, if we find one,
-             * re-initialise inflation
+             * Initialise counters to calculate
+             * how many bytes are input/output
+             * during this call to inflate.
+             */
+            bytes_consumed = strm->avail_in;
+            bytes_output   = strm->avail_out;
+
+            zran_log("Before inflate - avail_in=%u, avail_out=%u\n",
+                     strm->avail_in, strm->avail_out);
+
+            /*
+             * Inflate the block - the decompressed
+             * data is output straight to the provided
+             * data buffer.
+             *
+             * If ZRAN_INFLATE_STOP_AT_BLOCK is active,
+             * Z_BLOCK tells inflate to stop inflating
+             * at a compression block boundary. Otherwise,
+             * inflate stops when it comes to the end of a
+             * stream, or it runs out of input or output.
+             */
+            if (inflate_stop_at_block(flags)) {
+                z_ret = inflate(strm, Z_BLOCK);
+            }
+            else {
+                z_ret = inflate(strm, Z_NO_FLUSH);
+            }
+
+            zran_log("After inflate - avail_in=%u, avail_out=%u\n",
+                     strm->avail_in, strm->avail_out);
+
+            /*
+             * Adjust our offsets according to what
+             * was actually consumed/decompressed.
+             */
+            bytes_consumed   = bytes_consumed - strm->avail_in;
+            bytes_output     = bytes_output   - strm->avail_out;
+            cmp_offset      += bytes_consumed;
+            _total_consumed += bytes_consumed;
+            uncmp_offset    += bytes_output;
+            _total_output   += bytes_output;
+
+            /*
+             * Now we need to figure out what just happened.
+             *
+             * Z_BUF_ERROR indicates that the output buffer
+             * is full; we clobber it though, as it makes the
+             * code below a bit easier (and anyway, we can
+             * tell if the output buffer is full by checking
+             * strm->avail_out).
+             */
+            if (z_ret == Z_BUF_ERROR) {
+                z_ret = Z_OK;
+            }
+
+            /*
+             * If z_ret is not Z_STREAM_END or
+             * Z_OK, something has gone wrong.
+             *
+             * If the file comprises a sequence of
+             * concatenated gzip streams, we will
+             * encounter Z_STREAM_END before the end
+             * of the file (where one stream ends and
+             * the other begins).
+             *
+             * If at a new stream, we re-initialise
+             * inflation on the next loop iteration.
+             */
+            if (z_ret != Z_OK && z_ret != Z_STREAM_END) {
+                zran_log("zlib inflate failed (code: %i, msg: %s)\n",
+                         z_ret, strm->msg);
+                goto fail;
+            }
+
+            /*
+             * Keep track of the farthest point we have
+             * gotten to in the uncompressed data (across
+             * all gzip streams). If we've just read/
+             * decompressed some previously unseen data,
+             * update the size and crc of the current
+             * stream, so we can validate them against
+             * the size recorded in the footer later on.
+             */
+            if (uncmp_offset > index->uncompressed_seen) {
+
+                if (!(index->flags & ZRAN_SKIP_CRC_CHECK)) {
+                    /*
+                     * using bytes_output here to store the
+                     * number of newly uncompressed bytes
+                     */
+                    bytes_output = uncmp_offset - index->uncompressed_seen;
+
+                    index->stream_size +=       bytes_output;
+                    index->stream_crc32 = crc32(index->stream_crc32,
+                                                strm->next_out - bytes_output,
+                                                bytes_output);
+                }
+
+                index->uncompressed_seen = uncmp_offset;
+            }
+
+            /*
+             * End of a block? If INFLATE_STOP_AT_BLOCK
+             * is active, we want to stop at a compression
+             * block boundary.
+             *
+             * If we used Z_BLOCK above, and inflate
+             * encountered a block boundary, it indicates
+             * this in the the strm->data_type field.
+             */
+            if (inflate_stop_at_block(flags) &&
+                ((strm->data_type & 128) && !(strm->data_type & 64))) {
+
+                zran_log("At block or stream boundary, "
+                         "stopping inflation\n");
+
+                return_val = ZRAN_INFLATE_BLOCK_BOUNDARY;
+                break;
+            }
+
+            /*
+             * We've run out of space to store decompressed
+             * data - this is the responsibility of the caller,
+             * so bail out.
+             */
+            if (strm->avail_out == 0) {
+
+                zran_log("Output buffer full - stopping inflation\n");
+
+                /*
+                 * We return OUTPUT_FULL if we haven't
+                 * decompressed the requested number of
+                 * bytes, or ZRAN_INFLATE_STOP_AT_BLOCK
+                 * is active and we haven't yet found a
+                 * block.
+                 */
+                if (inflate_stop_at_block(flags) || _total_output < len) {
+                    return_val = ZRAN_INFLATE_OUTPUT_FULL;
+                }
+                break;
+            }
+
+            /*
+             * We've found the end  of file, or end of
+             * one gzip stream. Validate the uncompressed
+             * data (size/ CRC) against the gzip footer.
+             * Then then search for a new stream and, if
+             * we find one, re-initialise inflation
              */
             if (z_ret == Z_STREAM_END) {
 
@@ -1742,154 +1883,12 @@ static int _zran_inflate(zran_index_t *index,
                     goto fail;
                 }
             }
-
-            /*
-             * Initialise counters to calculate
-             * how many bytes are input/output
-             * during this call to inflate.
-             */
-            bytes_consumed = strm->avail_in;
-            bytes_output   = strm->avail_out;
-
-            zran_log("Before inflate - avail_in=%u, avail_out=%u\n",
-                     strm->avail_in, strm->avail_out);
-
-            /*
-             * Inflate the block - the decompressed
-             * data is output straight to the provided
-             * data buffer.
-             *
-             * If ZRAN_INFLATE_STOP_AT_BLOCK is active,
-             * Z_BLOCK tells inflate to stop inflating
-             * at a compression block boundary. Otherwise,
-             * inflate stops when it comes to the end of a
-             * stream, or it runs out of input or output.
-             */
-            if (inflate_stop_at_block(flags)) z_ret = inflate(strm, Z_BLOCK);
-            else                              z_ret = inflate(strm, Z_NO_FLUSH);
-
-            zran_log("After inflate - avail_in=%u, avail_out=%u\n",
-                     strm->avail_in, strm->avail_out);
-
-            /*
-             * Adjust our offsets according to what
-             * was actually consumed/decompressed.
-             */
-            bytes_consumed   = bytes_consumed - strm->avail_in;
-            bytes_output     = bytes_output   - strm->avail_out;
-            cmp_offset      += bytes_consumed;
-            _total_consumed += bytes_consumed;
-            uncmp_offset    += bytes_output;
-            _total_output   += bytes_output;
-
-            /*
-             * keep track of the farthest point we have
-             * gotten to in the uncompressed data (across
-             * all gzip streams), and update the size and
-             * crc of the current stream, so we can
-             * validate them against the size recorded in
-             * the footer later on.
-             */
-            if (uncmp_offset > index->uncompressed_seen) {
-
-                if (!(index->flags & ZRAN_SKIP_CRC_CHECK)) {
-                    /*
-                     * using bytes_output to store the number
-                     * of newly uncompressed bytes
-                     */
-                    bytes_output = uncmp_offset - index->uncompressed_seen;
-
-                    index->stream_size +=       bytes_output;
-                    index->stream_crc32 = crc32(index->stream_crc32,
-                                                strm->next_out - bytes_output,
-                                                bytes_output);
-                }
-
-                index->uncompressed_seen = uncmp_offset;
-            }
-
-            /*
-             * Now we need to figure out what just happened.
-             *
-             * Z_BUF_ERROR indicates that the output buffer
-             * is full; we clobber it though, as it makes the
-             * code below a bit easier (and anyway, we can
-             * tell if the output buffer is full by checking
-             * strm->avail_out).
-             */
-            if (z_ret == Z_BUF_ERROR) {
-                z_ret = Z_OK;
-            }
-
-            /*
-             * If z_ret is not Z_STREAM_END or
-             * Z_OK, something has gone wrong.
-             *
-             * If the file comprises a sequence of
-             * concatenated gzip streams, we will
-             * encounter Z_STREAM_END before the end
-             * of the file (where one stream ends and
-             * the other begins).
-             *
-             * If at a new stream, we re-initialise
-             * inflation on the next loop iteration.
-             */
-            if (z_ret != Z_OK && z_ret != Z_STREAM_END) {
-                zran_log("zlib inflate failed (code: %i, msg: %s)\n",
-                         z_ret, strm->msg);
-                goto fail;
-            }
-
-            /*
-             * End of a block? If INFLATE_STOP_AT_BLOCK
-             * is active, we want to stop at a compression
-             * block boundary.
-             *
-             * If we used Z_BLOCK above, and inflate
-             * encountered a block boundary, it indicates
-             * this in the the strm->data_type field.
-             */
-            if (inflate_stop_at_block(flags) &&
-                ((strm->data_type & 128) && !(strm->data_type & 64))) {
-
-                zran_log("At block or stream boundary, "
-                         "stopping inflation\n");
-
-                return_val = ZRAN_INFLATE_BLOCK_BOUNDARY;
-                break;
-            }
-
-            /*
-             * We've run out of space to
-             * store decompressed data
-             */
-            if (strm->avail_out == 0) {
-
-                zran_log("Output buffer full - stopping inflation\n");
-
-                /*
-                 * We return OUTPUT_FULL if we haven't
-                 * decompressed the requested number of
-                 * bytes, or ZRAN_INFLATE_STOP_AT_BLOCK
-                 * is active and we haven't yet found a
-                 * block.
-                 */
-                if (inflate_stop_at_block(flags) || _total_output < len) {
-                    return_val = ZRAN_INFLATE_OUTPUT_FULL;
-                }
-
-                break;
-            }
-
-            /*
-             * Some of the code above has decided that
-             * it wants this _zran_inflate call to return.
-             */
-            if (return_val != ZRAN_INFLATE_OK) {
-                break;
-            }
         }
 
+        /*
+         * Some of the code above has decided that
+         * it wants this _zran_inflate call to return.
+         */
         if (return_val != ZRAN_INFLATE_OK) {
             break;
         }

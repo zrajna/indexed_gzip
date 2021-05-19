@@ -215,11 +215,15 @@ struct _zran_point {
  * Initialise a zran_index_t struct for use with the given file.
  *
  * Passing in 0 for the spacing, window_size and readbuf_size arguments
- * will result in the follwoing values being used:
+ * will result in the following values being used:
  *
  *    spacing:      1048576
  *    window_size:  32768
  *    readbuf_size: 16384
+ *
+ * The read buffer must be at least the maximum expectedd size of a GZIP
+ * header. GZIP headers have a minimum size of 10 bytes, but there is no upper
+ * bound on their size, so using a very small read buffer would be unwise.
  *
  * The flags argument is a bit mask used to control the following options:
  *

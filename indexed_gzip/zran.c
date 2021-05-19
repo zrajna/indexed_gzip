@@ -320,10 +320,12 @@ int ZRAN_READ_DATA_ERROR = -2;
  * ZRAN_READ_DATA_ERROR.
  */
 static int _zran_read_data_from_file(
-    zran_index_t *index,       /* The index                               */
-    z_stream     *stream,      /* The z_stream struct                     */
-    uint64_t      cmp_offset,  /* Current offset in the compressed data   */
-    uint64_t      uncmp_offset /* Current offset in the uncompressed data */
+    zran_index_t *index,        /* The index                               */
+    z_stream     *stream,       /* The z_stream struct                     */
+    uint64_t      cmp_offset,   /* Current offset in the compressed data   */
+    uint64_t      uncmp_offset, /* Current offset in the uncompressed data */
+    uint32_t      need_atleast  /* Skip read if the read buffer already has
+                                   this many bytes */
 );
 
 
@@ -1258,6 +1260,9 @@ int _zran_init_zlib_inflate(zran_index_t *index,
         }
     }
 
+    zran_log("_zran_zlib_init_inflate: initialised, read %i bytes\n",
+             bytes_read - stream->avail_in);
+
     /*
      * Return the number of bytes of compressed
      * data, if any that were read over
@@ -1276,9 +1281,14 @@ fail:
 static int _zran_read_data_from_file(zran_index_t *index,
                                      z_stream     *stream,
                                      uint64_t      cmp_offset,
-                                     uint64_t      uncmp_offset) {
+                                     uint64_t      uncmp_offset,
+                                     uint32_t      need_atleast) {
 
     size_t f_ret;
+
+    if (stream->avail_in >= need_atleast) {
+        return 0;
+    }
 
     /*
      * If there are any unprocessed bytes
@@ -1720,13 +1730,12 @@ static int _zran_inflate(zran_index_t *index,
              * is going to expect a GZIP header, so make
              * sure we have some data for it to look at.
              */
-            if (strm->avail_in == 0) {
-                if (_zran_read_data_from_file(index,
-                                              strm,
-                                              cmp_offset,
-                                              uncmp_offset) != 0) {
-                    goto fail;
-                }
+            if (_zran_read_data_from_file(index,
+                                          strm,
+                                          cmp_offset,
+                                          uncmp_offset,
+                                          index->readbuf_size) != 0) {
+                goto fail;
             }
         }
 
@@ -1756,22 +1765,21 @@ static int _zran_inflate(zran_index_t *index,
 
         /*
          * Make sure the input buffer contains
-         * some data to be decompressed
+         * some data to be decompressed.
          */
-        if (strm->avail_in == 0) {
-            z_ret = _zran_read_data_from_file(index,
-                                              strm,
-                                              cmp_offset,
-                                              uncmp_offset);
+        z_ret = _zran_read_data_from_file(index,
+                                          strm,
+                                          cmp_offset,
+                                          uncmp_offset,
+                                          1);
 
-            /* EOF - there is no more data left to read */
-            if (z_ret == ZRAN_READ_DATA_EOF) {
-                return_val = ZRAN_INFLATE_EOF;
-                break;
-            }
-            else if (z_ret != 0) {
-                goto fail;
-            }
+        /* EOF - there is no more data left to read */
+        if (z_ret == ZRAN_READ_DATA_EOF) {
+            return_val = ZRAN_INFLATE_EOF;
+            break;
+        }
+        else if (z_ret != 0) {
+            goto fail;
         }
 
         /*
@@ -1823,7 +1831,18 @@ static int _zran_inflate(zran_index_t *index,
             _total_consumed += bytes_consumed;
             uncmp_offset    += bytes_output;
             _total_output   += bytes_output;
-            new_data         = uncmp_offset > index->uncompressed_seen;
+
+            /*
+             * If a previous call to inflate was on the last byte
+             * of a non-byte-aligned stream, it may return Z_OK.
+             * Then the next call will return Z_STREAM_END without
+             * producing anything. In this case, we preserve the
+             * new data flag, so that CRC validation below can
+             * still take place.
+             */
+            if (bytes_output > 0) {
+                new_data = uncmp_offset > index->uncompressed_seen;
+            }
 
             /*
              * Now we need to figure out what just happened.
@@ -1904,28 +1923,6 @@ static int _zran_inflate(zran_index_t *index,
             }
 
             /*
-             * We've run out of space to store decompressed
-             * data - this is the responsibility of the caller,
-             * so bail out.
-             */
-            if (strm->avail_out == 0) {
-
-                zran_log("Output buffer full - stopping inflation\n");
-
-                /*
-                 * We return OUTPUT_FULL if we haven't
-                 * decompressed the requested number of
-                 * bytes, or ZRAN_INFLATE_STOP_AT_BLOCK
-                 * is active and we haven't yet found a
-                 * block.
-                 */
-                if (inflate_stop_at_block(flags) || _total_output < len) {
-                    return_val = ZRAN_INFLATE_OUTPUT_FULL;
-                }
-                break;
-            }
-
-            /*
              * We've found the end of file, or end of
              * one gzip stream. Validate the uncompressed
              * data (size/ CRC) against the gzip footer.
@@ -1941,13 +1938,12 @@ static int _zran_inflate(zran_index_t *index,
                  * data from file if necessary. If there is no
                  * more data, the stream must be corrupt
                  */
-                if (strm->avail_in < 8) {
-                    if (_zran_read_data_from_file(index,
-                                                  strm,
-                                                  cmp_offset,
-                                                  uncmp_offset) != 0) {
-                        goto fail;
-                    }
+                if (_zran_read_data_from_file(index,
+                                              strm,
+                                              cmp_offset,
+                                              uncmp_offset,
+                                              8) != 0) {
+                    goto fail;
                 }
 
                 /*
@@ -1977,10 +1973,10 @@ static int _zran_inflate(zran_index_t *index,
                     else if (z_ret != 0) {
                         goto fail;
                     }
+                    new_data = 0;
                 }
-                /*
-                 * Otherwise skip over the 8 byte GZIP footer
-                 */
+
+                /* Otherwise skip over the 8 byte GZIP footer */
                 else {
                     strm->avail_in -= 8;
                     strm->next_in  += 8;
@@ -1988,11 +1984,15 @@ static int _zran_inflate(zran_index_t *index,
                 }
 
                 /*
-                 * TODO if readbuf  is empty at this stage,
-                 *      zran_find_next_stream won't have any
-                 *      data to search, so won't find any
-                 *      subsequent streams. Very edge-casy,
-                 *      Will fix if a bug is reported.
+                 * See if we have another concatenated gzip stream.
+                 *
+                 * WARNING If we run out of input data here, bad things
+                 * will happen. This will only happen with very small
+                 * read buffers, or absurd amounts of null-padding
+                 * between streams or at EOF. This could be handled
+                 * by flushing the input file, but it's such a
+                 * ridiculous edge case, that I don't think it's worth
+                 * the hassle.
                  */
                 z_ret = _zran_find_next_stream(index, strm, &off);
 
@@ -2024,6 +2024,28 @@ static int _zran_inflate(zran_index_t *index,
                         goto fail;
                     }
                 }
+            }
+
+            /*
+             * We've run out of space to store decompressed
+             * data - this is the responsibility of the caller,
+             * so bail out.
+             */
+            if (strm->avail_out == 0) {
+
+                zran_log("Output buffer full - stopping inflation\n");
+
+                /*
+                 * We return OUTPUT_FULL if we haven't
+                 * decompressed the requested number of
+                 * bytes, or ZRAN_INFLATE_STOP_AT_BLOCK
+                 * is active and we haven't yet found a
+                 * block.
+                 */
+                if (inflate_stop_at_block(flags) || _total_output < len) {
+                    return_val = ZRAN_INFLATE_OUTPUT_FULL;
+                }
+                break;
             }
         }
 

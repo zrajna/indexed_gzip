@@ -1205,6 +1205,13 @@ int _zran_init_zlib_inflate(zran_index_t *index,
         if (inflateInit2(stream, windowBits + 32) != Z_OK) { goto fail; }
         if (inflate(stream, Z_BLOCK)              != Z_OK) { goto fail; }
         if (inflateEnd(stream)                    != Z_OK) { goto fail; }
+
+        /*
+         * Reset CRC/size validation counters when
+         * we start reading a new gzip stream
+         */
+        index->stream_size  = 0;
+        index->stream_crc32 = 0;
     }
 
     /*
@@ -1452,12 +1459,6 @@ int _zran_find_next_stream(zran_index_t *index,
     }
 
     *offset += ret;
-
-    /*
-     * Reset stream size/crc counters
-     */
-    index->stream_size  = 0;
-    index->stream_crc32 = 0;
 
     return 0;
 

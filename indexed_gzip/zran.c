@@ -22,9 +22,10 @@
 #include "io.h"
 static int is_readonly(FILE *fd, PyObject *f)
 {
-    /* Can't find a way to do this correctly under Windows and
-       the check is not required anyway since the underlying
-       Python module checks it already */
+    /* Can't find a way to do this correctly under
+       Windows and the check is not required anyway
+       since the underlying Python module checks it
+       already */
     return 1;
 }
 #else
@@ -599,17 +600,34 @@ int zran_init(zran_index_t *index,
     if (readbuf_size == 0) readbuf_size = 16384;
 
     /*
-     * The zlib manual specifies that a window size of 32KB is 'always enough'
-     * to initialise inflation/deflation with a set dictionary. Less than
-     * that is not guaranteed to be enough.
-    */
+     * The zlib manual specifies that a window
+     * size of 32KB is 'always enough' to
+     * initialise inflation/deflation with a
+     * set dictionary. Less than that is not
+     * guaranteed to be enough.
+     */
     if (window_size < 32768)
         goto fail;
 
     /*
-     * window_size bytes of uncompressed data are stored with each seek point
-     * in the index. So it's a bit silly to have the distance between
-     * consecutive points less than the window size.
+     * Small read-buffers make code complicated.
+     * The absolute minimum we need is enough to
+     * store a GZIP footer, null padding bytes at
+     * the end of a stream, and the subsequent
+     * GZIP header. There are no bounds on the
+     * number of padding bytes, or the size of a
+     * GZIP header, so this constraint is
+     * arbitrary (but should be good enough).
+     */
+    if (readbuf_size < 512)
+        goto fail;
+
+    /*
+     * window_size bytes of uncompressed data are
+     * stored with each seek point in the index.
+     * So it's a bit silly to have the distance
+     * between consecutive points less than the
+     * window size.
      */
     if (spacing <= window_size)
       goto fail;

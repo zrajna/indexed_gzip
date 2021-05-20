@@ -2660,8 +2660,14 @@ int zran_import_index(zran_index_t *index,
     zran_point_t *point;
     zran_point_t *list_end;
 
-    /* Used for checking magic bytes in the beginning of the file. */
-    char magic_bytes[sizeof(zran_magic_bytes)];
+    /*
+     * Used for checking file ID, version, and
+     * flags at the beginning of the file. Flags
+     * is also used as a temporary variable.
+     */
+    char    file_id[sizeof(ZRAN_INDEX_FILE_ID)];
+    uint8_t version;
+    uint8_t flags;
 
     /*
      * Data fields that will be read from the file. They aren't stored directly
@@ -2678,36 +2684,50 @@ int zran_import_index(zran_index_t *index,
     /* Check if file is read only. */
     if (!is_readonly(fd, f)) goto fail;
 
-    /* Read magic bytes, and check for file errors and EOF. */
-    f_ret = fread_(magic_bytes, sizeof(magic_bytes), 1, fd, f);
-
+    /* Read ID, and check for file errors and EOF. */
+    f_ret = fread_(file_id, sizeof(file_id), 1, fd, f);
     if (feof_(fd, f, f_ret)) goto eof;
     if (ferror_(fd, f))      goto read_error;
     if (f_ret != 1)          goto read_error;
 
-    /* Verify magic bytes. */
-    if (memcmp(magic_bytes, zran_magic_bytes, sizeof(magic_bytes))) {
+    /* Verify file ID. */
+    if (memcmp(file_id, ZRAN_INDEX_FILE_ID, sizeof(file_id)))
         goto unknown_format;
-    }
+
+    /* Read file format version */
+    f_ret = fread_(&version, 1, 1, fd, f);
+    if (feof_(fd, f, f_ret)) goto eof;
+    if (ferror_(fd, f))      goto read_error;
+    if (f_ret != 1)          goto read_error;
+
+    /* This file is too new for us to cope */
+    if (version > ZRAN_INDEX_FILE_VERSION)
+        goto unsupported_version;
+
+    /* Read flags (currently unused) */
+    f_ret = fread_(&flags, 1, 1, fd, f);
+    if (feof_(fd, f, f_ret)) goto eof;
+    if (ferror_(fd, f))      goto read_error;
+    if (f_ret != 1)          goto read_error;
 
     /* Read compressed size, and check for file errors and EOF. */
     f_ret = fread_(&compressed_size, sizeof(compressed_size), 1, fd, f);
-
-    if (ferror_(fd, f)) goto read_error;
-    if (f_ret != 1)     goto read_error;
+    if (feof_(fd, f, f_ret)) goto eof;
+    if (ferror_(fd, f))      goto read_error;
+    if (f_ret != 1)          goto read_error;
 
     /*
-     * Compare compressed_size in the index file  to the existing size in
+     * Compare compressed_size in the index file to the existing size in
      * the current index (set in zran_init), if they don't match this means
      * this index file is not created for this compressed file.
      */
-    if (compressed_size != index->compressed_size) goto inconsistent;
+    if (compressed_size != index->compressed_size)
+        goto inconsistent;
 
     if (feof_(fd, f, f_ret)) goto eof;
 
     /* Read uncompressed size, and check for file errors and EOF. */
     f_ret = fread_(&uncompressed_size, sizeof(uncompressed_size), 1, fd, f);
-
     if (feof_(fd, f, f_ret)) goto eof;
     if (ferror_(fd, f))      goto read_error;
     if (f_ret != 1)          goto read_error;
@@ -2722,14 +2742,12 @@ int zran_import_index(zran_index_t *index,
 
     /* Read spacing, and check for file errors and EOF. */
     f_ret = fread_(&spacing, sizeof(spacing), 1, fd, f);
-
     if (feof_(fd, f, f_ret)) goto eof;
     if (ferror_(fd, f))      goto read_error;
     if (f_ret != 1)          goto read_error;
 
     /* Read window size, and check for file errors and EOF. */
     f_ret = fread_(&window_size, sizeof(window_size), 1, fd, f);
-
     if (feof_(fd, f, f_ret)) goto eof;
     if (ferror_(fd, f))      goto read_error;
     if (f_ret != 1)          goto read_error;
@@ -2748,7 +2766,8 @@ int zran_import_index(zran_index_t *index,
     if (ferror_(fd, f))      goto read_error;
     if (f_ret != 1)          goto read_error;
 
-    zran_log("zran_import_index: (%lu, %lu, %u, %u, %u)\n",
+    zran_log("zran_import_index: (%u, %lu, %lu, %u, %u, %u)\n",
+             version,
              compressed_size,
              uncompressed_size,
              spacing,
@@ -2764,8 +2783,8 @@ int zran_import_index(zran_index_t *index,
      * initialise the point list to 8 (same as in zran_init).
      */
     new_list = calloc(1, sizeof(zran_point_t) * max(npoints, 8));
-
-    if (new_list == NULL) goto memory_error;
+    if (new_list == NULL)
+        goto memory_error;
 
     /*
      * Initialize point to the first element of the list, and list_end to the
@@ -2781,7 +2800,6 @@ int zran_import_index(zran_index_t *index,
         /* Read compressed offset, and check for errors. */
         f_ret = fread_(&point->cmp_offset,
                        sizeof(point->cmp_offset), 1, fd, f);
-
         if (feof_(fd, f, f_ret)) goto eof;
         if (ferror_(fd, f))      goto read_error;
         if (f_ret != 1)          goto read_error;
@@ -2789,17 +2807,40 @@ int zran_import_index(zran_index_t *index,
         /* Read uncompressed offset, and check for errors. */
         f_ret = fread_(&point->uncmp_offset,
                        sizeof(point->uncmp_offset), 1, fd, f);
-
         if (feof_(fd, f, f_ret)) goto eof;
         if (ferror_(fd, f))      goto read_error;
         if (f_ret != 1)          goto read_error;
 
         /* Read bit offset, and check for errors. */
         f_ret = fread_(&point->bits, sizeof(point->bits), 1, fd, f);
-
         if (feof_(fd, f, f_ret)) goto eof;
         if (ferror_(fd, f))      goto read_error;
         if (f_ret != 1)          goto read_error;
+
+        /* Read data flag (added in version 1), and check for errors. */
+        if (version >= 1) {
+            f_ret = fread_(&flags, 1, 1, fd, f);
+            if (feof_(fd, f, f_ret)) goto eof;
+            if (ferror_(fd, f))      goto read_error;
+            if (f_ret != 1)          goto read_error;
+
+            /*
+             * The data flag determines whether or not any window data
+             * is associated with this point. We set point->data to 1
+             * to indicate to the loop below that this point has data
+             * to be loaded.
+             */
+            if (flags == 0) { point->data = NULL;     }
+            else            { point->data = NULL + 1; }
+        }
+        /*
+         * In index file version 0, the first point
+         * has no data, but all other points do.
+         */
+        else {
+            if (point == new_list) { point->data = NULL;     }
+            else                   { point->data = NULL + 1; }
+        }
 
         zran_log("zran_import_index: (%lu, %lu, %lu, %u)\n",
                  (npoints - (list_end - point)), // point index
@@ -2812,22 +2853,32 @@ int zran_import_index(zran_index_t *index,
     }
 
     /*
-     * Initialize point to the second element of the list (as the first element
-     * has no data), and list_end to the end of the list.
+     * Now loop through the window data for all index points. Above, we
+     * initialised all point->data fields to either NULL or 1, to indicate
+     * whether or not they have data to be loaded.
      */
-    point    = new_list + 1;
+    point    = new_list;
     list_end = new_list + npoints;
 
     /* Read new points iteratively for reading checkpoint data. */
     while (point < list_end) {
 
         /*
+         * There is no data associated with this point - it is either
+         * at the beginning of the file, or on a stream boundary.
+         */
+        if (point->data == NULL) {
+            point++;
+            continue;
+        }
+
+        /*
          * Allocate space for checkpoint data. These pointers in each point
          * should be cleaned up in case of any failures.
          */
         point->data = calloc(1, window_size);
-
-        if (point->data == NULL) goto memory_error;
+        if (point->data == NULL)
+            goto memory_error;
 
         /*
          * Read checkpoint data, and check for errors. End of file can be
@@ -2835,7 +2886,6 @@ int zran_import_index(zran_index_t *index,
          * the last element.
          */
         f_ret = fread_(point->data, window_size, 1, fd, f);
-
         if (feof_(fd, f, f_ret) && point < list_end - 1) goto eof;
         if (ferror_(fd, f))                              goto read_error;
         if (f_ret != 1)                                  goto read_error;
@@ -2936,6 +2986,10 @@ memory_error:
 
 unknown_format:
     fail_ret = ZRAN_IMPORT_UNKNOWN_FORMAT;
+    goto cleanup;
+
+unsupported_version:
+    fail_ret = ZRAN_IMPORT_UNSUPPORTED_VERSION;
     goto cleanup;
 
 cleanup:

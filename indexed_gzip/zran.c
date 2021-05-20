@@ -619,7 +619,7 @@ int zran_init(zran_index_t *index,
      * GZIP header, so this constraint is
      * arbitrary (but should be good enough).
      */
-    if (readbuf_size < 512)
+    if (readbuf_size < 128)
         goto fail;
 
     /*
@@ -677,6 +677,7 @@ int zran_init(zran_index_t *index,
     index->uncmp_seek_offset    = 0;
     index->inflate_cmp_offset   = 0;
     index->inflate_uncmp_offset = 0;
+    index->validating           = 0;
     index->last_stream_ended    = 0;
     index->stream_size          = 0;
     index->stream_crc32         = 0;
@@ -1205,13 +1206,6 @@ int _zran_init_zlib_inflate(zran_index_t *index,
         if (inflateInit2(stream, windowBits + 32) != Z_OK) { goto fail; }
         if (inflate(stream, Z_BLOCK)              != Z_OK) { goto fail; }
         if (inflateEnd(stream)                    != Z_OK) { goto fail; }
-
-        /*
-         * Reset CRC/size validation counters when
-         * we start reading a new gzip stream
-         */
-        index->stream_size  = 0;
-        index->stream_crc32 = 0;
     }
 
     /*
@@ -1285,6 +1279,14 @@ int _zran_init_zlib_inflate(zran_index_t *index,
                 goto fail;
         }
     }
+
+    /*
+     * Reset CRC/size validation counters when
+     * we start reading a new gzip stream
+     */
+    index->validating   = (point == NULL);
+    index->stream_size  = 0;
+    index->stream_crc32 = 0;
 
     zran_log("_zran_zlib_init_inflate: initialised, read %i bytes\n",
              bytes_read - stream->avail_in);
@@ -1891,6 +1893,7 @@ static int _zran_inflate(zran_index_t *index,
              * get to it.
              */
             if ((uncmp_offset > index->last_stream_ended) &&
+                index->validating                         &&
                 !(index->flags & ZRAN_SKIP_CRC_CHECK)) {
                 index->stream_size +=       bytes_output;
                 index->stream_crc32 = crc32(index->stream_crc32,
@@ -1929,15 +1932,29 @@ static int _zran_inflate(zran_index_t *index,
                 zran_log("End of gzip stream\n");
 
                 /*
-                 * The GZIP footer takes up 8 bytes - read more
-                 * data from file if necessary. If there is no
-                 * more data, the stream must be corrupt
+                 * The GZIP footer takes up 8 bytes - make
+                 * sure we have data in the input buffer.
+                 * In case we are reading concatentaed
+                 * streams, force a read if there are less
+                 * than 16 bytes in the input buffer (we
+                 * can't say for sure how many bytes we
+                 * need, because streams can have
+                 * arbitrary amounts of null-padding bytes
+                 * between them).
                  */
-                if (_zran_read_data_from_file(index,
-                                              strm,
-                                              cmp_offset,
-                                              uncmp_offset,
-                                              8) != 0) {
+                z_ret = _zran_read_data_from_file(index,
+                                                  strm,
+                                                  cmp_offset,
+                                                  uncmp_offset,
+                                                  10);
+                if (!((z_ret == 0) || (z_ret == ZRAN_READ_DATA_EOF))) {
+                    goto fail;
+                }
+                /*
+                 * If there is no more data, the footer is
+                 * missing, so the data must be corrupt.
+                 */
+                if (strm->avail_in < 8) {
                     goto fail;
                 }
 
@@ -1958,7 +1975,8 @@ static int _zran_inflate(zran_index_t *index,
                  * check that the CRC and uncompressed size in
                  * the footer match what we have calculated
                  */
-                if (uncmp_offset > index->last_stream_ended) {
+                if (uncmp_offset > index->last_stream_ended &&
+                    index->validating) {
                     z_ret = _zran_validate_stream(index, strm, &off);
 
                     if (z_ret == ZRAN_VALIDATE_STREAM_INVALID) {
@@ -1969,6 +1987,7 @@ static int _zran_inflate(zran_index_t *index,
                         goto fail;
                     }
                     index->last_stream_ended = uncmp_offset;
+                    index->validating        = 0;
                 }
 
                 /* Otherwise skip over the 8 byte GZIP footer */

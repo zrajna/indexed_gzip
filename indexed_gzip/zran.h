@@ -171,6 +171,7 @@ struct _zran_index {
      */
     uint64_t stream_crc32;
     uint32_t stream_size;
+    uint8_t  validating;
 };
 
 

@@ -2657,8 +2657,15 @@ int zran_import_index(zran_index_t *index,
     int fail_ret;
 
     /* Used for iterating over elements of zran_index_t.list. */
+    uint64_t      i;
     zran_point_t *point;
     zran_point_t *list_end;
+
+    /*
+     * Used to store flags for each point - allocated once we
+     * know how many points there are.
+     */
+    uint8_t *dataflags = NULL;
 
     /*
      * Used for checking file ID, version, and
@@ -2787,15 +2794,15 @@ int zran_import_index(zran_index_t *index,
         goto memory_error;
 
     /*
-     * Initialize point to the first element of the list, and list_end to the
-     * end of the list.
+     * Allocate space for the data flag for each point - whether or not
+     * there is data associated with it
      */
-    point    = new_list;
-    list_end = new_list + npoints;
+    dataflags = calloc(npoints, 1);
+    if (dataflags == NULL)
+        goto memory_error;
 
     /* Read new points iteratively for reading offset mapping. */
-    while (point < list_end)
-    {
+    for (i = 0, point = new_list; i < npoints; i++, point++) {
 
         /* Read compressed offset, and check for errors. */
         f_ret = fread_(&point->cmp_offset,
@@ -2839,37 +2846,26 @@ int zran_import_index(zran_index_t *index,
             flags = (point == new_list) ? 0 : 1;
         }
 
-        if (flags == 0) { point->data = NULL;     }
-        else            { point->data = NULL + 1; }
+        dataflags[i] = flags;
 
         zran_log("zran_import_index: (p%lu, %lu, %lu, %u, %u)\n",
-                 (npoints - (list_end - point)), // point index
+                 i,
                  point->cmp_offset,
                  point->uncmp_offset,
                  point->bits,
                  flags);
-
-        /* Done with this point. Proceed to the next one. */
-        point++;
     }
 
     /*
-     * Now loop through the window data for all index points. Above, we
-     * initialised all point->data fields to either NULL or 1, to indicate
-     * whether or not they have data to be loaded.
+     * Now loop through and load the window data for all index points.
      */
-    point    = new_list;
-    list_end = new_list + npoints;
-
-    /* Read new points iteratively for reading checkpoint data. */
-    while (point < list_end) {
+    for (i = 0, point = new_list; i < npoints; i++, point++) {
 
         /*
          * There is no data associated with this point - it is either
          * at the beginning of the file, or on a stream boundary.
          */
-        if (point->data == NULL) {
-            point++;
+        if (dataflags[i] == 0) {
             continue;
         }
 
@@ -2887,9 +2883,9 @@ int zran_import_index(zran_index_t *index,
          * the last element.
          */
         f_ret = fread_(point->data, window_size, 1, fd, f);
-        if (feof_(fd, f, f_ret) && point < list_end - 1) goto eof;
-        if (ferror_(fd, f))                              goto read_error;
-        if (f_ret != 1)                                  goto read_error;
+        if (feof_(fd, f, f_ret) && i < npoints - 1) goto eof;
+        if (ferror_(fd, f))                         goto read_error;
+        if (f_ret != 1)                             goto read_error;
 
         /*
          * TODO: If there are still more data after importing is done, it
@@ -2899,16 +2895,13 @@ int zran_import_index(zran_index_t *index,
         /* Print first and last three bytes of the checkpoint window. */
         zran_log("zran_import_index:"
                      "(%lu, [%02x %02x %02x...%02x %02x %02x])\n",
-                 (npoints - (list_end - point)), // point index
+                 i,
                  point->data[0],
                  point->data[1],
                  point->data[2],
                  point->data[window_size - 3],
                  point->data[window_size - 2],
                  point->data[window_size - 1]);
-
-        /* Done with this point. Proceed to the next one. */
-        point++;
     }
 
     /* There are no errors, it's safe to overwrite existing index data now. */
@@ -2961,6 +2954,8 @@ int zran_import_index(zran_index_t *index,
     index->size    = max(npoints, 8);
 
     zran_log("zran_import_index: done\n");
+
+    free(dataflags);
 
     return ZRAN_IMPORT_OK;
 
@@ -3015,6 +3010,10 @@ cleanup:
 
         /* Release the list itself. */
         free(new_list);
+    }
+
+    if (dataflags != NULL) {
+        free(dataflags);
     }
 
     return fail_ret;

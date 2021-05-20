@@ -677,7 +677,7 @@ int zran_init(zran_index_t *index,
     index->uncmp_seek_offset    = 0;
     index->inflate_cmp_offset   = 0;
     index->inflate_uncmp_offset = 0;
-    index->uncompressed_seen    = 0;
+    index->last_stream_ended    = 0;
     index->stream_size          = 0;
     index->stream_crc32         = 0;
     index->list                 = point_list;
@@ -1558,13 +1558,6 @@ static int _zran_inflate(zran_index_t *index,
     uint32_t bytes_output   = 0;
 
     /*
-     * Flag which is set during each iteration
-     * of the decompress loop, if we have just
-     * decompressed data for the first time.
-     */
-    uint8_t new_data = 0;
-
-    /*
      * Index point to start from
      * (if ZRAN_INFLATE_USE_OFFSET
      * is active).
@@ -1856,17 +1849,6 @@ static int _zran_inflate(zran_index_t *index,
                      strm->avail_in, strm->avail_out,
                      cmp_offset, uncmp_offset);
 
-            /*
-             * If a previous call to inflate was on the last byte
-             * of a non-byte-aligned stream, it may return Z_OK.
-             * Then the next call will return Z_STREAM_END without
-             * producing anything. In this case, we preserve the
-             * new data flag, so that CRC validation below can
-             * still take place.
-             */
-            if (bytes_output > 0) {
-                new_data = uncmp_offset > index->uncompressed_seen;
-            }
 
             /*
              * Now we need to figure out what just happened.
@@ -1901,30 +1883,18 @@ static int _zran_inflate(zran_index_t *index,
             }
 
             /*
-             * Keep track of the farthest point we have
-             * gotten to in the uncompressed data (across
-             * all gzip streams). If we've just read/
-             * decompressed some previously unseen data,
-             * update the size and crc of the current
-             * stream, so we can validate them against
-             * the size recorded in the footer later on.
+             * If we have not yet validated the current
+             * GZIP stream, update its size and crc so
+             * we can validate them against the size
+             * recorded in the stream footer when we
+             * get to it.
              */
-            if (new_data) {
-
-                if (!(index->flags & ZRAN_SKIP_CRC_CHECK)) {
-                    /*
-                     * using bytes_output here to store the
-                     * number of newly uncompressed bytes
-                     */
-                    bytes_output = uncmp_offset - index->uncompressed_seen;
-
-                    index->stream_size +=       bytes_output;
-                    index->stream_crc32 = crc32(index->stream_crc32,
-                                                strm->next_out - bytes_output,
-                                                bytes_output);
-                }
-
-                index->uncompressed_seen = uncmp_offset;
+            if ((uncmp_offset > index->last_stream_ended) &&
+                !(index->flags & ZRAN_SKIP_CRC_CHECK)) {
+                index->stream_size +=       bytes_output;
+                index->stream_crc32 = crc32(index->stream_crc32,
+                                            strm->next_out - bytes_output,
+                                            bytes_output);
             }
 
             /*
@@ -1987,7 +1957,7 @@ static int _zran_inflate(zran_index_t *index,
                  * check that the CRC and uncompressed size in
                  * the footer match what we have calculated
                  */
-                if (new_data) {
+                if (uncmp_offset > index->last_stream_ended) {
                     z_ret = _zran_validate_stream(index, strm, &off);
 
                     if (z_ret == ZRAN_VALIDATE_STREAM_INVALID) {
@@ -1997,7 +1967,7 @@ static int _zran_inflate(zran_index_t *index,
                     else if (z_ret != 0) {
                         goto fail;
                     }
-                    new_data = 0;
+                    index->last_stream_ended = uncmp_offset;
                 }
 
                 /* Otherwise skip over the 8 byte GZIP footer */

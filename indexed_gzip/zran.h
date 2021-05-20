@@ -144,13 +144,14 @@ struct _zran_index {
     uint64_t inflate_uncmp_offset;
 
     /*
-     * Total number of bytes that have been
-     * uncompressed so far - the farthest point
-     * in the uncompressed data that we have
-     * gotten to so far. This is updated as
-     * more data is read and uncompressed.
+     * Uncompressed offset at the point that the
+     * last GZIP stream ended. This is updated as
+     * more data is read and uncompressed, and
+     * used to determine whether the CRC/size
+     * check for the current stream has already
+     * been performed.
      */
-    uint64_t uncompressed_seen;
+    uint64_t last_stream_ended;
 
     /*
      * CRC-32 checksum and size (number of

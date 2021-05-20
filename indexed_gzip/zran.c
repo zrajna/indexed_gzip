@@ -71,8 +71,13 @@ static double round(double val)
 #define zran_log(...)
 #endif
 
-/* Define magic bytes and version for export format. */
-const char zran_magic_bytes[] = {'G', 'Z', 'I', 'D', 'X', 0, 0};
+
+/*
+ * Identifier and version number for index files created by zran_export_index.
+ */
+const char    ZRAN_INDEX_FILE_ID[]    = {'G', 'Z', 'I', 'D', 'X'};
+const uint8_t ZRAN_INDEX_FILE_VERSION = 1;
+
 
 /*
  * Discards all points in the index which come after the specfiied

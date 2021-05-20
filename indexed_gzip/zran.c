@@ -2471,9 +2471,10 @@ fail:
     return ZRAN_READ_FAIL;
 }
 
+
 /*
- * Store checkpoint information from index to file fd. File should be opened in
- * binary write mode.
+ * Store checkpoint information from index to file fd. File should be opened
+ * in binary write mode.
  */
 int zran_export_index(zran_index_t *index,
                       FILE         *fd,
@@ -2491,6 +2492,9 @@ int zran_export_index(zran_index_t *index,
     zran_point_t *point;
     zran_point_t *list_end;
 
+    /* File flags, currently not used. Also used as a temporary variable. */
+    uint8_t flags = 0;
+
     zran_log("zran_export_index: (%lu, %lu, %u, %u, %u)\n",
              index->compressed_size,
              index->uncompressed_size,
@@ -2498,9 +2502,17 @@ int zran_export_index(zran_index_t *index,
              index->window_size,
              index->npoints);
 
-    /* Write magic bytes, and check for errors. */
-    f_ret = fwrite_(zran_magic_bytes, sizeof(zran_magic_bytes), 1, fd, f);
+    /* Write ID and version, and check for errors. */
+    f_ret = fwrite_(ZRAN_INDEX_FILE_ID, sizeof(ZRAN_INDEX_FILE_ID), 1, fd, f);
+    if (ferror_(fd, f)) goto fail;
+    if (f_ret != 1)     goto fail;
 
+    f_ret = fwrite_(&ZRAN_INDEX_FILE_VERSION, 1, 1, fd, f);
+    if (ferror_(fd, f)) goto fail;
+    if (f_ret != 1)     goto fail;
+
+    /* Write flags (currently unused) */
+    f_ret = fwrite_(&flags, 1, 1, fd, f);
     if (ferror_(fd, f)) goto fail;
     if (f_ret != 1)     goto fail;
 
@@ -2543,64 +2555,59 @@ int zran_export_index(zran_index_t *index,
      * together, which enables user to read all offset mappings in one pass.
      */
 
-    /*
-     * Initialize point to the first element of the list, and list_end to the
-     * end of the list.
-     */
+    /* Write all points iteratively for checkpoint offset mapping. */
     point    = index->list;
     list_end = index->list + index->npoints;
-
-    /* Write all points iteratively for checkpoint offset mapping. */
     while (point < list_end) {
-
-        /*
-         * Below, it's preferred to write members of points elementwise to
-         * avoid handling struct alignment and padding issues.
-         */
 
         /* Write compressed offset, and check for errors. */
         f_ret = fwrite_(&point->cmp_offset,
                         sizeof(point->cmp_offset), 1, fd, f);
-
         if (ferror_(fd, f)) goto fail;
         if (f_ret != 1)     goto fail;
 
         /* Write uncompressed offset, and check for errors. */
         f_ret = fwrite_(&point->uncmp_offset,
                         sizeof(point->uncmp_offset), 1, fd, f);
-
         if (ferror_(fd, f)) goto fail;
         if (f_ret != 1)     goto fail;
 
         /* Write bit offset, and check for errors. */
         f_ret = fwrite_(&point->bits, sizeof(point->bits), 1, fd, f);
-
         if (ferror_(fd, f)) goto fail;
         if (f_ret != 1)     goto fail;
 
-        zran_log("zran_export_index: (%lu, %lu, %lu, %u)\n",
+        /* Write data flag, and check for errors. */
+        flags = (point->data == NULL) ? 1 : 0;
+        f_ret = fwrite_(&flags, 1, 1, fd, f);
+        if (ferror_(fd, f)) goto fail;
+        if (f_ret != 1)     goto fail;
+
+        zran_log("zran_export_index: (%lu, %lu, %lu, %u, %u)\n",
                  (index->npoints - (list_end - point)), // point index
                  point->cmp_offset,
                  point->uncmp_offset,
-                 point->bits);
+                 point->bits,
+                 flags);
 
-        /* Done with this point. Proceed to next one. */
         point++;
     }
 
     /*
-     * Initialize point to the second element of the list (as first element has
-     * no data), and list_end to the end of the list.
+     * Now write out the window data for every point. No data is written for
+     * points which don't have any data (e.g. at stream boundaries).
      */
-    point    = index->list + 1;
+    point    = index->list;
     list_end = index->list + index->npoints;
-
-    /* Write all points iteratively for writing checkpoint data. */
     while (point < list_end) {
+
+        if (point->data == NULL) {
+            point++;
+            continue;
+        }
 
         /* Write checkpoint data, and check for errors. */
         f_ret = fwrite_(point->data, index->window_size, 1, fd, f);
-
         if (ferror_(fd, f)) goto fail;
         if (f_ret != 1)     goto fail;
 
@@ -2626,7 +2633,6 @@ int zran_export_index(zran_index_t *index,
      * descriptor can be closed by Python code before having a chance to flush.
      */
     f_ret = fflush_(fd, f);
-
     if (ferror_(fd, f)) goto fail;
     if (f_ret != 0)     goto fail;
 

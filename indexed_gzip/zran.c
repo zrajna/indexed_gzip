@@ -1102,12 +1102,13 @@ int _zran_add_point(zran_index_t  *index,
     /*
      * Allocate memory to store the
      * uncompressed data (the "window")
-     * associated with this point. The
-     * first index point (where uncmp_offset == 0)
-     * has no data associated with it for
-     * obvious reasons.
+     * associated with this point. Index
+     * points corresponding to the beginning
+     * of a gzip stream (including at start
+     * of file) do not have any window data
+     * associated with them.
      */
-    if (uncmp_offset == 0) {
+    if (data == NULL) {
         point_data = NULL;
     }
     else {
@@ -1131,7 +1132,7 @@ int _zran_add_point(zran_index_t  *index,
      * window from the beginning of data. Does
      * that make sense?
      */
-    if (uncmp_offset > 0) {
+    if (data != NULL) {
         if (data_offset >= index->window_size) {
 
             memcpy(point_data,
@@ -1434,8 +1435,7 @@ int _zran_find_next_stream(zran_index_t *index,
     if (found == 0)
         goto not_found;
 
-    zran_log("New stream found, re-initialising "
-             "inflation (offset: %u)\n", offset);
+    zran_log("New stream found, re-initialising inflation\n");
 
     /*
      * Re-configure for inflation
@@ -1670,7 +1670,8 @@ static int _zran_inflate(zran_index_t *index,
         uncmp_offset = index->inflate_uncmp_offset;
     }
 
-    zran_log("initialising to inflate from c=%llu, u=%llu\n",
+    zran_log("initialising to inflate from "
+             "cmp_offset=%llu, uncmp_offset=%llu\n",
              cmp_offset,
              uncmp_offset);
 
@@ -1816,8 +1817,10 @@ static int _zran_inflate(zran_index_t *index,
             bytes_consumed = strm->avail_in;
             bytes_output   = strm->avail_out;
 
-            zran_log("Before inflate - avail_in=%u, avail_out=%u\n",
-                     strm->avail_in, strm->avail_out);
+            zran_log("Before inflate - avail_in=%u, avail_out=%u, "
+                     "cmp_offset=%lu, uncmp_offset=%lu\n",
+                     strm->avail_in, strm->avail_out,
+                     cmp_offset, uncmp_offset);
 
             /*
              * Inflate the block - the decompressed
@@ -1837,9 +1840,6 @@ static int _zran_inflate(zran_index_t *index,
                 z_ret = inflate(strm, Z_NO_FLUSH);
             }
 
-            zran_log("After inflate - avail_in=%u, avail_out=%u\n",
-                     strm->avail_in, strm->avail_out);
-
             /*
              * Adjust our offsets according to what
              * was actually consumed/decompressed.
@@ -1850,6 +1850,11 @@ static int _zran_inflate(zran_index_t *index,
             _total_consumed += bytes_consumed;
             uncmp_offset    += bytes_output;
             _total_output   += bytes_output;
+
+            zran_log("After inflate - avail_in=%u, avail_out=%u, "
+                     "cmp_offset=%lu, uncmp_offset=%lu\n",
+                     strm->avail_in, strm->avail_out,
+                     cmp_offset, uncmp_offset);
 
             /*
              * If a previous call to inflate was on the last byte

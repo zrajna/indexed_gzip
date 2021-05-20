@@ -118,3 +118,6 @@ if not sys.platform.startswith("win"):
     def test_export_import_no_points():
         for no_fds in (True, False):
             ctest_zran.test_export_import_no_points(no_fds)
+
+    def test_export_import_format_v0():
+        ctest_zran.test_export_import_format_v0()

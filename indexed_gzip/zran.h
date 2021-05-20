@@ -313,8 +313,12 @@ int64_t zran_read(
   uint64_t       len    /* Number of bytes to read   */
 );
 
-/* Magic bytes for exported index type. Value is defined in zran.c. */
-extern const char zran_magic_bytes[];
+/*
+ * Identifier and version number for index files created by zran_export_index,
+ * defined in zran.c.
+ */
+extern const char    ZRAN_INDEX_FILE_ID[];
+extern const uint8_t ZRAN_INDEX_FILE_VERSION;
 
 /* Return codes for zran_export_index. */
 enum {
@@ -332,13 +336,15 @@ enum {
  * structure. All fields are assumed to be stored with little-endian
  * ordering:
  *
- * | Offset | Length | Description                     |
- * | 0      | 7      | File header (GZIDX\00\00)       |
- * | 7      | 8      | Compressed file size  (uint64)  |
- * | 15     | 8      | Uncompressed file size (uint64) |
- * | 23     | 4      | Index point spacing (uint32)    |
- * | 27     | 4      | Index window size W (uint32)    |
- * | 31     | 4      | Number of index points (uint32) |
+ * | Offset | Length | Description                           |
+ * | 0      | 5      | File header (ascii, GZIDX)            |
+ * | 5      | 1      | Version (uint8, currently 1)          |
+ * | 6      | 1      | Reserved (uint8, currently must be 0) |
+ * | 7      | 8      | Compressed file size  (uint64)        |
+ * | 15     | 8      | Uncompressed file size (uint64)       |
+ * | 23     | 4      | Index point spacing (uint32)          |
+ * | 27     | 4      | Index window size W (uint32)          |
+ * | 31     | 4      | Number of index points (uint32)       |
  *
  * The header is followed by the offsets for each index point:
  *
@@ -346,17 +352,20 @@ enum {
  * | 0      | 8      | Compressed offset for point 0 (uint64)   |
  * | 8      | 8      | Uncompressed offset for point 0 (uint64) |
  * | 16     | 1      | Bit offset for point 0 (uint8)           |
+ * | 17     | 1      | Data flag - 1 if point has window data,  |
+ * |        |        | 0 otherwise (uint8, added in file format |
+ * |        |        | version 1)                               |
  * | ...    | ...    | ...                                      |
- * | N*17   | 8      | Compressed offset for point N (uint64)   |
+ * | N*18   | 8      | Compressed offset for point N (uint64)   |
  * | ...    | ...    | ...                                      |
  *
- * Finally the window data for every index point is concatenated
- * (W represents the index window size):
+ * Finally the window data for all index points that have data is
+ * concatenated (W represents the index window size):
  *
- * | Offset | Length | Description                   |
- * | 0      | W      | Window data for index point N |
- * | ...    | ...    | ...                           |
- * | N*W    | W      | Window data for index point N |
+ * | Offset | Length | Description                                 |
+ * | 0      | W      | Window data for first index point with data |
+ * | ...    | ...    | ...                                         |
+ * | N*W    | W      | Window data for Nth index point with data   |
  *
  * Returns:
  *   - ZRAN_EXPORT_OK for success.
@@ -370,16 +379,19 @@ int zran_export_index(
   PyObject      *f      /* Open handle to export file object */
 );
 
+
 /* Return codes for zran_import_index. */
 enum {
-    ZRAN_IMPORT_OK             =  0,
-    ZRAN_IMPORT_FAIL           = -1,
-    ZRAN_IMPORT_EOF            = -2,
-    ZRAN_IMPORT_READ_ERROR     = -3,
-    ZRAN_IMPORT_INCONSISTENT   = -4,
-    ZRAN_IMPORT_MEMORY_ERROR   = -5,
-    ZRAN_IMPORT_UNKNOWN_FORMAT = -6
+    ZRAN_IMPORT_OK                  =  0,
+    ZRAN_IMPORT_FAIL                = -1,
+    ZRAN_IMPORT_EOF                 = -2,
+    ZRAN_IMPORT_READ_ERROR          = -3,
+    ZRAN_IMPORT_INCONSISTENT        = -4,
+    ZRAN_IMPORT_MEMORY_ERROR        = -5,
+    ZRAN_IMPORT_UNKNOWN_FORMAT      = -6,
+    ZRAN_IMPORT_UNSUPPORTED_VERSION = -7
 };
+
 
 /*
  * Import current index from the given file.  index must have been initialized
@@ -414,6 +426,9 @@ enum {
  *     index. This typically result from out-of-memory.
  *
  *   - ZRAN_IMPORT_UNKNOWN_FORMAT to indicate given file is of unknown format.
+ *
+ *   - ZRAN_IMPORT_UNSUPPORTED_VERSION to indicate that the file has a version
+ *     which is too new for this version of indexed_gzip to parse.
  */
 int zran_import_index(
   zran_index_t  *index, /* The index                         */

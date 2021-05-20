@@ -5,6 +5,11 @@
 
 
 * Python 2.7 wheels for Windows are no longer being built (#71, 73).
+* A backwards-compatible change to the index file format, to accommodate seek
+  points at stream boundaries. Index files created with older versions of
+  `indexed_gzip` can still be loaded, but index files created with
+  `indexed_gzip` 1.6.0 cannot be loaded by older versions of `indexed_gzip`
+  (#75).
 
 
 ## 1.5.3 (March 23rd 2021)

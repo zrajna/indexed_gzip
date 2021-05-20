@@ -2578,12 +2578,12 @@ int zran_export_index(zran_index_t *index,
         if (f_ret != 1)     goto fail;
 
         /* Write data flag, and check for errors. */
-        flags = (point->data == NULL) ? 1 : 0;
+        flags = (point->data != NULL) ? 1 : 0;
         f_ret = fwrite_(&flags, 1, 1, fd, f);
         if (ferror_(fd, f)) goto fail;
         if (f_ret != 1)     goto fail;
 
-        zran_log("zran_export_index: (%lu, %lu, %lu, %u, %u)\n",
+        zran_log("zran_export_index: (p%lu, %lu, %lu, %u, %u)\n",
                  (index->npoints - (list_end - point)), // point index
                  point->cmp_offset,
                  point->uncmp_offset,
@@ -2830,23 +2830,24 @@ int zran_import_index(zran_index_t *index,
              * to indicate to the loop below that this point has data
              * to be loaded.
              */
-            if (flags == 0) { point->data = NULL;     }
-            else            { point->data = NULL + 1; }
         }
         /*
          * In index file version 0, the first point
          * has no data, but all other points do.
          */
         else {
-            if (point == new_list) { point->data = NULL;     }
-            else                   { point->data = NULL + 1; }
+            flags = (point == new_list) ? 0 : 1;
         }
 
-        zran_log("zran_import_index: (%lu, %lu, %lu, %u)\n",
+        if (flags == 0) { point->data = NULL;     }
+        else            { point->data = NULL + 1; }
+
+        zran_log("zran_import_index: (p%lu, %lu, %lu, %u, %u)\n",
                  (npoints - (list_end - point)), // point index
                  point->cmp_offset,
                  point->uncmp_offset,
-                 point->bits);
+                 point->bits,
+                 flags);
 
         /* Done with this point. Proceed to the next one. */
         point++;

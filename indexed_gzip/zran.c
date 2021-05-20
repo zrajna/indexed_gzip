@@ -920,11 +920,10 @@ int _zran_get_point_with_expand(zran_index_t  *index,
     result = _zran_get_point_at(index, offset, compressed, point);
 
     /*
-     * Don't expand the index if auto_build
-     * is not active, unless the requested
-     * offset is the beginning of the file.
+     * Don't expand the index if
+     * auto_build is not active
      */
-    if ((offset > 0) && ((index->flags & ZRAN_AUTO_BUILD) == 0)) {
+    if ((index->flags & ZRAN_AUTO_BUILD) == 0) {
         return result;
     }
 
@@ -2442,7 +2441,7 @@ int zran_seek(zran_index_t  *index,
 {
 
     int           result;
-    zran_point_t *seek_point;
+    zran_point_t *seek_point = NULL;
 
     zran_log("zran_seek(%lld, %i)\n", offset, whence);
 
@@ -2485,25 +2484,40 @@ int zran_seek(zran_index_t  *index,
     }
 
     /*
-     * Get the index point that
-     * corresponds to this offset.
+     * We implicitly allow seek(0) - if
+     * not auto-building the index,
+     * seek(0) would otherwwise fail.
      */
-    result = _zran_get_point_with_expand(index, offset, 0, &seek_point);
+    if (offset == 0) {
+        index->uncmp_seek_offset = offset;
+    }
+    else {
 
-    if      (result == ZRAN_GET_POINT_EOF)         goto eof;
-    else if (result == ZRAN_GET_POINT_NOT_COVERED) goto not_covered;
-    else if (result == ZRAN_GET_POINT_CRC_ERROR)   goto crcerror;
-    else if (result != ZRAN_GET_POINT_OK)          goto fail;
+        /*
+         * Get the index point that
+         * corresponds to this offset.
+         */
+        result = _zran_get_point_with_expand(index, offset, 0, &seek_point);
 
-    index->uncmp_seek_offset = offset;
-    offset                   = seek_point->cmp_offset;
+        if      (result == ZRAN_GET_POINT_EOF)         goto eof;
+        else if (result == ZRAN_GET_POINT_NOT_COVERED) goto not_covered;
+        else if (result == ZRAN_GET_POINT_CRC_ERROR)   goto crcerror;
+        else if (result != ZRAN_GET_POINT_OK)          goto fail;
 
-    /*
-     * This index point is not byte-aligned.
-     * Adjust the offset accordingly.
-     */
-    if (seek_point->bits > 0)
-        offset -= 1;
+        /*
+         * transform into an offset
+         * into the compresesd stream
+         */
+        index->uncmp_seek_offset = offset;
+        offset                   = seek_point->cmp_offset;
+
+        /*
+         * This index point is not byte-aligned.
+         * Adjust the offset accordingly.
+         */
+        if (seek_point->bits > 0)
+            offset -= 1;
+    }
 
     /*
      * The caller wants a ref to the
@@ -2612,26 +2626,36 @@ int64_t zran_read(zran_index_t *index,
     if (len == 0)         return 0;
     if (len >  INT64_MAX) goto fail;
 
-    zran_log("zran_read(%llu)\n", len);
+    zran_log("zran_read(%llu, %lu)\n", len, index->uncmp_seek_offset);
 
     /*
-     * Search for the index point that
-     * corresponds to our current seek
-     * location in the uncompressed
-     * data stream.
+     * Search for the index point that corresponds to
+     * our current seek location in the uncompressed
+     * data stream. Reading from the start of file is
+     * always allowed, even if the index does not
+     * contain any points.
      */
-    ret = _zran_get_point_with_expand(index,
-                                      index->uncmp_seek_offset,
-                                      0,
-                                      &start);
+    if (index->uncmp_seek_offset == 0) {
+        cmp_offset   = 0;
+        uncmp_offset = 0;
+    }
+    else {
+        ret = _zran_get_point_with_expand(index,
+                                          index->uncmp_seek_offset,
+                                          0,
+                                          &start);
 
-    if      (ret == ZRAN_GET_POINT_EOF)         goto eof;
-    if      (ret == ZRAN_GET_POINT_NOT_COVERED) goto not_covered;
-    else if (ret != ZRAN_GET_POINT_OK) {
-        if (ret == ZRAN_GET_POINT_CRC_ERROR) {
-            error_return_val = ZRAN_READ_CRC_ERROR;
+        if      (ret == ZRAN_GET_POINT_EOF)         goto eof;
+        if      (ret == ZRAN_GET_POINT_NOT_COVERED) goto not_covered;
+        else if (ret != ZRAN_GET_POINT_OK) {
+            if (ret == ZRAN_GET_POINT_CRC_ERROR) {
+                error_return_val = ZRAN_READ_CRC_ERROR;
+            }
+            goto fail;
         }
-        goto fail;
+
+        cmp_offset   = start->cmp_offset;
+        uncmp_offset = start->uncmp_offset;
     }
 
     /*
@@ -2651,11 +2675,8 @@ int64_t zran_read(zran_index_t *index,
      * reach the current seek location
      * into the uncompresesd data stream.
      */
-    cmp_offset      = start->cmp_offset;
-    uncmp_offset    = start->uncmp_offset;
     first_inflate   = 1;
     total_discarded = 0;
-
     while (uncmp_offset < index->uncmp_seek_offset) {
 
         /*

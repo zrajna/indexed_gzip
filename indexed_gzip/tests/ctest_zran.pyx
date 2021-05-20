@@ -1080,12 +1080,9 @@ def test_export_then_import(testfile, no_fds):
             assert p2.cmp_offset   == p1.cmp_offset, msg
             assert p2.uncmp_offset == p1.uncmp_offset, msg
             assert p2.bits         == p1.bits, msg
-            if i == 0:
-                assert not p2.data, msg
-                assert not p1.data, msg
+            if (not p1.data):
+                assert p1.data == p2.data, msg
             else:
-                assert p2.data, msg
-                assert p1.data, msg
                 assert not memcmp(p2.data, p1.data, ws), msg
 
         zran.zran_free(&index1)

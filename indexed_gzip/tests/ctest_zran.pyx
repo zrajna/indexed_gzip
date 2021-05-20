@@ -1018,12 +1018,40 @@ def test_readbuf_spacing_sizes(testfile, no_fds, nelems, niters, seed):
             print()
             zran.zran_free(&index)
 
-def test_export_then_import(testfile, no_fds):
 
-    cdef zran.zran_index_t  index1
-    cdef zran.zran_index_t  index2
+cdef _compare_indexes(zran.zran_index_t *index1,
+                      zran.zran_index_t *index2):
     cdef zran.zran_point_t *p1
     cdef zran.zran_point_t *p2
+
+    assert index2.compressed_size   == index1.compressed_size
+    assert index2.uncompressed_size == index1.uncompressed_size
+    assert index2.spacing           == index1.spacing
+    assert index2.window_size       == index1.window_size
+    assert index2.npoints           == index1.npoints
+
+    ws = index1.window_size
+
+    for i in range(index1.npoints):
+
+        p1 = &index1.list[i]
+        p2 = &index2.list[i]
+        msg = 'Error at point %d' % i
+
+        assert p2.cmp_offset   == p1.cmp_offset, msg
+        assert p2.uncmp_offset == p1.uncmp_offset, msg
+        assert p2.bits         == p1.bits, msg
+        if (not p1.data):
+            assert p1.data == p2.data, msg
+        else:
+            assert not memcmp(p2.data, p1.data, ws), msg
+
+
+
+def test_export_then_import(testfile, no_fds):
+
+    cdef zran.zran_index_t index1
+    cdef zran.zran_index_t index2
 
     indexSpacing = 1048576
     windowSize   = 32768
@@ -1063,27 +1091,7 @@ def test_export_then_import(testfile, no_fds):
             ret  = zran.zran_import_index(&index2, NULL if no_fds else cfid, <PyObject*>pyexportfid if no_fds else NULL)
             assert not ret, str(ret)
 
-        assert index2.compressed_size   == index1.compressed_size
-        assert index2.uncompressed_size == index1.uncompressed_size
-        assert index2.spacing           == index1.spacing
-        assert index2.window_size       == index1.window_size
-        assert index2.npoints           == index1.npoints
-
-        ws = index1.window_size
-
-        for i in range(index1.npoints):
-
-            p1 = &index1.list[i]
-            p2 = &index2.list[i]
-            msg = 'Error at point %d' % i
-
-            assert p2.cmp_offset   == p1.cmp_offset, msg
-            assert p2.uncmp_offset == p1.uncmp_offset, msg
-            assert p2.bits         == p1.bits, msg
-            if (not p1.data):
-                assert p1.data == p2.data, msg
-            else:
-                assert not memcmp(p2.data, p1.data, ws), msg
+        _compare_indexes(&index1, &index2)
 
         zran.zran_free(&index1)
         zran.zran_free(&index2)
@@ -1141,3 +1149,63 @@ def test_export_import_no_points(no_fds):
             pybuf = <bytes>(<char *>buffer)[:100]
             assert np.all(np.frombuffer(pybuf, dtype=np.uint8) == data)
             zran.zran_free(&index)
+
+
+def test_export_import_format_v0():
+    """Test index export and import on a version 0 index file. """
+
+    cdef zran.zran_index_t index1
+    cdef zran.zran_index_t index2
+    cdef int               ret
+
+    data = np.random.randint(1, 255, 1000000, dtype=np.uint8)
+    with tempdir():
+
+        with gzip.open('data.gz', 'wb') as f:
+            f.write(data.tostring())
+
+        with open('data.gz', 'rb')  as pyfid:
+            cfid = fdopen(pyfid.fileno(), 'rb')
+            assert not zran.zran_init(
+                &index1, cfid, NULL, 50000, 32768, 131072, 0)
+
+            assert not zran.zran_build_index(&index1, 0, 0)
+            _write_index_file_v0(&index1, 'data.gz.index')
+
+        with open('data.gz', 'rb')  as pyfid:
+            cfid = fdopen(pyfid.fileno(), 'rb')
+            assert not zran.zran_init(
+                &index2, cfid, NULL, 50000, 32768, 131072, 0)
+
+            with open('data.gz.index', 'rb') as pyidxfid:
+                cidxfid = fdopen(pyidxfid.fileno(), 'rb')
+                ret = zran.zran_import_index(&index2, cidxfid,  NULL)
+                assert ret == 0, ret
+
+        _compare_indexes(&index1, &index2)
+        zran.zran_free(&index1)
+        zran.zran_free(&index2)
+
+
+cdef _write_index_file_v0(zran.zran_index_t *index, dest):
+
+    cdef zran.zran_point_t *point
+
+    with open(dest, 'wb') as f:
+        f.write(b'GZIDX\0\0')
+        f.write(<bytes>(<char *>(&index.compressed_size))[:8])
+        f.write(<bytes>(<char *>(&index.uncompressed_size))[:8])
+        f.write(<bytes>(<char *>(&index.spacing))[:4])
+        f.write(<bytes>(<char *>(&index.window_size))[:4])
+        f.write(<bytes>(<char *>(&index.npoints))[:4])
+
+        for i in range(index.npoints):
+            point = &index.list[i]
+            f.write(<bytes>(<char *>(&point.cmp_offset))[:8])
+            f.write(<bytes>(<char *>(&point.uncmp_offset))[:8])
+            f.write(<bytes>(<char *>(&point.bits))[:1])
+
+        for i in range(1, index.npoints):
+            point = &index.list[i]
+            data  = <bytes>point.data[:index.window_size]
+            f.write(data)

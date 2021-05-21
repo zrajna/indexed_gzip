@@ -1422,10 +1422,8 @@ int _zran_find_next_stream(zran_index_t *index,
                            z_stream     *stream,
                            int          *offset) {
 
-
-    uint64_t i;
-    int      ret;
-    int      found;
+    int ret;
+    int found;
 
     /*
      * Search for the beginning of

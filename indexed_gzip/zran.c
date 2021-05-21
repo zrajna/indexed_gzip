@@ -2349,6 +2349,15 @@ int _zran_expand_index(zran_index_t *index, uint64_t until) {
         data_offset   = (data_offset + bytes_output) % data_size;
 
         /*
+         * update the last created offset on every iteration,
+         * to catch any index points created by _zran_inflate
+         */
+        if (index->npoints > 0) {
+            last_created      = &index->list[index->npoints - 1];
+            last_uncmp_offset = last_created->uncmp_offset;
+        }
+
+        /*
          * Has the output buffer been filled?
          * If so, we just continue - the
          * data_offset trickery means that we
@@ -2398,9 +2407,6 @@ int _zran_expand_index(zran_index_t *index, uint64_t until) {
                                 data) != 0) {
                 goto fail;
             }
-
-            last_created      = &index->list[index->npoints - 1];
-            last_uncmp_offset = uncmp_offset;
         }
 
         /* And if at EOF, we are done. */

@@ -1423,8 +1423,9 @@ int _zran_find_next_stream(zran_index_t *index,
                            int          *offset) {
 
 
-    int ret;
-    int found;
+    uint64_t i;
+    int      ret;
+    int      found;
 
     /*
      * Search for the beginning of
@@ -1433,27 +1434,30 @@ int _zran_find_next_stream(zran_index_t *index,
      */
     found = 0;
 
-    zran_log("Searching for a new stream\n");
+    zran_log("Searching for a new stream [%u]\n", stream->avail_in);
 
-    while (stream->avail_in >= 2) {
+    while (stream->avail_in > 0) {
 
-        if (stream->next_in[0] == 0x1f &&
+        if (stream->avail_in   >= 2    &&
+            stream->next_in[0] == 0x1f &&
             stream->next_in[1] == 0x8b) {
             found = 1;
             break;
         }
 
-        *offset          += 2;
-        stream->next_in  += 2;
-        stream->avail_in -= 2;
+        *offset          += 1;
+        stream->next_in  += 1;
+        stream->avail_in -= 1;
     }
 
     /*
      * No header found for
      * the next stream.
      */
-    if (found == 0)
+    if (found == 0) {
+        zran_log("Could not find another stream [%u]\n", stream->avail_in);
         goto not_found;
+    }
 
     zran_log("New stream found, re-initialising inflation\n");
 

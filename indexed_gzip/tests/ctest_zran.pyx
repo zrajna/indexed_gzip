@@ -1237,9 +1237,6 @@ def test_crc_validation(concat):
     buffer            = buf.buffer
     f                 = [None]  # to prevent gc
 
-    with open('crctest.gz', 'wb') as gf:
-        gf.write(cmpdata)
-
     def _zran_init(flags):
         f[0] = BytesIO(cmpdata)
         assert not zran.zran_init(&index,
@@ -1326,3 +1323,75 @@ def test_crc_validation(concat):
     cmpdata[-5] -= 1  # corrupt crc
     _run_crc_tests(True, zran.ZRAN_AUTO_BUILD | zran.ZRAN_SKIP_CRC_CHECK)
 
+
+def test_standard_usage_with_null_padding(concat):
+    """Make sure standard usage works with files that have null-padding after
+    the GZIP footer.
+
+    See https://www.gnu.org/software/gzip/manual/gzip.html#Tapes
+    """
+    cdef zran.zran_index_t index
+    cdef void             *buffer
+    cdef int64_t           ret
+
+    # use uint32 so there are lots of zeros,
+    # and so there is something to compress
+    dsize             = 1048576 * 10
+    data              = np.random.randint(0, 255, dsize // 4, dtype=np.uint32)
+    cmpdata, strmoffs = compress_inmem(data.tobytes(), concat)
+    buf               = ReadBuffer(dsize)
+    buffer            = buf.buffer
+    f                 = [None]  # to prevent gc
+
+    # random amount of padding for each stream
+    padding = np.random.randint(1, 100, len(strmoffs))
+
+    # new compressed data - bytearrays
+    # are initialised to contain all 0s
+    paddedcmpdata = bytearray(len(cmpdata) + padding.sum())
+
+    # copy old unpadded compressed data
+    # into new padded compressed data
+    padoff = 0  # offset into padded data
+    last   = 0  # offset to end of last copied stream in unpadded data
+    print(f'Padding streams [orig size: {len(cmpdata)}] ...')
+    for off, pad in zip(strmoffs, padding):
+
+        strm = cmpdata[last:off]
+
+        paddedcmpdata[padoff:padoff + len(strm)] = strm
+
+        print(f'  Copied stream from [{last} - {off}] to '
+              f'[{padoff} - {padoff + len(strm)}] ({pad} padding bytes)')
+
+        padoff += len(strm) + pad
+        last    = off
+
+
+    def _zran_init():
+        f[0] = BytesIO(paddedcmpdata)
+        assert not zran.zran_init(&index,
+                                  NULL,
+                                  <PyObject*>f[0],
+                                  1048576,
+                                  32768,
+                                  131072,
+                                  zran.ZRAN_AUTO_BUILD)
+
+    _zran_init()
+    ret = zran.zran_build_index(&index, 0, 0)
+    assert ret == zran.ZRAN_BUILD_INDEX_OK, ret
+    zran.zran_free(&index)
+
+    _zran_init()
+    ret = zran.zran_seek(&index, dsize - 1, SEEK_SET, NULL)
+    assert ret == zran.ZRAN_SEEK_OK, ret
+    zran.zran_free(&index)
+
+    _zran_init()
+    ret = zran.zran_read(&index, buffer, dsize)
+    assert ret == dsize, ret
+    zran.zran_free(&index)
+
+    pybuf = <bytes>(<char *>buffer)[:dsize]
+    assert np.all(np.frombuffer(pybuf, dtype=np.uint32) == data)

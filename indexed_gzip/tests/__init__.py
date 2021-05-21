@@ -126,8 +126,7 @@ def compress(infile, outfile, buflen=-1):
 def compress_inmem(data, concat):
     """Compress the given data (assumed to be bytes) and return a bytearray
     containing the compressed data (including gzip header and footer).
-    Also returns offsets for the beginning of each separate stream (just [0]
-    if concat is False).
+    Also returns offsets for the end of each separate stream.
     """
 
     f = io.BytesIO()
@@ -136,14 +135,20 @@ def compress_inmem(data, concat):
 
     offsets    = []
     compressed = 0
+    print(f'Generating compressed data {len(data)}, concat: {concat})')
     while compressed < len(data):
-        cmpsize = len(f.getvalue())
-        chunk   = data[compressed:compressed + chunksize]
+        start = len(f.getvalue())
+        chunk = data[compressed:compressed + chunksize]
         with gzip.GzipFile(mode='ab', fileobj=f) as gzf:
             gzf.write(chunk)
 
-        offsets.append(cmpsize)
+        end = len(f.getvalue())
+
+        print(f'  Wrote stream to {start} - {end} [{end - start} bytes] ...')
+        offsets.append(end)
         compressed += chunksize
+
+    print(f'  Final size: {len(f.getvalue())}')
 
     f.seek(0)
     return bytearray(f.read()), offsets

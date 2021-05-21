@@ -124,3 +124,6 @@ if not sys.platform.startswith("win"):
 
     def test_crc_validation(concat):
         ctest_zran.test_crc_validation(concat)
+
+    def test_standard_usage_with_null_padding(concat):
+        ctest_zran.test_standard_usage_with_null_padding(concat)

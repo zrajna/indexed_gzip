@@ -799,13 +799,14 @@ def test_seek_then_read_block(testfile, no_fds, nelems, niters, seed, use_mmap):
     with open(testfile, 'rb') as pyfid:
         cfid = fdopen(pyfid.fileno(), 'rb')
 
-        assert not zran.zran_init(&index,
-                                  NULL if no_fds else cfid,
-                                  <PyObject*>pyfid if no_fds else NULL,
-                                  indexSpacing,
-                                  32768,
-                                  131072,
-                                  zran.ZRAN_AUTO_BUILD)
+        ret = zran.zran_init(&index,
+                             NULL if no_fds else cfid,
+                             <PyObject*>pyfid if no_fds else NULL,
+                             indexSpacing,
+                             32768,
+                             131072,
+                             zran.ZRAN_AUTO_BUILD)
+        assert not ret, ret
 
         for i, se in enumerate(seekelems):
 

@@ -67,13 +67,11 @@ def compress(infile, outfile, buflen=-1):
 
         with open(infile, 'rb') as inf:
             while True:
-                with gzip.open(outfile, 'a') as outf:
-                    data = inf.read(buflen)
-
-                    if len(data) == 0:
-                        break
-
-                    outf.write(data)
+                data = inf.read(buflen)
+                if len(data) == 0:
+                    break
+                with open(outfile, 'ab') as outf:
+                    gzip.GzipFile(fileobj=outf).write(data)
 
     def compress_with_gzip_command():
 

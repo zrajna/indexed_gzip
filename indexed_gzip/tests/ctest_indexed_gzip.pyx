@@ -329,20 +329,28 @@ def test_manual_build():
 
         with igzip._IndexedGzipFile(fname, auto_build=False) as f:
 
-            # Seeking should fail
-            with pytest.raises(igzip.NotCoveredError):
-                f.seek(1234)
+            # Seeking to 0 should work, but
+            # anywhere else should fail
+            f.seek(0)
+            for off in [1, 2, 20, 200]:
+                with pytest.raises(igzip.NotCoveredError):
+                    f.seek(off)
 
             # Reading from beginning should work
             readval = read_element(f, 0, seek=False)
             assert readval == 0
 
+            # but subsequent reads should fail
+            # (n.b. this might change in the future)
+            with pytest.raises(igzip.NotCoveredError):
+                readval = read_element(f, 1, seek=False)
+
             # Seek should still fail even after read
-            f.seek(0)
             with pytest.raises(igzip.NotCoveredError):
                 f.seek(8)
 
             # But reading from beginning should still work
+            f.seek(0)
             readval = read_element(f, 0, seek=False)
             assert readval == 0
 
@@ -868,15 +876,16 @@ def test_size_multiple_of_readbuf():
 
         while True:
 
-            data = np.random.randint(1, 1000, 50000, dtype=np.uint32)
+            data = np.random.randint(1, 1000, 100000, dtype=np.uint32)
             with gzip.open(fname, 'wb') as f:
                 f.write(data.tobytes())
             del f
             f = None
 
-            # we need a non-prime file size
+            # we need a file size that is divisible
+            # by the minimum readbuf size
             fsize = op.getsize(fname)
-            if gcd(fsize) != 1:
+            if gcd(fsize) >= 128:
                 break
 
         # readbuf size == file size
@@ -888,7 +897,7 @@ def test_size_multiple_of_readbuf():
         f = None
 
         with igzip.IndexedGzipFile(fname, readbuf_size=bufsz) as f:
-            read = np.ndarray(shape=50000, dtype=np.uint32, buffer=f.read())
+            read = np.ndarray(shape=100000, dtype=np.uint32, buffer=f.read())
             assert np.all(read == data)
         del f
         f = None
@@ -902,7 +911,7 @@ def test_size_multiple_of_readbuf():
         f = None
 
         with igzip.IndexedGzipFile(fname, readbuf_size=bufsz) as f:
-            read = np.ndarray(shape=50000, dtype=np.uint32, buffer=f.read())
+            read = np.ndarray(shape=100000, dtype=np.uint32, buffer=f.read())
             assert np.all(read == data)
         del f
         f = None

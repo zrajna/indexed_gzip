@@ -1337,7 +1337,9 @@ static int _zran_read_data_from_file(zran_index_t *index,
 
     zran_log("Reading from file %llu [== %llu?] "
              "[into readbuf offset %u]\n",
-             ftell_(index->fd, index->f), cmp_offset, stream->avail_in);
+             ftell_(index->fd, index->f),
+             cmp_offset + stream->avail_in,
+             stream->avail_in);
 
     /*
      * Read a block of compressed data
@@ -1357,17 +1359,18 @@ static int _zran_read_data_from_file(zran_index_t *index,
     }
 
     /*
-     * No bytes left to read -
-     * we've reached EOF
+     * No bytes left to read, and there are
+     * only 8 bytes left to process (size of
+     * gzip footer) - we've reached EOF.
      */
-    if (f_ret == 0) {
+    if (f_ret == 0 && stream->avail_in <= 8) {
         if (feof_(index->fd, index->f, f_ret)) {
 
             zran_log("End of file, stopping inflation\n");
 
             /*
-             * We now know how big the
-             * uncompressed data is.
+             * we have uncompressed everything,
+             * so we now know its size.
              */
             if (index->uncompressed_size == 0) {
                 zran_log("Updating uncompressed data "
@@ -1937,27 +1940,48 @@ static int _zran_inflate(zran_index_t *index,
              */
             if (z_ret == Z_STREAM_END) {
 
-                zran_log("End of gzip stream\n");
+                zran_log("End of gzip stream [%u]\n", strm->avail_in);
 
                 /*
-                 * The GZIP footer takes up 8 bytes - make
-                 * sure we have data in the input buffer.
-                 * In case we are reading concatentaed
-                 * streams, force a read if there are less
-                 * than 16 bytes in the input buffer (we
-                 * can't say for sure how many bytes we
-                 * need, because streams can have
-                 * arbitrary amounts of null-padding bytes
-                 * between them).
+                 * Make sure we have data in the input buffer
+                 * to read and vaildate the gzip footer and,
+                 * in case we are reading concatentaed
+                 * streams, to search for the next stream and
+                 * read its header.
+                 *
+                 * There is no way of knowing how much data we
+                 * need to read in here - there is no upper
+                 * bound on the amount of null padding bytes
+                 * that may be present in betweem, or at the
+                 * end of, a stream, and there is no upper
+                 * bound on the size of a gzip header.
+
+                 * So a critical assumption is made here, that
+                 * the size of the read buffer is large enough
+                 * to encompass all of:
+                 *
+                 *   - the footer of a gzip stream,
+                 *   - null padding after the end of a gzip
+                 *     stream, and
+                 *   - the header of the next gzip stream
+                 *
+                 * This assumption could be removed by changing
+                 * the way that data is loaded and buffered
+                 * from the file - e.g. we could load bytes in
+                 * one-by-one, skipping over null bytes, and
+                 * then parse the gzip header ourselves.  But
+                 * this is far too much work for what is a very
+                 * edge-casey scenario.
                  */
                 z_ret = _zran_read_data_from_file(index,
                                                   strm,
                                                   cmp_offset,
                                                   uncmp_offset,
-                                                  10);
+                                                  index->readbuf_size);
                 if (!((z_ret == 0) || (z_ret == ZRAN_READ_DATA_EOF))) {
                     goto fail;
                 }
+
                 /*
                  * If there is no more data, the footer is
                  * missing, so the data must be corrupt.
@@ -1967,14 +1991,15 @@ static int _zran_inflate(zran_index_t *index,
                 }
 
                 /*
-                 * _validate_stream reads and checks in the gzip
-                 * stream footer (the CRC32 and ISIZE fields at the
-                 * end of a gzip stream), and _find_next_stream will
-                 * skip over any remaining bytes (e.g. null padding
-                 * bytes) until eof, or a new stream is found.
+                 * _validate_stream reads and checks in the
+                 * gzip stream footer (the CRC32 and ISIZE
+                 * fields at the end of a gzip stream), and
+                 * _find_next_stream will skip over any
+                 * remaining bytes (e.g. null padding bytes)
+                 * until eof, or a new stream is found.
                  *
-                 * The number of bytes that were read/skipped over
-                 * are accumulated into off.
+                 * The number of bytes that were read/
+                 * skipped over are accumulated into off.
                  */
                 off = 0;
 
@@ -2006,15 +2031,10 @@ static int _zran_inflate(zran_index_t *index,
                 }
 
                 /*
-                 * See if we have another concatenated gzip stream.
-                 *
-                 * WARNING If we run out of input data here, bad things
-                 * will happen. This will only happen with very small
-                 * read buffers, or absurd amounts of null-padding
-                 * between streams or at EOF. This could be handled
-                 * by flushing the input file, but it's such a
-                 * ridiculous edge case, that I don't think it's worth
-                 * the hassle.
+                 * See if we have another concatenated gzip
+                 * stream.  If we run out of input data here,
+                 * bad things will happen. Refer to the long
+                 * comment regarding the input buffer, above.
                  */
                 z_ret = _zran_find_next_stream(index, strm, &off);
 
@@ -2390,8 +2410,8 @@ int _zran_expand_index(zran_index_t *index, uint64_t until) {
          * index point at this location.
          *
          * Note that the _zran_inflate function
-         * adds index points at the beginning of
-         * the file, and at the beginning of all
+         * also adds index points at the beginning
+         * of the file, and at the beginning of all
          * other gzip streams, in the case of
          * concatenated streams (refer to its
          * add_stream_points argument),
@@ -2407,6 +2427,8 @@ int _zran_expand_index(zran_index_t *index, uint64_t until) {
                                 data) != 0) {
                 goto fail;
             }
+            last_created      = &index->list[index->npoints - 1];
+            last_uncmp_offset = uncmp_offset;
         }
 
         /* And if at EOF, we are done. */

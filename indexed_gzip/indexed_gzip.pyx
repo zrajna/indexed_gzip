@@ -587,8 +587,9 @@ cdef class _IndexedGzipFile:
         with self.__file_handle():
             ret = zran.zran_build_index(&self.index, 0, 0)
 
-        if ret != 0:
-            raise ZranError('zran_build_index returned error')
+        if ret != zran.ZRAN_BUILD_INDEX_OK:
+            raise ZranError('zran_build_index returned '
+                            'error: {}'.format(ret))
 
         log.debug('%s.build_full_index()', type(self).__name__)
 

@@ -257,13 +257,24 @@ void zran_free(
   zran_index_t *index /* The index */
 );
 
+/*
+ * Return codes for zran_build_index.
+ */
+enum {
+    ZRAN_BUILD_INDEX_OK        =  0,
+    ZRAN_BUILD_INDEX_FAIL      = -1,
+    ZRAN_BUILD_INDEX_CRC_ERROR = -2,
+};
+
 
 /*
  * (Re-)Builds the index to cover the given range, which must be
  * specified relative to the compressed data stream. Pass in 0
  * for both offsets to re-build the full index.
  *
- * Returns 0 on success, non-0 on failure.
+ * Returns ZRAN_BUILD_INDEX_OK on success, ZRAN_BUILD_INDEX_CRC_ERROR
+ * if a CRC error is detected in a GZIP stream, or ZRAN_BUILD_INDEX_FAIL
+ * if some other type of error occurs.
  */
 int zran_build_index(
   zran_index_t *index, /* The index */

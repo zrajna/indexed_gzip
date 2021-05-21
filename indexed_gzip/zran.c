@@ -244,7 +244,12 @@ static int _zran_init_zlib_inflate(
 );
 
 
-/* Return codes for _zran_expand_index */
+/*
+ * Return codes for _zran_expand_index. These are currently
+ * assumed to have identical values to the ZRAN_BUILD_INDEX
+ * return codes.
+ */
+int ZRAN_EXPAND_INDEX_OK        =  0;
 int ZRAN_EXPAND_INDEX_FAIL      = -1;
 int ZRAN_EXPAND_INDEX_CRC_ERROR = -2;
 
@@ -811,7 +816,7 @@ int zran_build_index(zran_index_t *index, uint64_t from, uint64_t until)
 {
 
     if (_zran_invalidate_index(index, from) != 0)
-        return -1;
+        return ZRAN_BUILD_INDEX_FAIL;
 
     if (until == 0)
       until = index->compressed_size;
@@ -971,6 +976,9 @@ int _zran_get_point_with_expand(zran_index_t  *index,
         limit = _zran_index_limit(index, 1);
         if (expand <= limit)
             expand = limit + 10;
+
+        zran_log("Estimated mapping from uncompresseed offset "
+                 "%lu into compressed data: %lu\n", offset, expand);
 
         /*
          * Expand the index
@@ -2437,7 +2445,7 @@ int _zran_expand_index(zran_index_t *index, uint64_t until) {
              cmp_offset, last_created->cmp_offset);
 
     free(data);
-    return 0;
+    return ZRAN_EXPAND_INDEX_OK;
 
 fail:
     free(data);

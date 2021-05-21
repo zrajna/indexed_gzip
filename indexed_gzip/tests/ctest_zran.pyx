@@ -1354,15 +1354,16 @@ def test_standard_usage_with_null_padding(concat):
     # into new padded compressed data
     padoff = 0  # offset into padded data
     last   = 0  # offset to end of last copied stream in unpadded data
-    print(f'Padding streams [orig size: {len(cmpdata)}] ...')
+    print('Padding streams [orig size: {}] ...'.format(len(cmpdata)))
     for off, pad in zip(strmoffs, padding):
 
         strm = cmpdata[last:off]
 
         paddedcmpdata[padoff:padoff + len(strm)] = strm
 
-        print(f'  Copied stream from [{last} - {off}] to '
-              f'[{padoff} - {padoff + len(strm)}] ({pad} padding bytes)')
+        print('  Copied stream from [{} - {}] to [{} - {}] ({} '
+              'padding bytes)'.format(
+                  last, off, padoff, padoff + len(strm), pad))
 
         padoff += len(strm) + pad
         last    = off

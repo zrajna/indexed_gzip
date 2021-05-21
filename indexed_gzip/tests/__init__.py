@@ -135,7 +135,8 @@ def compress_inmem(data, concat):
 
     offsets    = []
     compressed = 0
-    print(f'Generating compressed data {len(data)}, concat: {concat})')
+    print('Generating compressed data {}, concat: {})'.format(
+        len(data), concat))
     while compressed < len(data):
         start = len(f.getvalue())
         chunk = data[compressed:compressed + chunksize]
@@ -144,11 +145,12 @@ def compress_inmem(data, concat):
 
         end = len(f.getvalue())
 
-        print(f'  Wrote stream to {start} - {end} [{end - start} bytes] ...')
+        print('  Wrote stream to {} - {} [{} bytes] ...'.format(
+            start, end, end - start))
         offsets.append(end)
         compressed += chunksize
 
-    print(f'  Final size: {len(f.getvalue())}')
+    print('  Final size: {}'.format(len(f.getvalue())))
 
     f.seek(0)
     return bytearray(f.read()), offsets

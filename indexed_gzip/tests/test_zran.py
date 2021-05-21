@@ -121,3 +121,6 @@ if not sys.platform.startswith("win"):
 
     def test_export_import_format_v0():
         ctest_zran.test_export_import_format_v0()
+
+    def test_crc_validation(concat):
+        ctest_zran.test_crc_validation(concat)

@@ -5,6 +5,7 @@
 # Author: Paul McCarthy <pauldmccarthy@gmail.com>
 #
 
+import                    io
 import                    os
 import                    sys
 import                    time
@@ -122,6 +123,30 @@ def compress(infile, outfile, buflen=-1):
     poll(lambda : not cmpThread.is_alive())
 
 
+def compress_inmem(data, concat):
+    """Compress the given data (assumed to be bytes) and return a bytearray
+    containing the compressed data (including gzip header and footer).
+    Also returns offsets for the beginning of each separate stream (just [0]
+    if concat is False).
+    """
+
+    f = io.BytesIO()
+    if concat: chunksize = len(data) // 10
+    else:      chunksize = len(data)
+
+    offsets    = []
+    compressed = 0
+    while compressed < len(data):
+        cmpsize = len(f.getvalue())
+        chunk   = data[compressed:compressed + chunksize]
+        with gzip.GzipFile(mode='ab', fileobj=f) as gzf:
+            gzf.write(chunk)
+
+        offsets.append(cmpsize)
+        compressed += chunksize
+
+    f.seek(0)
+    return bytearray(f.read()), offsets
 
 
 def gen_test_data(filename, nelems, concat):

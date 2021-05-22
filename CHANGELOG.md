@@ -1,7 +1,7 @@
 # `indexed_gzip` changelog
 
 
-## 1.6.0 (..)
+## 1.6.0 (May 25th 2021)
 
 
 * Python 2.7 wheels for Windows are no longer being built (#71, 73).
@@ -10,6 +10,15 @@
   `indexed_gzip` can still be loaded, but index files created with
   `indexed_gzip` 1.6.0 cannot be loaded by older versions of `indexed_gzip`
   (#75).
+* CRC and size validation of uncompressed data is now performed by default,
+  on the first pass through a GZIP file. This can be disabled by setting the
+  new `skip_crc_check` argument to `False` when creating an
+  `IndexedGzipFile`. Validation is not performed when an existing index is
+  imported from file (#72).
+* Null padding bytes at the end of a GZIP file, or in between GZIP streams,
+  are now skipped over (#69, #70, #72).
+* Seek points are now created at the beginning of every GZIP stream, in files
+  containing concatenated streams (#72).
 
 
 ## 1.5.3 (March 23rd 2021)

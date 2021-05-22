@@ -100,6 +100,10 @@ class IndexedGzipFile(io.BufferedReader):
         :arg auto_build:       If ``True`` (the default), the index is
                                automatically built on calls to :meth:`seek`.
 
+        :arg skip_crc_check:   Defaults to ``False``. If ``True``, CRC/size
+                               validation of the uncompressed data is not
+                               performed.
+
         :arg spacing:          Number of bytes between index seek points.
 
         :arg window_size:      Number of bytes of uncompressed data stored with
@@ -237,6 +241,12 @@ cdef class _IndexedGzipFile:
     """
 
 
+    cdef readonly bint skip_crc_check
+    """Flag which is set to ``True`` if CRC/size validation of uncompressed
+    data is disabled.
+    """
+
+
     cdef readonly object filename
     """String containing path of file being indexed. Used to release and
     reopen file handles between seeks and reads.
@@ -274,7 +284,8 @@ cdef class _IndexedGzipFile:
                  readbuf_size=1048576,
                  readall_buf_size=16777216,
                  drop_handles=True,
-                 index_file=None):
+                 index_file=None,
+                 skip_crc_check=False):
         """Create an ``_IndexedGzipFile``. The file may be specified either
         with an open file handle (``fileobj``), or with a ``filename``. If the
         former, the file must have been opened in ``'rb'`` mode.
@@ -290,6 +301,12 @@ cdef class _IndexedGzipFile:
 
         :arg auto_build:       If ``True`` (the default), the index is
                                automatically built on calls to :meth:`seek`.
+
+        :arg skip_crc_check:   Defaults to ``False``. If ``True``, CRC/size
+                               validation of the uncompressed data is not
+                               performed. Automatically enabled if an
+                               ``index_file`` is provided, or if
+                               :meth:`import_index` is called.
 
         :arg spacing:          Number of bytes between index seek points.
 
@@ -366,13 +383,16 @@ cdef class _IndexedGzipFile:
         self.readbuf_size     = readbuf_size
         self.readall_buf_size = readall_buf_size
         self.auto_build       = auto_build
+        self.skip_crc_check   = skip_crc_check
         self.drop_handles     = drop_handles
         self.filename         = filename
         self.own_file         = own_file
         self.pyfid            = fileobj
 
-        if self.auto_build: flags = zran.ZRAN_AUTO_BUILD
-        else:               flags = 0
+        flags = 0
+
+        if auto_build:     flags |= zran.ZRAN_AUTO_BUILD
+        if skip_crc_check: flags |= zran.ZRAN_SKIP_CRC_CHECK
 
         # Set index.fd here just for the initial
         # call, as __file_handle may otherwise
@@ -567,8 +587,9 @@ cdef class _IndexedGzipFile:
         with self.__file_handle():
             ret = zran.zran_build_index(&self.index, 0, 0)
 
-        if ret != 0:
-            raise ZranError('zran_build_index returned error')
+        if ret != zran.ZRAN_BUILD_INDEX_OK:
+            raise ZranError('zran_build_index returned '
+                            'error: {}'.format(ret))
 
         log.debug('%s.build_full_index()', type(self).__name__)
 
@@ -602,10 +623,7 @@ cdef class _IndexedGzipFile:
         with self.__file_handle(), nogil:
             ret = zran.zran_seek(index, off, c_whence, NULL)
 
-        if ret < 0:
-            raise ZranError('zran_seek returned error: {}'.format(ret))
-
-        elif ret == zran.ZRAN_SEEK_NOT_COVERED:
+        if ret == zran.ZRAN_SEEK_NOT_COVERED:
             raise NotCoveredError('Index does not cover '
                                   'offset {}'.format(offset))
 
@@ -613,8 +631,12 @@ cdef class _IndexedGzipFile:
             raise NotCoveredError('Index must be completely built '
                                   'in order to seek from SEEK_END')
 
+        elif ret == zran.ZRAN_SEEK_CRC_ERROR:
+            raise CrcError('CRC/size validation failed - '
+                           'the GZIP data might be corrupt')
+
         elif ret not in (zran.ZRAN_SEEK_OK, zran.ZRAN_SEEK_EOF):
-            raise ZranError('zran_seek returned unknown code: {}'.format(ret))
+            raise ZranError('zran_seek returned error: {}'.format(ret))
 
         offset = self.tell()
 
@@ -657,10 +679,13 @@ cdef class _IndexedGzipFile:
                 with nogil:
                     ret = zran.zran_read(index, buffer, bufsz)
 
-                # see how the read went
-                if ret == zran.ZRAN_READ_FAIL:
-                    raise ZranError('zran_read returned error '
-                                    '({})'.format(ret))
+                # No bytes were read, and there are
+                # no more bytes to read. This will
+                # happen when the seek point was at
+                # or beyond EOF when zran_read was
+                # called
+                if ret == zran.ZRAN_READ_EOF:
+                    break
 
                 # This will happen if the current
                 # seek point is not covered by the
@@ -669,13 +694,16 @@ cdef class _IndexedGzipFile:
                     raise NotCoveredError('Index does not cover '
                                           'current offset')
 
-                # No bytes were read, and there are
-                # no more bytes to read. This will
-                # happen when the seek point was at
-                # or beyond EOF when zran_read was
-                # called
-                elif ret == zran.ZRAN_READ_EOF:
-                    break
+                # CRC or size check failed - data
+                # might be corrupt
+                elif ret == zran.ZRAN_READ_CRC_ERROR:
+                    raise CrcError('CRC/size validation failed - '
+                                   'the GZIP data might be corrupt')
+
+                # Unknown error
+                elif ret < 0:
+                    raise ZranError('zran_read returned error '
+                                    '({})'.format(ret))
 
                 nread  += ret
                 offset += ret
@@ -954,6 +982,8 @@ cdef class _IndexedGzipFile:
             if ret != zran.ZRAN_IMPORT_OK:
                 raise ZranError('import_index returned error: {}'.format(ret))
 
+            self.skip_crc_check = True
+
         finally:
             if close_file:
                 fileobj.close()
@@ -1048,6 +1078,14 @@ class NotCoveredError(ValueError):
 class ZranError(IOError):
     """Exception raised by the :class:`_IndexedGzipFile` when the ``zran``
     library signals an error.
+    """
+    pass
+
+
+class CrcError(OSError):
+    """Exception raised by the :class:`_IndexedGzipFile` when a CRC/size
+    validation check fails, which suggests that the GZIP data might be
+    corrupt.
     """
     pass
 

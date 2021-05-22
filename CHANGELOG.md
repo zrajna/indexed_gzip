@@ -1,7 +1,7 @@
 # `indexed_gzip` changelog
 
 
-## 1.6.0 (..)
+## 1.6.0 (May 25th 2021)
 
 
 * Python 2.7 wheels for Windows are no longer being built (#71, 73).

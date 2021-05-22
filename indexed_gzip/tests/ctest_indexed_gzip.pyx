@@ -397,7 +397,11 @@ def test_simple_read_with_null_padding():
         assert f.read() == b""
 
 
-def test_read_with_null_padding(testfile, nelems):
+def test_read_with_null_padding(testfile, nelems, use_mmap):
+
+    if use_mmap:
+        pytest.skip('skipping test_read_with_null_padding test '
+                    'as it will require too much memory')
 
     fileobj = BytesIO(open(testfile, "rb").read() + b"\0" * 100)
 

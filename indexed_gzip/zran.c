@@ -1329,10 +1329,22 @@ static int _zran_read_data_from_file(zran_index_t *index,
     /*
      * If there are any unprocessed bytes
      * left over, put them at the beginning
-     * of the read buffer
+     * of the read buffer.
+     *
+     * TODO: In times gone by, we would only
+     * attempt to read data (and therefore
+     * rotate memory here) when the read
+     * buffer was empty. But now, to keep
+     * the code in _zran_inflate clean-ish),
+     * we do this repeatedly, even when we
+     * are at EOF, to ensure that there is
+     * enough data to validate one stream,
+     * and find the next. We could improve
+     * things here, by only rotating memory
+     * here if needed.
      */
     if (stream->avail_in > 0) {
-        memcpy(index->readbuf, stream->next_in, stream->avail_in);
+        memmove(index->readbuf, stream->next_in, stream->avail_in);
     }
 
     zran_log("Reading from file %llu [== %llu?] "

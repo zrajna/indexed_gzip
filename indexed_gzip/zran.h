@@ -222,7 +222,10 @@ struct _zran_point {
  *
  * The read buffer must be at least the maximum expectedd size of a GZIP
  * header. GZIP headers have a minimum size of 10 bytes, but there is no upper
- * bound on their size, so using a very small read buffer would be unwise.
+ * bound on their size, so using a very small read buffer would be unwise.  In
+ * the case of concatenated GZIP streams, the read buffer must be at least big
+ * enough to accommodate a GZIP footer of one stream, padding bytes in between
+ * two streams, and the GZIP header of the next stream.
  *
  * The flags argument is a bit mask used to control the following options:
  *

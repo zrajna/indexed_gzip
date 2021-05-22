@@ -1188,10 +1188,10 @@ int _zran_init_zlib_inflate(zran_index_t *index,
                             z_stream     *stream,
                             zran_point_t *point) {
 
-    int     ret;
-    int     windowBits;
-    int64_t seek_loc;
-    int     bytes_read;
+    int           ret;
+    int           windowBits;
+    int64_t       seek_loc;
+    unsigned long bytes_read;
 
     bytes_read     = stream->avail_in;
     windowBits     = index->log_window_size;
@@ -1255,7 +1255,7 @@ int _zran_init_zlib_inflate(zran_index_t *index,
      * the inflation dictionary from the uncompressed
      * data associated with the index point.
      */
-    if (point != NULL) {
+    if (point != NULL && point->data != NULL) {
 
         /*
          * The starting index point is not byte-aligned,
@@ -1280,12 +1280,10 @@ int _zran_init_zlib_inflate(zran_index_t *index,
          * Initialise the inflate stream
          * with the index point data.
          */
-        if (point->data != NULL) {
-            if (inflateSetDictionary(stream,
-                                     point->data,
-                                     index->window_size) != Z_OK)
-                goto fail;
-        }
+        if (inflateSetDictionary(stream,
+                                 point->data,
+                                 index->window_size) != Z_OK)
+            goto fail;
     }
 
     /*
@@ -1335,7 +1333,7 @@ static int _zran_read_data_from_file(zran_index_t *index,
      * attempt to read data (and therefore
      * rotate memory here) when the read
      * buffer was empty. But now, to keep
-     * the code in _zran_inflate clean-ish),
+     * the code in _zran_inflate clean-ish,
      * we do this repeatedly, even when we
      * are at EOF, to ensure that there is
      * enough data to validate one stream,
@@ -1946,11 +1944,11 @@ static int _zran_inflate(zran_index_t *index,
             }
 
             /*
-             * We've found the end of file, or end of
-             * one gzip stream. Validate the uncompressed
+             * We've found the end of file, or end of one
+             * gzip stream. Validate the uncompressed
              * data (size/ CRC) against the gzip footer.
-             * Then then search for a new stream and, if
-             * we find one, re-initialise inflation
+             * Then search for a new stream and, if we
+             * find one, re-initialise inflation
              */
             if (z_ret == Z_STREAM_END) {
 
@@ -1966,7 +1964,7 @@ static int _zran_inflate(zran_index_t *index,
                  * There is no way of knowing how much data we
                  * need to read in here - there is no upper
                  * bound on the amount of null padding bytes
-                 * that may be present in betweem, or at the
+                 * that may be present in between, or at the
                  * end of, a stream, and there is no upper
                  * bound on the size of a gzip header.
 
@@ -2428,7 +2426,7 @@ int _zran_expand_index(zran_index_t *index, uint64_t until) {
          * of the file, and at the beginning of all
          * other gzip streams, in the case of
          * concatenated streams (refer to its
-         * add_stream_points argument),
+         * add_stream_points argument).
          */
         if (z_ret == ZRAN_INFLATE_EOF ||
             uncmp_offset - last_uncmp_offset >= index->spacing) {

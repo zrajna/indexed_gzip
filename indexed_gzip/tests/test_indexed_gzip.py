@@ -85,8 +85,8 @@ def test_read_all_drop_handles(testfile, nelems, use_mmap):
 def test_simple_read_with_null_padding():
     ctest_indexed_gzip.test_simple_read_with_null_padding()
 
-def test_read_with_null_padding(testfile, nelems):
-    ctest_indexed_gzip.test_read_with_null_padding(testfile, nelems)
+def test_read_with_null_padding(testfile, nelems, use_mmap):
+    ctest_indexed_gzip.test_read_with_null_padding(testfile, nelems, use_mmap)
 
 def test_read_beyond_end(concat):
     ctest_indexed_gzip.test_read_beyond_end(concat, False)

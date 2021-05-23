@@ -1292,35 +1292,38 @@ def test_crc_validation(concat):
             pybuf = <bytes>(<char *>buffer)[:dsize]
             assert np.all(np.frombuffer(pybuf, dtype=np.uint32) == data)
 
+    def wrap(val):
+        return val % 255
+
     # data/crc is good, all should be well
     _run_crc_tests(True)
 
     # corrupt the size, we should get an error
-    cmpdata[-1] += 1  # corrupt size
+    cmpdata[-1] = wrap(cmpdata[-1] + 1)  # corrupt size
     _run_crc_tests(False)
 
     # corrupt the crc, we should get an error
-    cmpdata[-1] -= 1  # restore size to correct value
-    cmpdata[-5] += 1  # corrupt crc
+    cmpdata[-1] = wrap(cmpdata[-1] - 1)  # restore size to correct value
+    cmpdata[-5] = wrap(cmpdata[-5] + 1)  # corrupt crc
     _run_crc_tests(False)
 
     # Corrupt a different stream, if we have more than one
-    cmpdata[-5] -= 1  # restore crc to correct value
+    cmpdata[-5] = wrap(cmpdata[-5] - 1)  # restore crc to correct value
     if len(strmoffs) > 1:
         for off in strmoffs[1:]:
-            cmpdata[off-1] += 1
+            cmpdata[off-1] = wrap(cmpdata[off-1] + 1)
             _run_crc_tests(False)
-            cmpdata[off-1] -= 1
+            cmpdata[off-1] = wrap(cmpdata[off-1] - 1)
 
     # Disable CRC, all should be well, even with a corrupt CRC/size
     # First test with good data
     _run_crc_tests(True, zran.ZRAN_AUTO_BUILD | zran.ZRAN_SKIP_CRC_CHECK)
 
-    cmpdata[-1] += 1  # corrupt size
+    cmpdata[-1] = wrap(cmpdata[-1] + 1)  # corrupt size
     _run_crc_tests(True, zran.ZRAN_AUTO_BUILD | zran.ZRAN_SKIP_CRC_CHECK)
 
-    cmpdata[-1] -= 1  # restore size to correct value
-    cmpdata[-5] -= 1  # corrupt crc
+    cmpdata[-1] = wrap(cmpdata[-1] - 1)  # restore size to correct value
+    cmpdata[-5] = wrap(cmpdata[-5] - 1)  # corrupt crc
     _run_crc_tests(True, zran.ZRAN_AUTO_BUILD | zran.ZRAN_SKIP_CRC_CHECK)
 
 

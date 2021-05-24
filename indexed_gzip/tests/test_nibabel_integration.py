@@ -7,7 +7,8 @@ import shutil
 
 import pytest
 
-import nibabel      as nib
+nib = pytest.importorskip("nibabel")
+
 import numpy        as np
 import indexed_gzip as igzip
 

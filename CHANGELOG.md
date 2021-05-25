@@ -1,7 +1,13 @@
 # `indexed_gzip` changelog
 
 
-## 1.6.0 (May 26th 2021)
+## 1.6.1 (May 25th 2021)
+
+
+* Tests requiring `nibabel` are now skipped, rather than causing failure.
+
+
+## 1.6.0 (May 23rd 2021)
 
 
 * Python 2.7 wheels for Windows are no longer being built (#71, 73).

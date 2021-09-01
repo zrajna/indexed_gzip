@@ -1212,8 +1212,11 @@ int _zran_init_zlib_inflate(zran_index_t *index,
         zran_log("_zran_init_zlib_inflate from current "
                  "seek location (expecting GZIP header)\n");
         if (inflateInit2(stream, windowBits + 32) != Z_OK) { goto fail; }
-        if (inflate(stream, Z_BLOCK)              != Z_OK) { goto fail; }
+        ret = inflate(stream, Z_BLOCK);
         if (inflateEnd(stream)                    != Z_OK) { goto fail; }
+        if (ret != Z_OK) {
+            goto fail;
+        }
     }
 
     /*

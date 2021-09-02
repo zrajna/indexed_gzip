@@ -763,7 +763,13 @@ void zran_free(zran_index_t *index) {
     for (i = 0; i < index->npoints; i++) {
         pt = &(index->list[i]);
 
-        free(pt->data);
+        /*
+         * points at compression stream boundaries
+         * have no data associated with them
+         */
+        if (pt->data != NULL) {
+            free(pt->data);
+        }
     }
 
     free(index->list);

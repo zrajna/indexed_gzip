@@ -31,6 +31,6 @@ chmod a+x testcmd
 
 export CIBW_TEST_COMMAND="bash {project}/testcmd {project}"
 
-python -m pip install cibuildwheel==1.10.0
+python -m pip install cibuildwheel==1.*
 
 python -m cibuildwheel --output-dir ./dist

@@ -1,9 +1,12 @@
 # `indexed_gzip` changelog
 
+
 ## 1.6.2 (September 2nd 2021)
 
 
 * Fixed a memory leak when initialising decompression / inflation (#82, #83).
+* Added file name to exception messages when possible, to assist in diagnosing
+  errors (#84).
 
 
 ## 1.6.1 (May 25th 2021)

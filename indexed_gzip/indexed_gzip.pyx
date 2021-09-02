@@ -406,7 +406,8 @@ cdef class _IndexedGzipFile:
                               window_size=window_size,
                               readbuf_size=readbuf_size,
                               flags=flags):
-                raise ZranError('zran_init returned error')
+                raise ZranError('zran_init returned error (file: '
+                                '{})'.format(self.errname))
 
         log.debug('%s.__init__(%s, %s, %s, %s, %s, %s, %s)',
                   type(self).__name__,
@@ -493,6 +494,20 @@ cdef class _IndexedGzipFile:
 
 
     @property
+    def errname(self):
+        """Used in exception messages. Returns the file name associated with
+        this ``_IndexedGzipFile``, or ``'n/a'`` if a file name cannot be
+        identified.
+        """
+        if self.filename is not None:
+            return self.filename
+        if self.pyfid is not None:
+            if getattr(self.pyfid, 'name', None) is not None:
+                return self.pyfid.name
+        return 'n/a'
+
+
+    @property
     def npoints(self):
         """Returns the number of index points that have been created. """
         return self.index.npoints
@@ -510,7 +525,8 @@ cdef class _IndexedGzipFile:
         """Closes this ``_IndexedGzipFile``. """
 
         if self.closed:
-            raise IOError('_IndexedGzipFile is already closed')
+            raise IOError('_IndexedGzipFile is already closed '
+                          '(file: {})'.format(self.errname))
 
         if   self.own_file and self.pyfid    is not None: self.pyfid.close()
         elif self.own_file and self.index.fd is not NULL: fclose(self.index.fd)
@@ -588,8 +604,8 @@ cdef class _IndexedGzipFile:
             ret = zran.zran_build_index(&self.index, 0, 0)
 
         if ret != zran.ZRAN_BUILD_INDEX_OK:
-            raise ZranError('zran_build_index returned '
-                            'error: {}'.format(ret))
+            raise ZranError('zran_build_index returned error: {} (file: {})'
+                            .format(ZRAN_ERRORS.ZRAN_BUILD[ret], self.errname))
 
         log.debug('%s.build_full_index()', type(self).__name__)
 
@@ -632,11 +648,13 @@ cdef class _IndexedGzipFile:
                                   'in order to seek from SEEK_END')
 
         elif ret == zran.ZRAN_SEEK_CRC_ERROR:
-            raise CrcError('CRC/size validation failed - '
-                           'the GZIP data might be corrupt')
+            raise CrcError('CRC/size validation failed - the '
+                           'GZIP data might be corrupt (file: '
+                           '{})'.format(self.errname))
 
         elif ret not in (zran.ZRAN_SEEK_OK, zran.ZRAN_SEEK_EOF):
-            raise ZranError('zran_seek returned error: {}'.format(ret))
+            raise ZranError('zran_seek returned error: {} (file: {})'
+                            .format(ZRAN_ERRORS.ZRAN_SEEK[ret], self.errname))
 
         offset = self.tell()
 
@@ -697,13 +715,16 @@ cdef class _IndexedGzipFile:
                 # CRC or size check failed - data
                 # might be corrupt
                 elif ret == zran.ZRAN_READ_CRC_ERROR:
-                    raise CrcError('CRC/size validation failed - '
-                                   'the GZIP data might be corrupt')
+                    raise CrcError('CRC/size validation failed - the '
+                                   'GZIP data might be corrupt (file: '
+                                   '{})'.format(self.errname))
+
 
                 # Unknown error
                 elif ret < 0:
-                    raise ZranError('zran_read returned error '
-                                    '({})'.format(ret))
+                    raise ZranError('zran_read returned error: {} (file: '
+                                    '{})'.format(ZRAN_ERRORS.ZRAN_READ[ret],
+                                                 self.errname))
 
                 nread  += ret
                 offset += ret
@@ -759,7 +780,8 @@ cdef class _IndexedGzipFile:
 
         # see how the read went
         if ret == zran.ZRAN_READ_FAIL:
-            raise ZranError('zran_read returned error ({})'.format(ret))
+            raise ZranError('zran_read returned error: {} (file: {})'
+                            .format(ZRAN_ERRORS.ZRAN_READ[ret], self.errname))
 
         # This will happen if the current
         # seek point is not covered by the
@@ -932,7 +954,9 @@ cdef class _IndexedGzipFile:
                 fd = NULL
             ret = zran.zran_export_index(&self.index, fd, <PyObject*>fileobj)
             if ret != zran.ZRAN_EXPORT_OK:
-                raise ZranError('export_index returned error: {}'.format(ret))
+                raise ZranError('export_index returned error: {} (file: '
+                                '{})'.format(ZRAN_ERRORS.ZRAN_EXPORT[ret],
+                                             self.errname))
 
         finally:
             if close_file:
@@ -980,7 +1004,9 @@ cdef class _IndexedGzipFile:
                 fd = NULL
             ret = zran.zran_import_index(&self.index, fd, <PyObject*>fileobj)
             if ret != zran.ZRAN_IMPORT_OK:
-                raise ZranError('import_index returned error: {}'.format(ret))
+                raise ZranError('import_index returned error: {} (file: '
+                                '{})'.format(ZRAN_ERRORS.ZRAN_IMPORT[ret],
+                                             self.errname))
 
             self.skip_crc_check = True
 
@@ -1095,3 +1121,37 @@ class NoHandleError(ValueError):
     ``drop_handles is True`` and an attempt is made to access the underlying
     file object.
     """
+
+
+class ZRAN_ERRORS(object):
+    """Contains text versions of all error codes emitted by zran.c. """
+    ZRAN_BUILD = {
+        zran.ZRAN_BUILD_INDEX_FAIL      : 'ZRAN_BUILD_INDEX_FAIL',
+        zran.ZRAN_BUILD_INDEX_CRC_ERROR : 'ZRAN_BUILD_INDEX_CRC_ERROR'
+    }
+    ZRAN_SEEK = {
+        zran.ZRAN_SEEK_CRC_ERROR       : 'ZRAN_SEEK_CRC_ERROR',
+        zran.ZRAN_SEEK_FAIL            : 'ZRAN_SEEK_FAIL',
+        zran.ZRAN_SEEK_NOT_COVERED     : 'ZRAN_SEEK_NOT_COVERED',
+        zran.ZRAN_SEEK_EOF             : 'ZRAN_SEEK_EOF',
+        zran.ZRAN_SEEK_INDEX_NOT_BUILT : 'ZRAN_SEEK_INDEX_NOT_BUILT'
+    }
+    ZRAN_READ = {
+        zran.ZRAN_READ_NOT_COVERED : 'ZRAN_READ_NOT_COVERED',
+        zran.ZRAN_READ_EOF         : 'ZRAN_READ_EOF',
+        zran.ZRAN_READ_FAIL        : 'ZRAN_READ_FAIL',
+        zran.ZRAN_READ_CRC_ERROR   : 'ZRAN_READ_CRC_ERROR'
+    }
+    ZRAN_EXPORT = {
+        zran.ZRAN_EXPORT_WRITE_ERROR : 'ZRAN_EXPORT_WRITE_ERROR'
+    }
+    ZRAN_IMPORT = {
+        zran.ZRAN_IMPORT_OK                  : 'ZRAN_IMPORT_OK',
+        zran.ZRAN_IMPORT_FAIL                : 'ZRAN_IMPORT_FAIL',
+        zran.ZRAN_IMPORT_EOF                 : 'ZRAN_IMPORT_EOF',
+        zran.ZRAN_IMPORT_READ_ERROR          : 'ZRAN_IMPORT_READ_ERROR',
+        zran.ZRAN_IMPORT_INCONSISTENT        : 'ZRAN_IMPORT_INCONSISTENT',
+        zran.ZRAN_IMPORT_MEMORY_ERROR        : 'ZRAN_IMPORT_MEMORY_ERROR',
+        zran.ZRAN_IMPORT_UNKNOWN_FORMAT      : 'ZRAN_IMPORT_UNKNOWN_FORMAT',
+        zran.ZRAN_IMPORT_UNSUPPORTED_VERSION : 'ZRAN_IMPORT_UNSUPPORTED_VERSION'
+    }

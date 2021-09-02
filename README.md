@@ -305,6 +305,9 @@ Many thanks to the following contributors (listed chronologically):
    (#34)
  - Ashwin Ramaswami (@epicfaace): Support for in-memory file objects (#55),
    bug fixes (#63, #64, #65).
+ - Michał Górny (@mgorny): Remove hard dependency on `nibabel` from test suite
+   (#78).
+ - Alexander Gorban (@alexgorban) Fix memory leak (#82, #83).
 
 
 ## License

@@ -56,14 +56,14 @@ cdef extern from "zran.h":
         ZRAN_EXPORT_WRITE_ERROR = -1,
 
         # return codes for zran_import_index
-        ZRAN_IMPORT_OK             =  0,
-        ZRAN_IMPORT_FAIL           = -1,
-        ZRAN_IMPORT_EOF            = -2,
-        ZRAN_IMPORT_READ_ERROR     = -3,
-        ZRAN_IMPORT_OVERFLOW       = -4,
-        ZRAN_IMPORT_INCONSISTENT   = -5,
-        ZRAN_IMPORT_MEMORY_ERROR   = -6,
-        ZRAN_IMPORT_UNKNOWN_FORMAT = -7
+        ZRAN_IMPORT_OK                  =  0,
+        ZRAN_IMPORT_FAIL                = -1,
+        ZRAN_IMPORT_EOF                 = -2,
+        ZRAN_IMPORT_READ_ERROR          = -3,
+        ZRAN_IMPORT_INCONSISTENT        = -4,
+        ZRAN_IMPORT_MEMORY_ERROR        = -5,
+        ZRAN_IMPORT_UNKNOWN_FORMAT      = -6,
+        ZRAN_IMPORT_UNSUPPORTED_VERSION = -7
 
     int zran_init(zran_index_t *index,
                   FILE         *fd,

@@ -1212,11 +1212,8 @@ int _zran_init_zlib_inflate(zran_index_t *index,
         zran_log("_zran_init_zlib_inflate from current "
                  "seek location (expecting GZIP header)\n");
         if (inflateInit2(strm, window + 32) != Z_OK) { goto fail; }
-        ret = inflate(strm, Z_BLOCK);
+        if (inflate(strm, Z_BLOCK)          != Z_OK) { goto fail_free_strm; }
         if (inflateEnd(strm)                != Z_OK) { goto fail; }
-        if (ret != Z_OK) {
-            goto fail;
-        }
     }
 
     /*
@@ -1271,12 +1268,12 @@ int _zran_init_zlib_inflate(zran_index_t *index,
             ret = getc_(index->fd, index->f);
 
             if (ret == -1 && ferror_(index->fd, index->f)) {
-                goto fail;
+                goto fail_free_strm;
             }
 
             if (inflatePrime(strm,
                              point->bits, ret >> (8 - point->bits)) != Z_OK)
-                goto fail;
+                goto fail_free_strm;
         }
 
         /*
@@ -1286,7 +1283,7 @@ int _zran_init_zlib_inflate(zran_index_t *index,
         if (inflateSetDictionary(strm,
                                  point->data,
                                  index->window_size) != Z_OK)
-            goto fail;
+            goto fail_free_strm;
     }
 
     /*
@@ -1306,6 +1303,16 @@ int _zran_init_zlib_inflate(zran_index_t *index,
      */
     return bytes_read - strm->avail_in;
 
+/*
+ * Something has gone wrong, but
+ * inflateInit2 has been called,
+ * so we need to call inflateEnd.
+ * Falls through to the fail:
+ * clause.
+ */
+fail_free_strm:
+    inflateEnd(strm);
+/* Something has gone wrong */
 fail:
     return -1;
 }

@@ -406,7 +406,8 @@ cdef class _IndexedGzipFile:
                               window_size=window_size,
                               readbuf_size=readbuf_size,
                               flags=flags):
-                raise ZranError('zran_init returned error')
+                raise ZranError('zran_init returned error (file: '
+                                '{})'.format(self.filename or 'n/a'))
 
         log.debug('%s.__init__(%s, %s, %s, %s, %s, %s, %s)',
                   type(self).__name__,
@@ -510,7 +511,8 @@ cdef class _IndexedGzipFile:
         """Closes this ``_IndexedGzipFile``. """
 
         if self.closed:
-            raise IOError('_IndexedGzipFile is already closed')
+            raise IOError('_IndexedGzipFile is already closed (file: '
+                          '{})'.format(self.filename or 'n/a'))
 
         if   self.own_file and self.pyfid    is not None: self.pyfid.close()
         elif self.own_file and self.index.fd is not NULL: fclose(self.index.fd)
@@ -588,8 +590,8 @@ cdef class _IndexedGzipFile:
             ret = zran.zran_build_index(&self.index, 0, 0)
 
         if ret != zran.ZRAN_BUILD_INDEX_OK:
-            raise ZranError('zran_build_index returned '
-                            'error: {}'.format(ret))
+            raise ZranError('zran_build_index returned error: {} (file: '
+                            '{})'.format(ret, self.filename or 'n/a'))
 
         log.debug('%s.build_full_index()', type(self).__name__)
 
@@ -632,11 +634,13 @@ cdef class _IndexedGzipFile:
                                   'in order to seek from SEEK_END')
 
         elif ret == zran.ZRAN_SEEK_CRC_ERROR:
-            raise CrcError('CRC/size validation failed - '
-                           'the GZIP data might be corrupt')
+            raise CrcError('CRC/size validation failed - the '
+                           'GZIP data might be corrupt (file: '
+                           '{})'.format(self.filename or 'n/a'))
 
         elif ret not in (zran.ZRAN_SEEK_OK, zran.ZRAN_SEEK_EOF):
-            raise ZranError('zran_seek returned error: {}'.format(ret))
+            raise ZranError('zran_seek returned error: {} (file: '
+                            '{})'.format(ret, self.filename or 'n/a'))
 
         offset = self.tell()
 
@@ -697,13 +701,15 @@ cdef class _IndexedGzipFile:
                 # CRC or size check failed - data
                 # might be corrupt
                 elif ret == zran.ZRAN_READ_CRC_ERROR:
-                    raise CrcError('CRC/size validation failed - '
-                                   'the GZIP data might be corrupt')
+                    raise CrcError('CRC/size validation failed - the '
+                                   'GZIP data might be corrupt (file: '
+                                   '{})'.format(self.filename or 'n/a'))
+
 
                 # Unknown error
                 elif ret < 0:
-                    raise ZranError('zran_read returned error '
-                                    '({})'.format(ret))
+                    raise ZranError('zran_read returned error ({}, {})'
+                                    .format(ret, self.filename or 'n/a'))
 
                 nread  += ret
                 offset += ret
@@ -759,7 +765,8 @@ cdef class _IndexedGzipFile:
 
         # see how the read went
         if ret == zran.ZRAN_READ_FAIL:
-            raise ZranError('zran_read returned error ({})'.format(ret))
+            raise ZranError('zran_read returned error ({}, {})'
+                            .format(ret, self.filename or 'n/a'))
 
         # This will happen if the current
         # seek point is not covered by the
@@ -932,7 +939,8 @@ cdef class _IndexedGzipFile:
                 fd = NULL
             ret = zran.zran_export_index(&self.index, fd, <PyObject*>fileobj)
             if ret != zran.ZRAN_EXPORT_OK:
-                raise ZranError('export_index returned error: {}'.format(ret))
+                raise ZranError('export_index returned error: {} (file: '
+                                '{})'.format(ret, self.filename or 'n/a'))
 
         finally:
             if close_file:
@@ -980,7 +988,8 @@ cdef class _IndexedGzipFile:
                 fd = NULL
             ret = zran.zran_import_index(&self.index, fd, <PyObject*>fileobj)
             if ret != zran.ZRAN_IMPORT_OK:
-                raise ZranError('import_index returned error: {}'.format(ret))
+                raise ZranError('import_index returned error: {} (file: '
+                                '{})'.format(ret, self.filename or 'n/a'))
 
             self.skip_crc_check = True
 

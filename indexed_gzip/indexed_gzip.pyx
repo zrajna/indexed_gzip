@@ -722,8 +722,8 @@ cdef class _IndexedGzipFile:
 
                 # Unknown error
                 elif ret < 0:
-                    raise ZranError('zran_read returned error ({}, {})'
-                                    .format(ret, self.errname))
+                    raise ZranError('zran_read returned error: {} (file: '
+                                    '{})'.format(ret, self.errname))
 
                 nread  += ret
                 offset += ret

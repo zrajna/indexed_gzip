@@ -1,16 +1,21 @@
 # `indexed_gzip` changelog
 
+## 1.6.2 (September 2nd 2021)
+
+
+* Fixed a memory leak when initialising decompression / inflation (#82, #83).
+
 
 ## 1.6.1 (May 25th 2021)
 
 
-* Tests requiring `nibabel` are now skipped, rather than causing failure.
+* Tests requiring `nibabel` are now skipped, rather than causing failure (#78).
 
 
 ## 1.6.0 (May 23rd 2021)
 
 
-* Python 2.7 wheels for Windows are no longer being built (#71, 73).
+* Python 2.7 wheels for Windows are no longer being built (#71, #73).
 * A backwards-compatible change to the index file format, to accommodate seek
   points at stream boundaries. Index files created with older versions of
   `indexed_gzip` can still be loaded, but index files created with

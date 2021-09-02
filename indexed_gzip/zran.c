@@ -763,7 +763,13 @@ void zran_free(zran_index_t *index) {
     for (i = 0; i < index->npoints; i++) {
         pt = &(index->list[i]);
 
-        free(pt->data);
+        /*
+         * points at compression stream boundaries
+         * have no data associated with them
+         */
+        if (pt->data != NULL) {
+            free(pt->data);
+        }
     }
 
     free(index->list);
@@ -1185,19 +1191,19 @@ fail:
 
 /* Initialise the given z_stream struct for decompression/inflation. */
 int _zran_init_zlib_inflate(zran_index_t *index,
-                            z_stream     *stream,
+                            z_stream     *strm,
                             zran_point_t *point) {
 
     int           ret;
-    int           windowBits;
+    int           window;
     int64_t       seek_loc;
     unsigned long bytes_read;
 
-    bytes_read     = stream->avail_in;
-    windowBits     = index->log_window_size;
-    stream->zalloc = Z_NULL;
-    stream->zfree  = Z_NULL;
-    stream->opaque = Z_NULL;
+    bytes_read   = strm->avail_in;
+    window       = index->log_window_size;
+    strm->zalloc = Z_NULL;
+    strm->zfree  = Z_NULL;
+    strm->opaque = Z_NULL;
 
     /*
      * If we're starting from the the current location in
@@ -1211,9 +1217,9 @@ int _zran_init_zlib_inflate(zran_index_t *index,
 
         zran_log("_zran_init_zlib_inflate from current "
                  "seek location (expecting GZIP header)\n");
-        if (inflateInit2(stream, windowBits + 32) != Z_OK) { goto fail; }
-        if (inflate(stream, Z_BLOCK)              != Z_OK) { goto fail; }
-        if (inflateEnd(stream)                    != Z_OK) { goto fail; }
+        if (inflateInit2(strm, window + 32) != Z_OK) { goto fail; }
+        if (inflate(strm, Z_BLOCK)          != Z_OK) { goto fail_free_strm; }
+        if (inflateEnd(strm)                != Z_OK) { goto fail; }
     }
 
     /*
@@ -1246,7 +1252,7 @@ int _zran_init_zlib_inflate(zran_index_t *index,
      * in _zran_inflate).
      */
 
-    if (inflateInit2(stream, -windowBits) != Z_OK) {
+    if (inflateInit2(strm, -window) != Z_OK) {
         goto fail;
     }
 
@@ -1268,22 +1274,22 @@ int _zran_init_zlib_inflate(zran_index_t *index,
             ret = getc_(index->fd, index->f);
 
             if (ret == -1 && ferror_(index->fd, index->f)) {
-                goto fail;
+                goto fail_free_strm;
             }
 
-            if (inflatePrime(stream,
+            if (inflatePrime(strm,
                              point->bits, ret >> (8 - point->bits)) != Z_OK)
-                goto fail;
+                goto fail_free_strm;
         }
 
         /*
          * Initialise the inflate stream
          * with the index point data.
          */
-        if (inflateSetDictionary(stream,
+        if (inflateSetDictionary(strm,
                                  point->data,
                                  index->window_size) != Z_OK)
-            goto fail;
+            goto fail_free_strm;
     }
 
     /*
@@ -1295,14 +1301,24 @@ int _zran_init_zlib_inflate(zran_index_t *index,
     index->stream_crc32 = 0;
 
     zran_log("_zran_zlib_init_inflate: initialised, read %i bytes\n",
-             bytes_read - stream->avail_in);
+             bytes_read - strm->avail_in);
 
     /*
      * Return the number of bytes of compressed
      * data, if any that were read over
      */
-    return bytes_read - stream->avail_in;
+    return bytes_read - strm->avail_in;
 
+/*
+ * Something has gone wrong, but
+ * inflateInit2 has been called,
+ * so we need to call inflateEnd.
+ * Falls through to the fail:
+ * clause.
+ */
+fail_free_strm:
+    inflateEnd(strm);
+/* Something has gone wrong */
 fail:
     return -1;
 }

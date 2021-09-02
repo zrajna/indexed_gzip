@@ -23,6 +23,14 @@ import                    contextlib
 
 import numpy as np
 
+# The stdlib resource module is only
+# available on unix-like platforms.
+try:
+    import resource
+except ImportError:
+    resource = None
+
+
 cimport numpy as np
 
 from posix.types cimport  off_t
@@ -1399,3 +1407,41 @@ def test_standard_usage_with_null_padding(concat):
 
     pybuf = <bytes>(<char *>buffer)[:dsize]
     assert np.all(np.frombuffer(pybuf, dtype=np.uint32) == data)
+
+
+# pauldmccarthy/indexed_gzip#82
+def test_inflateInit_leak_on_error():
+    """Make sure memory is not leaked after a successful call to
+    inflateInit2(), but then a failure on subsequent zlib calls.
+    """
+
+    cdef zran.zran_index_t index
+
+    # inflateInit2 is called twice in the _zran_zlib_init_inflate function.
+    # We can target the first call by passing a file containing random noise.
+    # I haven't yet figured out a reliable way to target the second call.
+    f = BytesIO(np.arange(1, 100).tobytes())
+
+    iters = np.arange(1, 10000)
+    mem   = np.zeros(10000, dtype=np.uint64)
+
+    for i in iters:
+        assert not zran.zran_init(&index,
+                                  NULL,
+                                  <PyObject*>f,
+                                  1048576,
+                                  32768,
+                                  131072,
+                                  zran.ZRAN_AUTO_BUILD)
+        assert zran.zran_seek(&index, 20, SEEK_SET, NULL) == \
+            zran.ZRAN_SEEK_FAIL
+        zran.zran_free(&index)
+
+        if resource is not None:
+            mem[i] = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+
+    # We expect to see some small growth in memory
+    # usage for the first few iterations, but then
+    # it should remain stable
+    mem = mem[5:]
+    assert np.all(mem == mem[0])

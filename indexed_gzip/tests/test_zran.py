@@ -127,3 +127,6 @@ if not sys.platform.startswith("win"):
 
     def test_standard_usage_with_null_padding(concat):
         ctest_zran.test_standard_usage_with_null_padding(concat)
+
+    def test_inflateInit_leak_on_error():
+        ctest_zran.test_inflateInit_leak_on_error()

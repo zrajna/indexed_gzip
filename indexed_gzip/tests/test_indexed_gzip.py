@@ -30,6 +30,9 @@ def test_open_close_ctxmanager(testfile, nelems, seed):
 def test_open_close_ctxmanager_drop_handles(testfile, nelems, seed):
     ctest_indexed_gzip.test_open_close_ctxmanager(testfile, nelems, seed, True)
 
+def test_open_mode():
+    ctest_indexed_gzip.test_open_mode()
+
 def test_atts(testfile):
     ctest_indexed_gzip.test_atts(testfile, False)
 

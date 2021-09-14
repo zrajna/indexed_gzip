@@ -345,7 +345,7 @@ cdef class _IndexedGzipFile:
             filename = None
 
         if fileobj is not None and \
-           getattr(fileobj, 'mode', 'rb') not in ('r', 'rb'):
+           getattr(fileobj, 'mode', 'rb') not in (None, 'r', 'rb'):
             raise ValueError('Invalid mode - fileobj must be opened '
                              'in read-only binary ("rb") mode')
 

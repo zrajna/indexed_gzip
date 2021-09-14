@@ -288,7 +288,8 @@ cdef class _IndexedGzipFile:
                  skip_crc_check=False):
         """Create an ``_IndexedGzipFile``. The file may be specified either
         with an open file handle (``fileobj``), or with a ``filename``. If the
-        former, the file must have been opened in ``'rb'`` mode.
+        former, the file is assumed have been opened for reading in binary
+        mode.
 
         .. note:: The ``auto_build`` behaviour only takes place on calls to
                   :meth:`seek`.
@@ -337,19 +338,20 @@ cdef class _IndexedGzipFile:
            (fileobj is not None and filename is not None):
             raise ValueError('One of fileobj or filename must be specified')
 
-        if fileobj is not None and getattr(fileobj, 'mode', 'rb') != 'rb':
-            raise ValueError('The gzip file must be opened in '
-                             'read-only binary ("rb") mode')
-
-        if (fileobj is None) and (mode not in (None, 'r', 'rb')):
-            raise ValueError('Invalid mode ({}), must be '
-                             '\'r\' or \'rb\''.format(mode))
-
         # filename can be either a
         # name or a file object
         if  hasattr(filename, 'read'):
             fileobj  = filename
             filename = None
+
+        if fileobj is not None and \
+           getattr(fileobj, 'mode', 'rb') not in ('r', 'rb'):
+            raise ValueError('Invalid mode - fileobj must be opened '
+                             'in read-only binary ("rb") mode')
+
+        if (fileobj is None) and (mode not in (None, 'r', 'rb')):
+            raise ValueError('Invalid mode ({}), must be '
+                             '"r" or "rb"'.format(mode))
 
         # If __file_handle is called on a file
         # that doesn't exist, it passes the

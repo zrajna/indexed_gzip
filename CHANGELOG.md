@@ -1,6 +1,14 @@
 # `indexed_gzip` changelog
 
 
+## 1.6.3 (September 14th 2021)
+
+
+* Relaxed `mode` check when creating an `IndexedGzipFile` from an open file
+  handle - `fileobj.mode` may now be `'r'` or `'rb'` (or may not exist at all)
+  (#85, #86).
+
+
 ## 1.6.2 (September 2nd 2021)
 
 

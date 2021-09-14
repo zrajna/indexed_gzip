@@ -112,6 +112,54 @@ def test_open_close_ctxmanager(testfile, nelems, seed, drop):
     assert f.closed
 
 
+def test_open_mode():
+
+    modes = [('r',  True),
+             ('rb', True),
+             (None, True),
+             ('rt', False),
+             ('w',  False),
+             ('wt', False)]
+
+    # open from file
+    with tempdir():
+        with gzip.open('f.gz', 'wb') as f:
+            f.write(b'12345')
+        for mode, expect in modes:
+            if expect:
+                gzf = igzip.IndexedGzipFile('f.gz', mode=mode)
+                assert gzf.read() == b'12345'
+            else:
+                with pytest.raises(ValueError):
+                    igzip.IndexedGzipFile('f.gz', mode=mode)
+
+    # open from fileobj
+    class BytesIOWithMode(BytesIO):
+        pass
+
+    # accept file-like without mode attribute
+    modes.append(('del', True))
+
+    for mode, expect in modes:
+
+        if mode == 'del' and hasattr(BytesIOWithMode, 'mode'):
+            delattr(BytesIOWithMode, 'mode')
+        else:
+            BytesIOWithMode.mode = mode
+
+        fileobj = BytesIOWithMode()
+        with gzip.GzipFile(fileobj=fileobj, mode='wb') as f:
+            f.write(b'12345')
+
+        print(mode, expect)
+
+        if expect:
+            assert igzip.IndexedGzipFile(fileobj=fileobj).read() == b'12345'
+        else:
+            with pytest.raises(ValueError):
+                igzip.IndexedGzipFile(fileobj=fileobj).read()
+
+
 def test_atts(testfile, drop):
 
     modes = [None, 'rb', 'r']

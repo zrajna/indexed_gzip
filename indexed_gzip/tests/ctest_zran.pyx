@@ -1464,9 +1464,8 @@ def test_read_eof_memmove_rotate_bug():
     # reading from the wrong location.
     #
     # We can trigger this situation by generating a file
-    # which has compressed data of size
-    # (X * readbuf_size) + Y, for any integer x, and for
-    # 9 <= Y < 16
+    # which has compressed file size (X * readbuf_size) + Y,
+    # for any integer x, and for 9 <= Y < 16
 
     cdef zran.zran_index_t index
     cdef FILE             *cfid

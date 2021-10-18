@@ -1,6 +1,14 @@
 # `indexed_gzip` changelog
 
 
+## 1.6.4 (October 18th 2021)
+
+
+* Fixed a bug related to buffering input data, which was causing a spurious
+  `CrcError` (#80, #87).
+
+
+
 ## 1.6.3 (September 14th 2021)
 
 

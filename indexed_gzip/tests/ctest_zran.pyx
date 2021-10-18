@@ -1448,7 +1448,7 @@ def test_inflateInit_leak_on_error():
 
 
 # pauldmccarthy/indexed_gzip#80
-def test_read_eof_memmove_rotate_bug():
+def test_read_eof_memmove_rotate_bug(seed):
 
     # This bug was triggered by the read buffer rotation
     # that takes place in zran.c::_zran_read_data_from_file,
@@ -1471,17 +1471,16 @@ def test_read_eof_memmove_rotate_bug():
     cdef FILE             *cfid
 
     with tempdir():
-        nelems = np.random.randint(524288, 525000, 1)
+        nelems = np.random.randint(524288, 525000, 1)[0]
         data   = np.random.random(nelems)
         with gzip.open('test.gz', 'wb') as f:
-            f.write(data)
+            f.write(data.tobytes())
 
         fsize        = os.stat('test.gz').st_size
         readbuf_size = fsize - 10
 
         with open('test.gz', 'rb') as pyfid:
             cfid = fdopen(pyfid.fileno(), 'rb')
-
             assert not zran.zran_init(&index,
                                       cfid,
                                       NULL,

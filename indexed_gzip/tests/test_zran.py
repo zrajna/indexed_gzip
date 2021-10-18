@@ -130,3 +130,6 @@ if not sys.platform.startswith("win"):
 
     def test_inflateInit_leak_on_error():
         ctest_zran.test_inflateInit_leak_on_error()
+
+    def test_read_eof_memmove_rotate_bug():
+        ctest_zran.test_read_eof_memmove_rotate_bug()

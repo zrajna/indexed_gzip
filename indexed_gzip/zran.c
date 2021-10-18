@@ -1395,6 +1395,14 @@ static int _zran_read_data_from_file(zran_index_t *index,
             zran_log("End of file, stopping inflation\n");
 
             /*
+             * Reset next_in pointer to beginning of
+             * read buffer, as we rotated it above,
+             * and the area that next_in was pointing
+             * to may have been overwritten by memmove.
+             */
+            stream->next_in = index->readbuf;
+
+            /*
              * we have uncompressed everything,
              * so we now know its size.
              */

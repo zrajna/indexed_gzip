@@ -1445,3 +1445,52 @@ def test_inflateInit_leak_on_error():
     # it should remain stable
     mem = mem[5:]
     assert np.all(mem == mem[0])
+
+
+# pauldmccarthy/indexed_gzip#80
+def test_read_eof_memmove_rotate_bug(seed):
+
+    # This bug was triggered by the read buffer rotation
+    # that takes place in zran.c::_zran_read_data_from_file,
+    # and occurs when the file is at EOF, and the
+    # stream->next_in pointer is ahead of index->readbuf by
+    # less than stream->avail_in bytes. In this case, the
+    # source and dest pointers passed to memmove are
+    # overlapping, so the area pointed to by next_in is
+    # modified. The bug was that, when at EOF, the
+    # stream->next_in pointer was not being reset to point
+    # to the beginning of readbuf, so the subsequent read
+    # of the gzip footer in _zran_validate_stream was
+    # reading from the wrong location.
+    #
+    # We can trigger this situation by generating a file
+    # which has compressed file size (X * readbuf_size) + Y,
+    # for any integer x, and for 9 <= Y < 16
+
+    cdef zran.zran_index_t index
+    cdef FILE             *cfid
+
+    with tempdir():
+        nelems = np.random.randint(524288, 525000, 1)[0]
+        data   = np.random.random(nelems)
+        with gzip.open('test.gz', 'wb') as f:
+            f.write(data.tobytes())
+
+        fsize        = os.stat('test.gz').st_size
+        readbuf_size = fsize - 10
+
+        with open('test.gz', 'rb') as pyfid:
+            cfid = fdopen(pyfid.fileno(), 'rb')
+            assert not zran.zran_init(&index,
+                                      cfid,
+                                      NULL,
+                                      4194304,
+                                      32768,
+                                      readbuf_size,
+                                      zran.ZRAN_AUTO_BUILD)
+
+            eof = nelems * 8 - 1
+            got = zran.zran_seek(&index, eof, SEEK_SET, NULL)
+
+            assert got                    == zran.ZRAN_SEEK_OK, got
+            assert zran.zran_tell(&index) == eof

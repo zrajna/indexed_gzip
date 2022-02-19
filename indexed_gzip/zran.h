@@ -202,9 +202,9 @@ struct _zran_point {
     uint8_t   bits;
 
     /*
-     * Chunk of uncompressed data preceeding this point.
+     * Chunk of uncompressed data preceding this point.
      * This is required to initialise decompression from
-     * this point onwards.
+     * this point onward.
      */
     uint8_t  *data;
 };
@@ -220,7 +220,7 @@ struct _zran_point {
  *    window_size:  32768
  *    readbuf_size: 16384
  *
- * The read buffer must be at least the maximum expectedd size of a GZIP
+ * The read buffer must be at least the maximum expected size of a GZIP
  * header. GZIP headers have a minimum size of 10 bytes, but there is no upper
  * bound on their size, so using a very small read buffer would be unwise.  In
  * the case of concatenated GZIP streams, the read buffer must be at least big

@@ -129,10 +129,22 @@ class IndexedGzipFile(io.BufferedReader):
         :arg buffer_size:      Optional, must be passed as a keyword argument.
                                Passed through to
                                ``io.BufferedReader.__init__``. If not provided,
-                               a default value of 1048576 is used.
+                               a default value of 4 * spacing is used if spacing
+                               is given else 4 MiB is used.
         """
 
-        buffer_size        = kwargs.pop('buffer_size', 1048576)
+        # Use 4x spacing because each raw read seeks from the last index point
+        # even if the position did not change since the last read call. On
+        # average, this incurs an overhead of spacing / 2. For 4x spacing, this
+        # overhead would be 1/8 = 12.5%, which should be negligible. The
+        # increased memory-usage is not an issue because internally many buffers
+        # are also allocated with 4 * spacing size.
+        # Note that setting the buffer_size too high might incur performance
+        # penalties for usecases with a lot of seeks and only small reads.
+        spacing = kwargs['spacing'] if ('spacing' in kwargs
+                  and kwargs['spacing'] > 0) else 1024 * 1024
+        buffer_size = kwargs.pop('buffer_size', max(4096, 4 * spacing))
+
         fobj               = _IndexedGzipFile(*args, **kwargs)
         self.__file_lock   = threading.RLock()
         self.__igz_fobj    = fobj

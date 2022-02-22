@@ -3,7 +3,7 @@
  * Python file-like objects or file descriptors.
  *
  * Functions which interact with Python file-likes will acquire and release
- * the GIL as needeed.
+ * the GIL as needed.
  */
 
 #include <math.h>

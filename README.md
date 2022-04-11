@@ -308,6 +308,8 @@ Many thanks to the following contributors (listed chronologically):
  - Michał Górny (@mgorny): Remove hard dependency on `nibabel` from test suite
    (#78).
  - Alexander Gorban (@alexgorban) Fix memory leak (#82, #83).
+ - Maximilian Knespel (@mxmlnkn) Change default read buffer size to
+   improve performance (#90).
 
 
 ## License

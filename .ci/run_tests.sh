@@ -29,13 +29,14 @@ fi
 # generation to sporadically fail
 #
 # https://github.com/pytest-dev/pytest-cov/issues/406
-if [[ "$PLATFORM" == "windows"* ]]; then
-  EXTRA_ARGS="$EXTRA_ARGS --no-cov"
-fi
+#
+# Disabling coverage on all platforms, as it
+# seems to be causing problems
+EXTRA_ARGS="$EXTRA_ARGS --no-cov"
 
+#       --cov-config=./.coveragerc \
 python -m indexed_gzip.tests      \
        -c setup.cfg               \
-       --cov-config=./.coveragerc \
        -v -s                      \
        -m "$TEST_SUITE"           \
        -k "$TEST_PATTERN"         \

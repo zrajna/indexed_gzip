@@ -1,6 +1,6 @@
 [run]
 plugins     = Cython.Coverage
-concurrency = thread multiprocessing
+concurrency = thread,multiprocessing
 parallel    = True
 source      = indexed_gzip
 omit        =

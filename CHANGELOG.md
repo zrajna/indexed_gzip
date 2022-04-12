@@ -1,6 +1,12 @@
 # `indexed_gzip` changelog
 
 
+## 1.6.7 (April 12th 2022)
+
+
+* More updates to wheel building procedure (#93).
+
+
 ## 1.6.6 (April 12th 2022)
 
 

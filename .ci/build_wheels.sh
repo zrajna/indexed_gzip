@@ -40,4 +40,4 @@ python -m cibuildwheel --output-dir ./dist
 # Disable py27 builds on windows
 export CIBW_BUILD="cp27-mac* cp27-*linux*"
 python -m pip install cibuildwheel==1.*
-python -m cibuildwheel --output-dir ./dist
+python -m cibuildwheel --allow-empty --output-dir ./dist

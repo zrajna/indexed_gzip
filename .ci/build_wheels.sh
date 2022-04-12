@@ -15,8 +15,8 @@ export CIBW_ENVIRONMENT_WINDOWS="ZLIB_HOME='$ZLIB_HOME'"
 # cython for the Cython.Coverage plugin.
 export CIBW_TEST_REQUIRES="cython pytest pytest-cov coverage numpy nibabel"
 
-# Disable pypy and win+py27 builds
-export CIBW_SKIP="pp* cp27-win*"
+# Disable pypy builds
+export CIBW_SKIP="pp*"
 
 # Pytest makes it *very* awkward to run tests
 # from an installed package, and still find/
@@ -36,6 +36,8 @@ export CIBW_TEST_COMMAND="bash {project}/testcmd {project}"
 python -m pip install cibuildwheel
 python -m cibuildwheel --output-dir ./dist
 
-export CIBW_BUILD="cp27*"
+
+# Disable py27 builds on windows
+export CIBW_BUILD="cp27-mac* cp27-*linux*"
 python -m pip install cibuildwheel==1.*
 python -m cibuildwheel --output-dir ./dist

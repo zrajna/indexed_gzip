@@ -1,7 +1,7 @@
 # `indexed_gzip` changelog
 
 
-## 1.6.8 (April 13th 2022)
+## 1.6.9 (April 13th 2022)
 
 
 * Changed the default read buffer size used by the `IndexedGzipFile` class

@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -e
+
 # Make sure cython is available on all platforms
 # Numpy is required to build the test modules
 export CIBW_BEFORE_BUILD="pip install cython numpy"

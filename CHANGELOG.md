@@ -1,23 +1,13 @@
 # `indexed_gzip` changelog
 
 
-## 1.6.7 (April 12th 2022)
-
-
-* More updates to wheel building procedure (#93).
-
-
-## 1.6.6 (April 12th 2022)
-
-
-* Update to wheel building procedure (#92).
-
-
-## 1.6.5 (April 11th 2022)
+## 1.6.8 (April 13th 2022)
 
 
 * Changed the default read buffer size used by the `IndexedGzipFile` class
   (#90).
+* Update to wheel building procedure (#92,#93,#95).
+* Aded `pyproject.toml` to declare build-time requirements (#94).
 
 
 ## 1.6.4 (October 18th 2021)

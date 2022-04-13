@@ -60,6 +60,8 @@ class Clean(Command):
         files = [
             '*.so',
             op.join(igzbase, 'indexed_gzip.c'),
+            op.join(igzbase, 'zran.o'),
+            op.join(igzbase, 'zran_file_util.o'),
             op.join(igzbase, '*.pyc'),
             op.join(igzbase, '*.so'),
             op.join(igzbase, 'tests', '*.so'),

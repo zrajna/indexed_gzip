@@ -59,7 +59,6 @@ class Clean(Command):
 
         files = [
             '*.so',
-            '.coverage.*',
             op.join(igzbase, 'indexed_gzip.c'),
             op.join(igzbase, '*.pyc'),
             op.join(igzbase, '*.so'),
@@ -258,6 +257,6 @@ setup(
 
     ext_modules=extensions,
 
-    tests_require=['pytest', 'numpy', 'nibabel', 'coverage', 'pytest-cov'],
+    tests_require=['pytest', 'numpy', 'nibabel'],
     test_suite='tests',
 )

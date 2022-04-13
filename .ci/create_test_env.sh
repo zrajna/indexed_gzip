@@ -38,4 +38,4 @@ fi
 
 source $thisdir/activate_env.sh "$envdir"
 pip install wheel setuptools
-pip install --prefer-binary cython pytest coverage pytest-cov "$NUMPY" "$NIBABEL"
+pip install --prefer-binary cython pytest "$NUMPY" "$NIBABEL"

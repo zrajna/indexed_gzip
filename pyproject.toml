@@ -2,13 +2,10 @@
 requires = ["setuptools >= 40.8.0", "wheel", "cython", "numpy"]
 
 [tool.pytest.ini_options]
-testpaths = [
-    "indexed_gzip/tests"
-]
+testpaths = ["indexed_gzip/tests"]
 addopts = "-v"
 markers = [
     "zran_test:         Test the zran.c library",
     "indexed_gzip_test: Test the indexed_gzip library",
     "nibabel_test:      Test interaction between indexed_gzip and nibabel/numpy",
-    "slow_test:         Test which takes a long time"
-]
+    "slow_test:         Test which takes a long time"]

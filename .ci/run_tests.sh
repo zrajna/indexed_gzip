@@ -24,7 +24,7 @@ if [[ -n "$NELEMS" ]]; then
 fi
 
 python -m indexed_gzip.tests      \
-       -c setup.cfg               \
+       -c pyproject.toml          \
        -v -s                      \
        -m "$TEST_SUITE"           \
        -k "$TEST_PATTERN"         \

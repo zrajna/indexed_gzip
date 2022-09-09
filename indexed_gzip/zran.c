@@ -1366,9 +1366,8 @@ static int _zran_read_data_from_file(zran_index_t *index,
         memmove(index->readbuf, stream->next_in, stream->avail_in);
     }
 
-    zran_log("Reading from file %llu [== %llu?] "
+    zran_log("Reading from file %llu "
              "[into readbuf offset %u]\n",
-             ftell_(index->fd, index->f),
              cmp_offset + stream->avail_in,
              stream->avail_in);
 
@@ -1419,7 +1418,7 @@ static int _zran_read_data_from_file(zran_index_t *index,
             if (index->compressed_size == 0) {
                 zran_log("Updating compressed data "
                          "size: %llu\n", cmp_offset);
-                index->compressed_size = cmp_offset;
+                index->compressed_size = cmp_offset + 8;
             }
             goto eof;
         }
@@ -1794,8 +1793,10 @@ static int _zran_inflate(zran_index_t *index,
          * to the correct location in the file for us.
          */
         if (start == NULL) {
-            if (fseek_(index->fd, index->f, 0, SEEK_SET) != 0) {
-                goto fail;
+            if (seekable_(index->fd, index->f)) {
+                if (fseek_(index->fd, index->f, 0, SEEK_SET) != 0) {
+                    goto fail;
+                }
             }
 
             /*

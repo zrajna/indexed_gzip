@@ -657,7 +657,12 @@ int zran_init(zran_index_t *index,
         if (fseek_(fd, f, 0, SEEK_SET) != 0)
             goto fail;
     } else {
-        // File is not seekable, so don't calculate compressed_size.
+        /*
+         * File is not seekable, so don't calculate
+         * compressed_size.  It will be updated in
+         * _zran_read_data_from_file when the EOF
+         * is reached
+         */
         compressed_size = 0;
     }
 

@@ -40,7 +40,7 @@ def tempdir():
 
 
 def touch(path):
-    """Create an enpty file."""
+    """Create an empty file."""
     with open(path, 'wt') as f:
         pass
 

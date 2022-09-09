@@ -25,7 +25,7 @@ import                    tempfile
 import                    contextlib
 
 import numpy as np
-from io import BytesIO, UnsupportedOperation
+from io import BytesIO
 import pytest
 
 import indexed_gzip as igzip

@@ -274,8 +274,9 @@ int ZRAN_EXPAND_INDEX_CRC_ERROR = -2;
  * ZRAN_EXPAND_INDEX_FAIL.
  */
 static int _zran_expand_index(
-    zran_index_t *index, /* The index                      */
-    uint64_t      until  /* Expand the index to this point */
+    zran_index_t *index, /* The index */
+    uint64_t      until  /* Expand the index to this point. If 0,
+                            expand  the index until EOF is reached. */
 );
 
 
@@ -635,7 +636,7 @@ int zran_init(zran_index_t *index,
      * window size.
      */
     if (spacing <= window_size)
-      goto fail;
+        goto fail;
 
     /* The file must be opened in read-only mode */
     if (!is_readonly(fd, f))
@@ -829,9 +830,6 @@ int zran_build_index(zran_index_t *index, uint64_t from, uint64_t until)
     if (_zran_invalidate_index(index, from) != 0)
         return ZRAN_BUILD_INDEX_FAIL;
 
-    if (until == 0)
-      until = index->compressed_size;
-
     return _zran_expand_index(index, until);
 }
 
@@ -857,7 +855,9 @@ int _zran_get_point_at(
      * Bad input - past the end of the compressed or
      * uncompressed streams (if the latter is known).
      */
-    if (compressed && offset >= index->compressed_size)
+    if (compressed                 &&
+        index->compressed_size > 0 &&
+        offset >= index->compressed_size)
         goto eof;
 
     if (!compressed                  &&
@@ -1415,6 +1415,11 @@ static int _zran_read_data_from_file(zran_index_t *index,
                 zran_log("Updating uncompressed data "
                          "size: %llu\n", uncmp_offset);
                 index->uncompressed_size = uncmp_offset;
+            }
+            if (index->compressed_size == 0) {
+                zran_log("Updating compressed data "
+                         "size: %llu\n", cmp_offset);
+                index->compressed_size = cmp_offset;
             }
             goto eof;
         }
@@ -2303,7 +2308,7 @@ int _zran_expand_index(zran_index_t *index, uint64_t until) {
          * The index already covers the requested
          * offset. Nothing needs to be done.
          */
-        if (until <= start->cmp_offset)
+        if (until != 0 && until <= start->cmp_offset)
             return 0;
     }
 
@@ -2320,10 +2325,10 @@ int _zran_expand_index(zran_index_t *index, uint64_t until) {
 
     /*
      * If the caller passed until == 0,
-     * we force some data to be read.
+     * we expand to EOF.
      */
     if (until == 0) {
-      until = index->spacing;
+        until = UINT64_MAX;
     }
 
     /*
@@ -2333,7 +2338,6 @@ int _zran_expand_index(zran_index_t *index, uint64_t until) {
      * points in the index.
      */
     if (start != NULL) {
-
         cmp_offset        = start->cmp_offset;
         uncmp_offset      = start->uncmp_offset;
         last_uncmp_offset = uncmp_offset;
@@ -2346,14 +2350,13 @@ int _zran_expand_index(zran_index_t *index, uint64_t until) {
 
     /*
      * Don't finish until we're at the end of the
-     * file, or we've expanded the index past
-     * the requested offset (and have created at
-     * least one new index point -
-     * last_created == NULL tells us whether a
-     * point has been created).
+     * file (break at bottom of loop), or we've
+     * expanded the index past the requested
+     * offset (and have created at least one new
+     * index point - last_created == NULL tells
+     * us whether a point has been created).
      */
-    while ((cmp_offset < index->compressed_size) &&
-           (last_created == NULL || last_created->cmp_offset < until)) {
+    while (last_created == NULL || last_created->cmp_offset < until) {
 
         /*
          * On the first call to _zran_inflate, we

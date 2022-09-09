@@ -351,5 +351,5 @@ int seekable_(FILE *fd, PyObject *f) {
     return fd != NULL ? 1: _seekable_python(f);
     #else
     return fd != NULL ? 1: _seekable_python2(f);
-    # endif
+    #endif
 }

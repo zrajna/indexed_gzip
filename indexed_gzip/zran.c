@@ -276,7 +276,7 @@ int ZRAN_EXPAND_INDEX_CRC_ERROR = -2;
 static int _zran_expand_index(
     zran_index_t *index, /* The index */
     uint64_t      until  /* Expand the index to this point. If 0,
-                            expand  the index until EOF is reached. */
+                            expand the index until EOF is reached. */
 );
 
 
@@ -858,7 +858,7 @@ int _zran_get_point_at(
 
     /*
      * Bad input - past the end of the compressed or
-     * uncompressed streams (if the latter is known).
+     * uncompressed streams (if their sizes are known).
      */
     if (compressed                 &&
         index->compressed_size > 0 &&
@@ -1798,6 +1798,11 @@ static int _zran_inflate(zran_index_t *index,
          * to the correct location in the file for us.
          */
         if (start == NULL) {
+            /*
+             * If file is not seekable, assume that
+             * it is positioned at the beginning of
+             * the stream.
+             */
             if (seekable_(index->fd, index->f)) {
                 if (fseek_(index->fd, index->f, 0, SEEK_SET) != 0) {
                     goto fail;

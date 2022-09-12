@@ -266,7 +266,7 @@ fail:
  */
 int _seekable_python2(PyObject *f) {
     int64_t ret;
-    ret =_ftell_python(f);
+    ret = _ftell_python(f);
     if (ret < 0) {
         PyErr_Clear();
     }

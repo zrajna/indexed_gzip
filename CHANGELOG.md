@@ -1,7 +1,7 @@
 # `indexed_gzip` changelog
 
 
-## 1.7.0 (September 10th 2022)
+## 1.7.0 (September 12th 2022)
 
 
 * Changes to allow an index to be built from file-likes which don't support

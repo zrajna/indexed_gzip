@@ -232,6 +232,48 @@ int _getc_python(PyObject *f) {
 }
 
 /*
+ * Calls the .seekable() method on Python file-like objects.
+ */
+int _seekable_python(PyObject *f) {
+    PyObject *data = NULL;
+    int64_t   result;
+
+    _ZRAN_FILE_UTIL_ACQUIRE_GIL
+
+    data = PyObject_CallMethod(f, "seekable", NULL);
+    if (data == NULL)
+        goto fail;
+
+    result = PyLong_AsLong(data);
+    if (result == -1 && PyErr_Occurred())
+        goto fail;
+
+    Py_DECREF(data);
+    _ZRAN_FILE_UTIL_RELEASE_GIL
+    return result;
+
+fail:
+    Py_XDECREF(data);
+    _ZRAN_FILE_UTIL_RELEASE_GIL
+    return -1;
+}
+
+
+/*
+ * Hacky implementation of seekable() for Python 2.
+ * If f.tell() returns an error, assume that the
+ * object is unseekable.
+ */
+int _seekable_python2(PyObject *f) {
+    int64_t ret;
+    ret = _ftell_python(f);
+    if (ret < 0) {
+        PyErr_Clear();
+    }
+    return ret >= 0;
+}
+
+/*
  * Calls ferror on fd if specified, otherwise the Python-specific method on f.
  */
 int ferror_(FILE *fd, PyObject *f) {
@@ -298,4 +340,16 @@ size_t fwrite_(const void *ptr,
  */
 int getc_(FILE *fd, PyObject *f) {
     return fd != NULL ? getc(fd): _getc_python(f);
+}
+
+/*
+ * Returns whether the given file is seekable. If fd is specified, assumes it's always seekable.
+ * If f is specified, calls f.seekable() to see if the Python file object is seekable.
+ */
+int seekable_(FILE *fd, PyObject *f) {
+    #if PY_MAJOR_VERSION > 2
+    return fd != NULL ? 1: _seekable_python(f);
+    #else
+    return fd != NULL ? 1: _seekable_python2(f);
+    #endif
 }

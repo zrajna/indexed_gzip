@@ -1,6 +1,13 @@
 # `indexed_gzip` changelog
 
 
+## 1.7.0 (September 12th 2022)
+
+
+* Changes to allow an index to be built from file-likes which don't support
+  `seek()` or `tell()` operations (#103, #105).
+
+
 ## 1.6.13 (April 14th 2022)
 
 

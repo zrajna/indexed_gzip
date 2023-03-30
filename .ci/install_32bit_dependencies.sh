@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
 
+# prevent any prompts when
+# apt/yum installing tzdata
+export DEBIAN_FRONTEND="noninteractive"
+export TZ="Europe/London"
+
 apt-get install -y                 \
         build-essential            \
         software-properties-common \

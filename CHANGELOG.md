@@ -1,6 +1,14 @@
 # `indexed_gzip` changelog
 
 
+## 1.7.1 (March 30th 2023)
+
+
+* Small change to the `IndexedGzipFile` class so that it accepts file-likes
+  which do not implement `fileno()` (#118).
+
+
+
 ## 1.7.0 (September 12th 2022)
 
 

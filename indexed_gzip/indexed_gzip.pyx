@@ -387,9 +387,14 @@ cdef class _IndexedGzipFile:
         if not drop_handles:
             if fileobj is None:
                 fileobj = builtin_open(filename, mode)
+            # Try to get a reference to the
+            # underlying file descriptor
             try:
                 fd  = fdopen(fileobj.fileno(), 'rb')
-            except io.UnsupportedOperation:
+            # If we can't get the file descriptor, fall
+            # back to using the python file-like
+            except Exception as e:
+                log.debug('Cannot get file descriptor (%s), using file-like', e)
                 fd  = NULL
 
         self.spacing          = spacing

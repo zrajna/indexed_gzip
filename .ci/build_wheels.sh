@@ -2,6 +2,11 @@
 
 set -e
 
+# prevent any prompts when
+# apt/yum installing tzdata
+export DEBIAN_FRONTEND="noninteractive"
+export TZ="Europe/London"
+
 # Make sure zlib headers are available on linux
 export CIBW_BEFORE_ALL_LINUX="yum install -y zlib-devel || apt-get install -y zlib1g-dev || apk add zlib-dev || true"
 

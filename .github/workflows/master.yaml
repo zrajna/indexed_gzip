@@ -145,7 +145,7 @@ jobs:
       NIBABEL:        ${{ matrix.nibabel }}
       # earlier versions of nibabel require
       # an older version of numpy
-      NUMPY:          ${{ (matrix.nibabel <= 2.3) && '1.17' || '' }}
+      NUMPY:          ${{ (matrix.nibabel <= 2.3) && '1.17' || '1.20' }}
       ENV_DIR:        ./test.env
 
     steps:

@@ -285,7 +285,7 @@ jobs:
     container: i386/ubuntu:18.04
     strategy:
       matrix:
-        python-version: ["2.7", "3.10"]
+        python-version: ["2.7", "3.8"]
         extra-args:     ["", "--concat"]
 
     env:

@@ -169,8 +169,10 @@ class IndexedGzipFile(io.BufferedReader):
             return self.read(nbytes)
 
 
-    def __reduce__(self):
+    def __reduce_ex__(self, protocol):
         """Used to pickle an ``IndexedGzipFile``.
+
+        :arg protocol:         Pickle protocol version
 
         Returns a tuple containing:
           - a reference to the ``unpickle`` function
@@ -1093,7 +1095,7 @@ def unpickle(state):
     """Create a new ``IndexedGzipFile`` from a pickled state.
 
     :arg state: State of a pickled object, as returned by the
-                ``IndexedGzipFile.__reduce__`` method.
+                ``IndexedGzipFile.__reduce_ex__`` method.
 
     :returns:   A new ``IndexedGzipFile`` object.
     """

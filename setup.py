@@ -79,9 +79,14 @@ class Clean(Command):
 noc99     = sys.version_info[0] == 3 and sys.version_info[1] <= 4
 windows   = sys.platform.startswith("win")
 testing   = 'INDEXED_GZIP_TESTING' in os.environ
+thisdir   = op.dirname(__file__)
 
 # compile ZLIB source?
 ZLIB_HOME = os.environ.get("ZLIB_HOME", None)
+# setuptools may complain about
+# absolute paths in some circumstances
+if ZLIB_HOME is not None:
+    ZLIB_HOME = op.relpath(ZLIB_HOME, thisdir)
 
 # If cython is present, we'll compile
 # the pyx files from scratch. Otherwise,

@@ -23,6 +23,11 @@ if [[ -n "$NELEMS" ]]; then
   NELEMS="--nelems $NELEMS"
 fi
 
+# Coverage on windows is flaky
+if [[ "$PLATFORM" == "windows"* ]]; then
+  EXTRA_ARGS="$EXTRA_ARGS --no-cov"
+fi
+
 python -m indexed_gzip.tests      \
        -c pyproject.toml          \
        -v -s                      \

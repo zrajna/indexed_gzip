@@ -28,14 +28,12 @@ if [[ "$USING_OS_PYTHON" != "1" ]]; then
   pip install virtualenv
 fi
 
-if [[ "$PYTHON_VERSION" == "2.7" ]]; then
-  virtualenv "$envdir"
-elif [[ "$USING_OS_PYTHON" == "1" ]]; then
+if [[ "$USING_OS_PYTHON" == "1" ]]; then
   python"$PYTHON_VERSION" -m venv "$envdir"
 else
   python -m venv "$envdir"
 fi
 
 source $thisdir/activate_env.sh "$envdir"
-pip install wheel setuptools
-pip install --prefer-binary cython pytest "$NUMPY" "$NIBABEL"
+pip install wheel setuptools build
+pip install --prefer-binary cython pytest coverage pytest-cov "$NUMPY" "$NIBABEL"

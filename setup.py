@@ -76,22 +76,17 @@ class Clean(Command):
 
 
 # Platform information
-python2   = sys.version_info[0] == 2
-noc99     = python2 or (sys.version_info[0] == 3 and sys.version_info[1] <= 4)
+noc99     = sys.version_info[0] == 3 and sys.version_info[1] <= 4
 windows   = sys.platform.startswith("win")
 testing   = 'INDEXED_GZIP_TESTING' in os.environ
+thisdir   = op.dirname(__file__)
 
 # compile ZLIB source?
 ZLIB_HOME = os.environ.get("ZLIB_HOME", None)
-
-# Load README description
-readme = op.join(op.dirname(__file__), 'README.md')
-if python2:
-    openreadme = ft.partial(open, readme, 'rt')
-else:
-    openreadme = ft.partial(open, readme, 'rt', encoding='utf-8')
-with openreadme() as f:
-    readme = f.read().strip()
+# setuptools may complain about
+# absolute paths in some circumstances
+if ZLIB_HOME is not None:
+    ZLIB_HOME = op.relpath(ZLIB_HOME, thisdir)
 
 # If cython is present, we'll compile
 # the pyx files from scratch. Otherwise,
@@ -144,11 +139,6 @@ if have_numpy:
 if windows:
     if ZLIB_HOME is None:
         libs.append('zlib')
-
-    # For stdint.h which is not included in the old Visual C
-    # compiler used for Python 2
-    if python2:
-        include_dirs.append('compat')
 
     # Some C functions might not be present when compiling against
     # older versions of python
@@ -219,46 +209,8 @@ else:          extensions = [igzip_ext]
 if have_cython:
     extensions = cythonize(extensions, compiler_directives=compiler_directives)
 
-
-# find the version number
-def readVersion():
-    version  = {}
-    initfile = op.join(op.dirname(__file__), 'indexed_gzip', '__init__.py')
-    with open(initfile, 'rt') as f:
-        for line in f:
-            if line.startswith('__version__'):
-                exec(line, version)
-                break
-    return version.get('__version__')
-
-
 setup(
     name='indexed_gzip',
-    packages=['indexed_gzip', 'indexed_gzip.tests'],
-    version=readVersion(),
-    author='Paul McCarthy',
-    author_email='pauldmccarthy@gmail.com',
-    description='Fast random access of gzip files in Python',
-    long_description=readme,
-    long_description_content_type='text/markdown',
-    url='https://github.com/pauldmccarthy/indexed_gzip',
-    license='zlib',
-
-    classifiers=[
-        'Development Status :: 3 - Alpha',
-        'Intended Audience :: Developers',
-        'License :: OSI Approved :: zlib/libpng License',
-        'Programming Language :: C',
-        'Programming Language :: Cython',
-        'Programming Language :: Python :: 2',
-        'Programming Language :: Python :: 3',
-        'Topic :: System :: Archiving :: Compression',
-    ],
-
     cmdclass={'clean' : Clean},
-
     ext_modules=extensions,
-
-    tests_require=['pytest', 'numpy', 'nibabel'],
-    test_suite='tests',
 )

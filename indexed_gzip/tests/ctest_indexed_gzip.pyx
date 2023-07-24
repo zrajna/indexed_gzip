@@ -1158,7 +1158,7 @@ def test_multiproc_serialise():
 
         gzf = igzip.IndexedGzipFile(fname)
 
-        size    = len(data) / 16
+        size    = int(len(data) / 16)
         offsets = np.arange(0, len(data), size)
         func    = ft.partial(_mpfunc, gzf, size * 4)
 

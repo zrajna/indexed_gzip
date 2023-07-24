@@ -310,6 +310,7 @@ Many thanks to the following contributors (listed chronologically):
  - Alexander Gorban (@alexgorban) Fix memory leak (#82, #83).
  - Maximilian Knespel (@mxmlnkn) Change default read buffer size to
    improve performance (#90).
+ - Ben Beasley (@musicinmybrain) Python 3.12 compatibility (#126).
 
 
 ## License

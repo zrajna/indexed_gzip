@@ -9,8 +9,8 @@ thisdir=$(cd $(dirname "$0") && pwd)
 
 source $thisdir/activate_env.sh "$envdir"
 
-pip install twine
+pip install --upgrade pip wheel setuptools twine build
 
-python setup.py bdist_wheel
+python -m build
 
 twine check dist/*

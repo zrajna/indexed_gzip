@@ -14,11 +14,8 @@ jobs:
     strategy:
       matrix:
         os:             ["ubuntu-latest", "macos-latest", "windows-latest"]
-        python-version: ["2.7", "3.8", "3.9", "3.10", "3.11"]
+        python-version: ["3.8", "3.9", "3.10", "3.11"]
         extra-args:     ["", "--concat"]
-        exclude:
-          - os:             windows-latest
-            python-version: 2.7
 
     env:
       PLATFORM:       ${{ matrix.os }}
@@ -53,10 +50,10 @@ jobs:
   # Quick tests on 32 bit platform
   test-32bit:
     runs-on: ubuntu-latest
-    container: i386/ubuntu:18.04
+    container: i386/ubuntu:20.04
     strategy:
       matrix:
-        python-version: ["2.7", "3.8"]
+        python-version: ["3.9"]
         extra-args:     ["", "--concat"]
 
     env:

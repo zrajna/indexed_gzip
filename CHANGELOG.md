@@ -1,12 +1,18 @@
 # `indexed_gzip` changelog
 
 
+## 1.8.0 (July 24th 2023)
+
+
+* Compatibility fixes for Python 3.12 and Cython 3.0.0 (#126, #127).
+* Removed support for Python 2.7 (#127).
+
+
 ## 1.7.1 (March 31st 2023)
 
 
 * Small change to the `IndexedGzipFile` class so that it accepts file-likes
   which do not implement `fileno()` (#118).
-
 
 
 ## 1.7.0 (September 12th 2022)

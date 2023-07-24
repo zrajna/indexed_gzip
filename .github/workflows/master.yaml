@@ -23,11 +23,8 @@ jobs:
     strategy:
       matrix:
         os:             ["ubuntu-latest", "macos-latest", "windows-latest"]
-        python-version: ["2.7", "3.8", "3.9", "3.10", "3.11"]
+        python-version: ["3.8", "3.9", "3.10", "3.11"]
         extra-args:     ["", "--concat"]
-        exclude:
-          - os:             windows-latest
-            python-version: 2.7
 
     env:
       PLATFORM:       ${{ matrix.os }}
@@ -101,7 +98,7 @@ jobs:
 
     env:
       PLATFORM:       ${{ matrix.os }}
-      PYTHON_VERSION: 3.8
+      PYTHON_VERSION: 3.10
       TEST_SUITE:     ${{ matrix.test-suite }}
       EXTRA_ARGS:     ${{ matrix.extra-args }}
       NELEMS:         ${{ matrix.nelems }}
@@ -129,46 +126,6 @@ jobs:
       - name: Run tests
         run:  bash  ./.ci/run_tests.sh "$ENV_DIR"
 
-
-  # Nibabel integration run on all OSes,
-  # and different versions of nibabel
-  test-nibabel-integration:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os:      ["ubuntu-latest", "macos-latest", "windows-latest"]
-        nibabel: ["2.0", "2.1", "2.2", "2.3", "2.4", "2.5", "3.0", "3.1", "3.2"]
-    env:
-      PLATFORM:       ${{ matrix.os }}
-      PYTHON_VERSION: "3.8"
-      TEST_SUITE:     nibabel_test
-      NIBABEL:        ${{ matrix.nibabel }}
-      # earlier versions of nibabel require
-      # an older version of numpy
-      NUMPY:          ${{ (matrix.nibabel <= 2.3) && '1.17' || '1.20' }}
-      ENV_DIR:        ./test.env
-
-    steps:
-      - uses: actions/checkout@v2
-      - name: Set up Python
-        uses: actions/setup-python@v2
-        with:
-          python-version: "3.8"
-          architecture:   x64
-      - name: Create test environment
-        run:  bash ./.ci/create_test_env.sh "$ENV_DIR"
-      - name: Log test environment
-        run: |
-          source ./.ci/activate_env.sh "$ENV_DIR"
-          python -V
-          pip freeze
-      - name: Download zlib
-        if:   ${{ matrix.os == 'windows-latest' }}
-        run:  bash ./.ci/download_zlib.sh
-      - name: Build indexed_gzip
-        run:  bash ./.ci/build_dev_indexed_gzip.sh "$ENV_DIR"
-      - name: Run tests
-        run:  bash  ./.ci/run_tests.sh "$ENV_DIR"
 
   # zran tests run only on ubuntu
   test-zran:
@@ -282,10 +239,10 @@ jobs:
   # Tests on 32 bit platform
   test-32bit:
     runs-on: ubuntu-latest
-    container: i386/ubuntu:18.04
+    container: i386/ubuntu:20.04
     strategy:
       matrix:
-        python-version: ["2.7", "3.8"]
+        python-version: "3.9"
         extra-args:     ["", "--concat"]
 
     env:

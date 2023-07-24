@@ -23,10 +23,10 @@ if [[ -n "$NELEMS" ]]; then
   NELEMS="--nelems $NELEMS"
 fi
 
-# Coverage on windows is flaky
-if [[ "$PLATFORM" == "windows"* ]]; then
-  EXTRA_ARGS="$EXTRA_ARGS --no-cov"
-fi
+# Coverage reporting seems to be
+# flaky and can result in test jobs
+# failing, even if all tests passed.
+EXTRA_ARGS="$EXTRA_ARGS --no-cov"
 
 python -m indexed_gzip.tests      \
        -c pyproject.toml          \

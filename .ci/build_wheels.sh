@@ -41,12 +41,5 @@ chmod a+x testcmd
 
 export CIBW_TEST_COMMAND="bash {project}/testcmd {project}"
 
-# cibuildwheel 2 doesn't support py27, but cibuildwheel
-# 1 doesn't suppport py310. So we do two builds.
 python -m pip install cibuildwheel
 python -m cibuildwheel --output-dir ./dist
-
-# Disable py27 builds on windows
-export CIBW_BUILD="cp27-mac* cp27-*linux*"
-python -m pip install cibuildwheel==1.*
-python -m cibuildwheel --allow-empty --output-dir ./dist

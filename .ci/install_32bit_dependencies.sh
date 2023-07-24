@@ -11,15 +11,10 @@ apt-get install -y                 \
         zlib1g                     \
         zlib1g-dev
 
-if [ "$PYTHON_VERSION" == "2.7" ]; then
-  PACKAGES="python-pip python-virtualenv"
-else
-  PACKAGES="python3-pip python${PYTHON_VERSION}-venv"
-fi
-
 add-apt-repository -y ppa:deadsnakes/ppa
 apt-get update     -y
-apt-get install    -y               \
-        python"$PYTHON_VERSION"     \
-        python"$PYTHON_VERSION"-dev \
-        $PACKAGES
+apt-get install    -y                \
+        python"$PYTHON_VERSION"      \
+        python"$PYTHON_VERSION"-dev  \
+        python${PYTHON_VERSION}-venv \
+        python3-pip

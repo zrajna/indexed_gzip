@@ -1,5 +1,44 @@
 [build-system]
-requires = ["setuptools >= 40.8.0", "cython", "numpy"]
+requires      = ["setuptools >= 40.8.0", "cython", "numpy"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name            = "indexed_gzip"
+dynamic         = ["version"]
+description     = "Fast random access of gzip files in Python"
+readme          = {file = "README.md", content-type="text/markdown"}
+license         = {text = "zlib"}
+requires-python = ">=3"
+maintainers     = [{name = "Paul McCarthy", email = "pauldmccarthy@gmail.com"}]
+classifiers     = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: zlib/libpng License",
+    "Programming Language :: C",
+    "Programming Language :: Cython",
+    "Programming Language :: Python :: 2",
+    "Programming Language :: Python :: 3",
+    "Topic :: System :: Archiving :: Compression",
+]
+
+[project.urls]
+"Repository" = "https://github.com/pauldmccarthy/indexed_gzip"
+
+[project.optional-dependencies]
+test = [
+  "pytest",
+  "numpy",
+  "nibabel",
+  "coverage",
+  "pytest-cov"
+]
+
+[tool.setuptools.packages.find]
+include = ["indexed_gzip*"]
+
+[tool.setuptools.dynamic]
+version = {attr = "indexed_gzip.__version__"}
+
 
 [tool.pytest.ini_options]
 testpaths = ["indexed_gzip/tests"]
@@ -9,3 +48,7 @@ markers = [
     "indexed_gzip_test: Test the indexed_gzip library",
     "nibabel_test:      Test interaction between indexed_gzip and nibabel/numpy",
     "slow_test:         Test which takes a long time"]
+
+[tool.coverage.run]
+include = ["indexed_gzip/*"]
+omit    = ["indexed_gzip/tests/*"]

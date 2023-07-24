@@ -796,7 +796,7 @@ def test_read_all(testfile, no_fds, nelems, use_mmap):
 
         zran.zran_free(&index)
 
-    nelemsp = nbytes / 8.
+    nelemsp = nbytes // 8.
     data    = np.PyArray_SimpleNewFromData(1, &nelemsp,  np.NPY_UINT64, buffer)
 
     assert check_data_valid(data, 0)
@@ -855,7 +855,7 @@ def test_seek_then_read_block(testfile, no_fds, nelems, niters, seed, use_mmap):
                 print('  should be: {}'.format((se + readelems) * 8))
                 raise
 
-            nelemsp = nbytes / 8.
+            nelemsp = nbytes // 8.
             data    = np.PyArray_SimpleNewFromData(1, &nelemsp,  np.NPY_UINT64, buffer)
 
             assert check_data_valid(data, se, se + readelems)

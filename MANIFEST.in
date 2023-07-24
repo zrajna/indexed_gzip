@@ -1,0 +1,4 @@
+recursive-include indexed_gzip *.pyx
+recursive-include indexed_gzip *.pxd
+recursive-include indexed_gzip *.c
+recursive-include indexed_gzip *.h

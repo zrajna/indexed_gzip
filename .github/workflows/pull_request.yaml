@@ -50,7 +50,7 @@ jobs:
   # Quick tests on 32 bit platform
   test-32bit:
     runs-on: ubuntu-latest
-    container: i386/ubuntu:18.04
+    container: i386/ubuntu:20.04
     strategy:
       matrix:
         python-version: ["3.10"]

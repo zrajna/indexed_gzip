@@ -15,7 +15,7 @@ export CIBW_BEFORE_ALL_LINUX="yum install -y zlib-devel || apt-get install -y zl
 export CIBW_ENVIRONMENT_WINDOWS="ZLIB_HOME='$ZLIB_HOME'"
 
 # Run quick test suite on built wheels.
-export CIBW_TEST_REQUIRES="cython pytest numpy nibabel"
+export CIBW_TEST_REQUIRES="cython pytest numpy nibabel coverage cython-coverage pytest-cov"
 
 # Disable pypy builds (reasons for doing this have been lost to
 # history [GHA logs of failing builds deleted]).
@@ -34,9 +34,9 @@ export CIBW_TEST_SKIP="*i686* *aarch64*"
 # Pytest makes it *very* awkward to run tests
 # from an installed package, and still find/
 # interpret a conftest.py file correctly.
-echo '#!/usr/bin/env bash'                                               >  testcmd
-echo 'cp $1/pyproject.toml .'                                            >> testcmd
-echo 'python -m indexed_gzip.tests -c pyproject.toml -m "not slow_test"' >> testcmd
+echo '#!/usr/bin/env bash'                                                        >  testcmd
+echo 'cp $1/pyproject.toml .'                                                     >> testcmd
+echo 'python -m indexed_gzip.tests -c pyproject.toml -m --no-cov "not slow_test"' >> testcmd
 chmod a+x testcmd
 
 export CIBW_TEST_COMMAND="bash {project}/testcmd {project}"

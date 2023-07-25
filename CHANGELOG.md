@@ -5,7 +5,7 @@
 
 
 * Compatibility fixes for Python 3.12 and Cython 3.0.0 (#126, #127).
-* Removed support for Python 2.7 (#127).
+* Removed support for Python 2.7 (#128).
 
 
 ## 1.7.1 (March 31st 2023)

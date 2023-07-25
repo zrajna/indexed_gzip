@@ -1,6 +1,12 @@
 # `indexed_gzip` changelog
 
 
+## 1.8.2 (July 25th 2023)
+
+
+* Adjustment to package build process (#134).
+
+
 ## 1.8.1 (July 25th 2023)
 
 

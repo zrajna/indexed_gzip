@@ -1,6 +1,13 @@
 # `indexed_gzip` changelog
 
 
+## 1.8.1 (July 25th 2023)
+
+
+* Now building packages for python >=3.7, as recent versions of setuptools do
+  not support older Python versions (#133).
+
+
 ## 1.8.0 (July 24th 2023)
 
 

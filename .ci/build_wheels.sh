@@ -36,7 +36,7 @@ export CIBW_TEST_SKIP="*i686* *aarch64*"
 # interpret a conftest.py file correctly.
 echo '#!/usr/bin/env bash'                                                        >  testcmd
 echo 'cp $1/pyproject.toml .'                                                     >> testcmd
-echo 'python -m indexed_gzip.tests -c pyproject.toml -m --no-cov "not slow_test"' >> testcmd
+echo 'python -m indexed_gzip.tests -c pyproject.toml --no-cov -m "not slow_test"' >> testcmd
 chmod a+x testcmd
 
 export CIBW_TEST_COMMAND="bash {project}/testcmd {project}"

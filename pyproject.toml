@@ -30,7 +30,8 @@ test = [
   "numpy",
   "nibabel",
   "coverage",
-  "pytest-cov"
+  "pytest-cov",
+  "cython-coverage"
 ]
 
 [tool.setuptools.packages.find]

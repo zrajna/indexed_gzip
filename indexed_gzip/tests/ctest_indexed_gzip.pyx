@@ -218,6 +218,11 @@ def test_init_failure_cases(concat, drop):
         with pytest.raises(ValueError):
             f = igzip._IndexedGzipFile(drop_handles=drop)
 
+        # Doesn't exist
+        with pytest.raises(FileNotFoundError):
+            f = igzip._IndexedGzipFile(filename='no_file.gz',
+                                       drop_handles=drop)
+
         # can only specify one of filename/fid
         with pytest.raises(ValueError):
             with open(testfile, mode='rb'):

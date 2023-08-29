@@ -4,11 +4,13 @@
 #
 set -e
 
-curl -o zlib.tar.gz https://www.zlib.net/zlib-1.2.13.tar.gz
+ZLIB_VERSION=1.3
+
+curl -o zlib.tar.gz https://www.zlib.net/zlib-${ZLIB_VERSION}.tar.gz
 
 tar -xzf zlib.tar.gz
 
-ZLIB_HOME=$(pwd)/zlib-1.2.13
+ZLIB_HOME=$(pwd)/zlib-${ZLIB_VERSION}
 
 # if windows, turn /drive/path/to/zlib into
 # drive:/path/to/zlib.

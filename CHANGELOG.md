@@ -1,11 +1,17 @@
 # `indexed_gzip` changelog
 
 
+## 1.8.4 (August 30th 2023)
+
+
+* Change the `IndexedGzipFile` class to raise a `FileNotFoundError` instead
+  of a `ValueError`, when a path to a non-existent file is provided (#137).
+
+
 ## 1.8.3 (July 25th 2023)
 
 
 * Another adjustment to package build process (#135).
-
 
 
 ## 1.8.2 (July 25th 2023)

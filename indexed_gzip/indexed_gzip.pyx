@@ -372,7 +372,7 @@ cdef class _IndexedGzipFile:
         # a segmentation fault on linux. So
         # let's check before that happens.
         if (filename is not None) and (not op.isfile(filename)):
-            raise FileNotFoundError(f'File {filename} does not exist')
+            raise DoesNotExistError(f'File {filename} does not exist')
 
         mode     = 'rb'
         own_file = fileobj is None
@@ -1116,14 +1116,12 @@ class NotCoveredError(ValueError):
     this error will only occur on attempts to call the ``seek`` method
     with ``whence=SEEK_END``, where the index has not been completely built.
     """
-    pass
 
 
 class ZranError(IOError):
     """Exception raised by the :class:`_IndexedGzipFile` when the ``zran``
     library signals an error.
     """
-    pass
 
 
 class CrcError(OSError):
@@ -1131,13 +1129,18 @@ class CrcError(OSError):
     validation check fails, which suggests that the GZIP data might be
     corrupt.
     """
-    pass
 
 
 class NoHandleError(ValueError):
     """Exception raised by the :class:`_IndexedGzipFile` when
     ``drop_handles is True`` and an attempt is made to access the underlying
     file object.
+    """
+
+
+class DoesNotExistError(ValueError, FileNotFoundError):
+    """Exception raised by the :class:`_IndexedGzipFile` when it is passed
+    a path to a file that does not exist.
     """
 
 

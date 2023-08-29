@@ -1,13 +1,13 @@
 # This workflow runs the full set of of indexed_gzip
 # unit tests on a range of different versions of Python,
 # and on different operating systems and architectures.
-# It is run on pushes to the master branch.
+# It is run on pushes to the main branch.
 
 
 on:
   push:
     branches:
-      - master
+      - main
 
 
 defaults:

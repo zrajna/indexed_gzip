@@ -364,7 +364,8 @@ cdef class _IndexedGzipFile:
                              'in read-only binary ("rb") mode')
 
         if (fileobj is None) and (mode not in (None, 'r', 'rb')):
-            raise ValueError(f'Invalid mode ({mode}), must be "r" or "rb"')
+            raise ValueError('Invalid mode ({}), must be '
+                             '"r" or "rb"'.format(mode))
 
         # If __file_handle is called on a file
         # that doesn't exist, it passes the
@@ -372,7 +373,7 @@ cdef class _IndexedGzipFile:
         # a segmentation fault on linux. So
         # let's check before that happens.
         if (filename is not None) and (not op.isfile(filename)):
-            raise DoesNotExistError(f'File {filename} does not exist')
+            raise DoesNotExistError('File {} does not exist'.format(filename))
 
         mode     = 'rb'
         own_file = fileobj is None
@@ -426,8 +427,8 @@ cdef class _IndexedGzipFile:
                               window_size=window_size,
                               readbuf_size=readbuf_size,
                               flags=flags):
-                raise ZranError('zran_init returned error '
-                                f'(file: {self.errname})')
+                raise ZranError('zran_init returned error (file: '
+                                '{})'.format(self.errname))
 
         log.debug('%s.__init__(%s, %s, %s, %s, %s, %s, %s)',
                   type(self).__name__,
@@ -545,8 +546,8 @@ cdef class _IndexedGzipFile:
         """Closes this ``_IndexedGzipFile``. """
 
         if self.closed:
-            raise IOError('_IndexedGzipFile is already '
-                          f'closed (file: {self.errname})')
+            raise IOError('_IndexedGzipFile is already closed '
+                          '(file: {})'.format(self.errname))
 
         if   self.own_file and self.pyfid    is not None: self.pyfid.close()
         elif self.own_file and self.index.fd is not NULL: fclose(self.index.fd)
@@ -654,22 +655,23 @@ cdef class _IndexedGzipFile:
         cdef zran.zran_index_t *index    = &self.index
 
         if whence not in (SEEK_SET, SEEK_CUR, SEEK_END):
-            raise ValueError(f'Invalid value for whence: {whence}')
+            raise ValueError('Invalid value for whence: {}'.format(whence))
 
         with self.__file_handle(), nogil:
             ret = zran.zran_seek(index, off, c_whence, NULL)
 
         if ret == zran.ZRAN_SEEK_NOT_COVERED:
             raise NotCoveredError('Index does not cover '
-                                  f'offset {offset}')
+                                  'offset {}'.format(offset))
 
         elif ret == zran.ZRAN_SEEK_INDEX_NOT_BUILT:
             raise NotCoveredError('Index must be completely built '
                                   'in order to seek from SEEK_END')
 
         elif ret == zran.ZRAN_SEEK_CRC_ERROR:
-            raise CrcError('CRC/size validation failed - the GZIP data '
-                           f'might be corrupt (file: {self.errname})')
+            raise CrcError('CRC/size validation failed - the '
+                           'GZIP data might be corrupt (file: '
+                           '{})'.format(self.errname))
 
         elif ret not in (zran.ZRAN_SEEK_OK, zran.ZRAN_SEEK_EOF):
             raise ZranError('zran_seek returned error: {} (file: {})'
@@ -734,8 +736,9 @@ cdef class _IndexedGzipFile:
                 # CRC or size check failed - data
                 # might be corrupt
                 elif ret == zran.ZRAN_READ_CRC_ERROR:
-                    raise CrcError('CRC/size validation failed - the GZIP data '
-                                   f'might be corrupt (file: {self.errname})')
+                    raise CrcError('CRC/size validation failed - the '
+                                   'GZIP data might be corrupt (file: '
+                                   '{})'.format(self.errname))
 
 
                 # Unknown error

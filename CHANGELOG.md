@@ -1,7 +1,13 @@
 # `indexed_gzip` changelog
 
 
-## 1.8.4 (August 30th 2023)
+## 1.8.5 (August 29th 2023)
+
+
+*  Updates to package build process (#138).
+
+
+## 1.8.4 (August 29th 2023)
 
 
 * Change the `IndexedGzipFile` class to raise a `FileNotFoundError` instead

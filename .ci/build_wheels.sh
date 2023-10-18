@@ -24,7 +24,7 @@ export CIBW_TEST_REQUIRES="cython pytest numpy nibabel coverage cython-coverage 
 # compiling numpy takes too long, and causes GHA jobs to time out).
 #
 # Disable py312 builds until numpy is available
-export CIBW_SKIP="pp* *musllinux* *312*"
+export CIBW_SKIP="pp* *musllinux*"
 
 # Skip i686/aarch64 tests - I have experienced hangs on these
 # platforms, which I traced to a trivial numpy operation -

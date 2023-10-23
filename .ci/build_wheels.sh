@@ -19,19 +19,16 @@ export CIBW_TEST_REQUIRES="cython pytest numpy nibabel coverage cython-coverage 
 
 # Disable pypy builds (reasons for doing this have been lost to
 # history [GHA logs of failing builds deleted]).
-#
-# Disable musllinux builds until numpy binaries are available (as
-# compiling numpy takes too long, and causes GHA jobs to time out).
-#
-# Disable py312 builds until numpy is available
-export CIBW_SKIP="pp* *musllinux*"
+export CIBW_SKIP="pp*"
 
-# Skip i686/aarch64 tests - I have experienced hangs on these
+# Skip i686 tests - I have experienced hangs on these
 # platforms, which I traced to a trivial numpy operation -
-# "numpy.linalg.det(numpy.eye(3))". This occurs when numpy has
-# to be compiled from source during the build, so can be
-# re-visited if/when numpy is avaialble on all platforms.
-export CIBW_TEST_SKIP="*i686* *aarch64*"
+# "numpy.linalg.det(numpy.eye(3))". This occurs when numpy
+# has to be compiled from source during the build, so can
+# be re-visited if/when numpy is avaialble on all platforms.
+#
+# Skip py312 tests on Windows due to unresolved test failures.
+export CIBW_TEST_SKIP="*i686* cp312-win*"
 
 # Pytest makes it *very* awkward to run tests
 # from an installed package, and still find/

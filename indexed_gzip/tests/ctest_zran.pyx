@@ -181,7 +181,7 @@ cdef class ReadBuffer:
                     zeros    = np.zeros(min(towrite, 134217728), dtype=np.uint8)
                     towrite -= len(zeros)
 
-                    os.write(fd, zeros.tostring())
+                    os.write(fd, zeros.tobytes())
 
             th = threading.Thread(target=initmem)
             th.start()
@@ -1133,7 +1133,7 @@ def test_export_import_no_points(no_fds):
     with tempdir():
 
         with gzip.open('data.gz', 'wb') as f:
-            f.write(data.tostring())
+            f.write(data.tobytes())
 
         with open('data.gz', 'rb')  as pyfid:
             cfid = fdopen(pyfid.fileno(), 'rb')
@@ -1187,7 +1187,7 @@ def test_export_import_format_v0():
     with tempdir():
 
         with gzip.open('data.gz', 'wb') as f:
-            f.write(data.tostring())
+            f.write(data.tobytes())
 
         with open('data.gz', 'rb')  as pyfid:
             cfid = fdopen(pyfid.fileno(), 'rb')

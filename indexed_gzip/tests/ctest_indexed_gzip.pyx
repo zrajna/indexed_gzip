@@ -68,7 +68,7 @@ def test_open_close(testfile, nelems, seed, drop):
 
     assert not f.closed
 
-    element = np.random.randint(0, nelems, 1)
+    element = np.random.randint(0, nelems, 1)[0]
     readval = read_element(f, element)
 
     assert readval == element
@@ -90,7 +90,7 @@ def test_open_function(testfile, nelems):
         f1 = igzip.IndexedGzipFile(testfile)
         f2 = igzip.open(           testfile)
 
-        element  = np.random.randint(0, nelems, 1)
+        element  = np.random.randint(0, nelems, 1)[0]
         readval1 = read_element(f1, element)
         readval2 = read_element(f2, element)
 
@@ -106,7 +106,7 @@ def test_open_close_ctxmanager(testfile, nelems, seed, drop):
 
     with igzip._IndexedGzipFile(filename=testfile, drop_handles=drop) as f:
 
-        element = np.random.randint(0, nelems, 1)
+        element = np.random.randint(0, nelems, 1)[0]
         readval = read_element(f, element)
 
     assert readval == element
@@ -262,7 +262,7 @@ def test_create_from_open_handle(testfile, nelems, seed, drop, file_like_object)
     assert gzf.fileobj() is f
     assert not gzf.drop_handles
 
-    element = np.random.randint(0, nelems, 1)
+    element = np.random.randint(0, nelems, 1)[0]
     readval = read_element(gzf, element)
 
     gzf.close()
@@ -291,7 +291,7 @@ def test_accept_filename_or_fileobj(testfile, nelems):
         gzf2 = igzip._IndexedGzipFile(f)
         gzf3 = igzip._IndexedGzipFile(fileobj=BytesIO(open(testfile, 'rb').read()))
 
-        element  = np.random.randint(0, nelems, 1)
+        element  = np.random.randint(0, nelems, 1)[0]
         readval1 = read_element(gzf1, element)
         readval2 = read_element(gzf2, element)
         readval3 = read_element(gzf3, element)
@@ -329,7 +329,7 @@ def test_prioritize_fd_over_f(testfile, nelems):
         f.read  = error_fn  # If the file-like object were directly used by zran.c, reading would raise an error.
         gzf     = igzip._IndexedGzipFile(fileobj=f)
 
-        element  = np.random.randint(0, nelems, 1)
+        element  = np.random.randint(0, nelems, 1)[0]
         readval  = read_element(gzf, element)
 
         assert readval == element
@@ -353,7 +353,7 @@ def test_handles_not_dropped(testfile, nelems, seed):
         # doesn't change across reads
         for i in range(5):
 
-            element = np.random.randint(0, nelems, 1)
+            element = np.random.randint(0, nelems, 1)[0]
             readval = read_element(f, element)
 
             assert readval == element
@@ -367,7 +367,7 @@ def test_handles_not_dropped(testfile, nelems, seed):
 
             for i in range(5):
 
-                element = np.random.randint(0, nelems, 1)
+                element = np.random.randint(0, nelems, 1)[0]
                 readval = read_element(gzf, element)
 
                 assert readval == element
@@ -413,7 +413,7 @@ def test_manual_build():
             f.build_full_index()
 
             for i in range(5):
-                element = np.random.randint(0, nelems, 1)
+                element = np.random.randint(0, nelems, 1)[0]
                 readval = read_element(f, element)
                 assert readval == element
 
@@ -925,7 +925,7 @@ def test_build_index_from_unseekable():
         # make a test file
         data = np.arange(524288, dtype=np.uint64)
         with gzip.open(fname, 'wb') as f:
-            f.write(data.tostring())
+            f.write(data.tobytes())
 
         # Test creating the index when file is unseekable,
         # then using the index when file is seekable.
@@ -967,7 +967,7 @@ def test_wrapper_class():
 
         data = np.arange(65536, dtype=np.uint64)
         with gzip.open(fname, 'wb') as f:
-            f.write(data.tostring())
+            f.write(data.tobytes())
 
         with igzip.IndexedGzipFile(fname, drop_handles=False) as f:
 

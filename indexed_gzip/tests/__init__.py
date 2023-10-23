@@ -77,7 +77,7 @@ def compress(infile, outfile, buflen=-1):
                 if len(data) == 0:
                     break
                 with open(outfile, 'ab') as outf:
-                    gzip.GzipFile(fileobj=outf).write(data)
+                    gzip.GzipFile(fileobj=outf, mode='ab').write(data)
 
     def compress_with_gzip_command():
 

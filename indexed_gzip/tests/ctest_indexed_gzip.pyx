@@ -493,6 +493,10 @@ def test_read_beyond_end(concat, drop):
         assert check_data_valid(data1, 0)
         assert check_data_valid(data2, 0)
 
+        del f
+        f = None
+        os.remove(testfile)
+
 
 def test_seek(concat):
     with tempdir() as tdir:

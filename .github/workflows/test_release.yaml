@@ -1,7 +1,6 @@
-# This workflow builds binary wheels for indexed_gzip, for
-# different platforms and different Python versions, using
-# cibuildwheel. It is triggered manually. The built wheels
-# are published to PyPi.
+# This workflow builds binary wheels for indexed_gzip,
+# for different platforms and different Python versions,
+# using cibuildwheel. It is triggered manually.
 
 on:
   workflow_dispatch
@@ -109,27 +108,3 @@ jobs:
         with:
           name: wheels
           path: ./dist/*.whl
-
-
-  publish_to_pypi:
-    name:    Publish indexed_gzip to PyPi
-    runs-on: ubuntu-latest
-    needs:   [build_sdist, build_macos_wheels, build_windows_wheels, build_linux_wheels]
-    steps:
-
-      - name: Download source archive
-        uses: actions/download-artifact@v2
-        with:
-          name: sdist
-          path: dist/
-      - name: Download wheel archives
-        uses: actions/download-artifact@v2
-        with:
-          name: wheels
-          path: dist/
-
-      - name: Publish archives to PyPI
-        uses: pypa/gh-action-pypi-publish@v1.4.1
-        with:
-          user:     __token__
-          password: ${{ secrets.PYPI_TOKEN }}

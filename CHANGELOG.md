@@ -1,7 +1,7 @@
 # `indexed_gzip` changelog
 
 
-## 1.8.6 (November 2nd 2023)
+## 1.8.7 (November 2nd 2023)
 
 
 * Enable Python 3.12 and `musllinux` builds (#139).

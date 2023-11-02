@@ -125,7 +125,9 @@ libs                = []
 extra_srcs          = []
 extra_compile_args  = []
 compiler_directives = {'language_level' : 2}
-define_macros       = []
+define_macros       = [
+    ('NPY_NO_DEPRECATED_API', 'NPY_1_7_API_VERSION'),
+]
 
 if ZLIB_HOME is not None:
     include_dirs.append(ZLIB_HOME)

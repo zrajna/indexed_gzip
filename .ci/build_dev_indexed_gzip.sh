@@ -13,4 +13,4 @@ source $thisdir/activate_env.sh "$envdir"
 # modules - see setup.py
 export INDEXED_GZIP_TESTING=1
 
-pip install -e .
+pip install --no-build-isolation --editable .

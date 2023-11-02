@@ -20,7 +20,7 @@ import numpy as np
 
 
 def tempdir():
-    """Returnsa context manager which creates and returns a temporary
+    """Returns a context manager which creates and returns a temporary
     directory, and then deletes it on exit.
     """
 
@@ -34,6 +34,7 @@ def tempdir():
 
         def __exit__(self, *a, **kwa):
             os.chdir(self.prevdir)
+            time.sleep(0.25)
             shutil.rmtree(self.tempdir)
 
     return ctx()
@@ -77,7 +78,7 @@ def compress(infile, outfile, buflen=-1):
                 if len(data) == 0:
                     break
                 with open(outfile, 'ab') as outf:
-                    gzip.GzipFile(fileobj=outf).write(data)
+                    gzip.GzipFile(fileobj=outf, mode='ab').write(data)
 
     def compress_with_gzip_command():
 

@@ -43,7 +43,7 @@ version = {attr = "indexed_gzip.__version__"}
 
 [tool.pytest.ini_options]
 testpaths = ["indexed_gzip/tests"]
-addopts = "-v --cov=indexed_gzip"
+addopts = "-v --cov=indexed_gzip --showlocals"
 markers = [
     "zran_test:         Test the zran.c library",
     "indexed_gzip_test: Test the indexed_gzip library",

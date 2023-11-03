@@ -24,7 +24,8 @@ export CIBW_SKIP="pp*"
 # Make sure numpy can be built without BLAS being present
 # (it may end up being built from source on some platforms)
 # https://github.com/numpy/numpy/issues/24703#issuecomment-1722379388
-export PIP_CONFIG_SETTINGS='setup-args="-Dallow-noblas=true"'
+export CIBW_BUILD_FRONTEND="pip; args: --no-build-isolation"
+export CIBW_BEFORE_BUILD='pip install cython numpy setuptools --config-settings=setup-args="-Dallow-noblas=true"'
 
 # Skip i686 tests - I have experienced hangs on these
 # platforms, which I traced to a trivial numpy operation -

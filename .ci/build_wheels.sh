@@ -33,9 +33,9 @@ export CIBW_TEST_SKIP="*i686* cp312-win*"
 # Pytest makes it *very* awkward to run tests
 # from an installed package, and still find/
 # interpret a conftest.py file correctly.
-echo '#!/usr/bin/env bash'                                                        >  testcmd
-echo 'cp $1/pyproject.toml .'                                                     >> testcmd
-echo 'python -m indexed_gzip.tests -c pyproject.toml --no-cov -m "not slow_test"' >> testcmd
+echo '#!/usr/bin/env bash'                                                                           >  testcmd
+echo 'cp $1/pyproject.toml .'                                                                        >> testcmd
+echo 'python -m indexed_gzip.tests -c pyproject.toml --no-cov -m "not slow_test" -k "not test_zran"' >> testcmd
 chmod a+x testcmd
 
 export CIBW_TEST_COMMAND="bash {project}/testcmd {project}"

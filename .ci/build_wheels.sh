@@ -21,26 +21,27 @@ export CIBW_TEST_REQUIRES="cython pytest numpy nibabel coverage cython-coverage 
 # history [GHA logs of failing builds deleted]).
 export CIBW_SKIP="pp*"
 
-# Make sure numpy can be built without BLAS being present
-# (it may end up being built from source on some platforms)
-# https://github.com/numpy/numpy/issues/24703#issuecomment-1722379388
-export PIP_CONFIG_SETTINGS='setup-args="-Dallow-noblas=true"'
+# Skip i686 and aarch64 tests
 
-# Skip i686 tests - I have experienced hangs on these
-# platforms, which I traced to a trivial numpy operation -
-# "numpy.linalg.det(numpy.eye(3))". This occurs when numpy
-# has to be compiled from source during the build, so can
-# be re-visited if/when numpy is avaialble on all platforms.
+#  - I have experienced hangs on these platforms,
+#    which I traced to a trivial numpy operation -
+#    "numpy.linalg.det(numpy.eye(3))".
+
+#  - Numpy wheels are not available for these
+#    platforms, so has to be compiled from source
+#    during the build, which massively increases
+#    build time and complexity.
 #
-# Skip py312 tests on Windows due to unresolved test failures.
-export CIBW_TEST_SKIP="*i686* cp312-win*"
+# Skip py312 tests on Windows due to unresolved
+# test failures.
+export CIBW_TEST_SKIP="*i686* *aarch64* cp312-win*"
 
 # Pytest makes it *very* awkward to run tests
 # from an installed package, and still find/
 # interpret a conftest.py file correctly.
-echo '#!/usr/bin/env bash'                                                        >  testcmd
-echo 'cp $1/pyproject.toml .'                                                     >> testcmd
-echo 'python -m indexed_gzip.tests -c pyproject.toml --no-cov -m "not slow_test"' >> testcmd
+echo '#!/usr/bin/env bash'                                                                           >  testcmd
+echo 'cp $1/pyproject.toml .'                                                                        >> testcmd
+echo 'python -m indexed_gzip.tests -c pyproject.toml --no-cov -m "not slow_test" -k "not test_zran"' >> testcmd
 chmod a+x testcmd
 
 export CIBW_TEST_COMMAND="bash {project}/testcmd {project}"

@@ -7,15 +7,22 @@
 
 from __future__ import print_function
 
+import warnings
+
 import sys
 
-if not sys.platform.startswith("win"):
+try:
+    from . import ctest_zran
+except ImportError:
+    warnings.warn(UserWarning('indexed_gzip.ctest_zran not '
+                              'found - cannot run zran tests'))
+    ctest_zran = None
+
+if (ctest_zran is not None) and (not sys.platform.startswith("win")):
     # Run these tests only on POSIX systems
     import pytest
 
     import numpy as np
-
-    from . import ctest_zran
 
     pytestmark = pytest.mark.zran_test
 

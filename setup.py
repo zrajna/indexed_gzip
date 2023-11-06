@@ -177,17 +177,7 @@ igzip_ext = Extension(
     define_macros=define_macros)
 
 # Optional test modules
-test_exts = [
-    Extension(
-        'indexed_gzip.tests.ctest_indexed_gzip',
-        [op.join('indexed_gzip', 'tests',
-                 'ctest_indexed_gzip.{}'.format(pyx_ext))],
-        libraries=libs,
-        library_dirs=lib_dirs,
-        include_dirs=include_dirs,
-        extra_compile_args=extra_compile_args,
-        define_macros=define_macros)
-]
+test_exts = []
 
 if not windows:
     # Uses POSIX memmap API so won't work on Windows

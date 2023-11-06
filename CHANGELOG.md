@@ -1,10 +1,11 @@
 # `indexed_gzip` changelog
 
 
-## 1.8.7 (November 2nd 2023)
+## 1.8.7 (November 6th 2023)
 
 
 * Enable Python 3.12 and `musllinux` builds (#139).
+* Remove `numpy` as a mandatory build-time dependency (#142, #143).
 
 
 ## 1.8.5 (August 29th 2023)

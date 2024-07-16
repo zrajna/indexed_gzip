@@ -55,7 +55,7 @@ jobs:
     container: i386/ubuntu:20.04
     strategy:
       matrix:
-        python-version: ["3.9"]
+        python-version: ["3.11"]
         extra-args:     ["", "--concat"]
 
     env:
@@ -68,7 +68,7 @@ jobs:
     steps:
       - name: Install git
         run:  apt-get update -y && apt-get install -y git
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v1
       - name: Install system dependencies
         run:  bash ./.ci/install_32bit_dependencies.sh
       - name: Create test environment

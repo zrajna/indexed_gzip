@@ -1,6 +1,12 @@
 # `indexed_gzip` changelog
 
 
+## 1.8.8 (November 7th 2024)
+
+
+* Enable Python 3.13 builds (#150).
+
+
 ## 1.8.7 (November 6th 2023)
 
 

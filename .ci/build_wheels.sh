@@ -31,10 +31,7 @@ export CIBW_SKIP="pp*"
 #    platforms, so has to be compiled from source
 #    during the build, which massively increases
 #    build time and complexity.
-#
-# Skip py312 tests on Windows due to unresolved
-# test failures.
-export CIBW_TEST_SKIP="*i686* *aarch64* cp312-win*"
+export CIBW_TEST_SKIP="*i686* *aarch64*"
 
 # Pytest makes it *very* awkward to run tests
 # from an installed package, and still find/

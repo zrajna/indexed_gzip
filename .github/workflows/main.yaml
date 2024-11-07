@@ -22,11 +22,8 @@ jobs:
     strategy:
       matrix:
         os:             ["ubuntu-latest", "macos-latest", "windows-latest"]
-        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
+        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
         extra-args:     ["", "--concat"]
-        exclude:
-          - os:             windows-latest
-            python-version: 3.12
 
     env:
       PLATFORM:       ${{ matrix.os }}
@@ -99,7 +96,7 @@ jobs:
 
     env:
       PLATFORM:       ${{ matrix.os }}
-      PYTHON_VERSION: 3.10
+      PYTHON_VERSION: 3.11
       TEST_SUITE:     ${{ matrix.test-suite }}
       EXTRA_ARGS:     ${{ matrix.extra-args }}
       NELEMS:         ${{ matrix.nelems }}
@@ -110,7 +107,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.10"
+          python-version: "3.11"
       - name: Create test environment
         run:  bash ./.ci/create_test_env.sh "$ENV_DIR"
       - name: Log test environment
@@ -208,7 +205,7 @@ jobs:
 
     env:
       PLATFORM:       ${{ matrix.os }}
-      PYTHON_VERSION: "3.10"
+      PYTHON_VERSION: "3.11"
       TEST_SUITE:     "zran_test"
       TEST_PATTERN:   ${{ matrix.test-pattern }}
       EXTRA_ARGS:     ${{ matrix.extra-args }}
@@ -221,7 +218,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.10"
+          python-version: "3.11"
       - name: Create test environment
         run:  bash ./.ci/create_test_env.sh "$ENV_DIR"
       - name: Log test environment

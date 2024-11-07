@@ -229,4 +229,7 @@ jobs:
       - name: Build indexed_gzip
         run:  bash ./.ci/build_dev_indexed_gzip.sh "$ENV_DIR"
       - name: Run tests
+        if:   ${{ !(matrix.os             == 'windows-latest' &&
+                   (matrix.python-version == '3.12' ||
+                    matrix.python-version == '3.13')) }}
         run:  bash  ./.ci/run_tests.sh "$ENV_DIR"

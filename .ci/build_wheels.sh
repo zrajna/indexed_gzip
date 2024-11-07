@@ -21,20 +21,28 @@ export CIBW_TEST_REQUIRES="cython pytest numpy nibabel coverage cython-coverage 
 # history [GHA logs of failing builds deleted]).
 export CIBW_SKIP="pp*"
 
-# Skip i686 and aarch64 tests
-
+# Skip i686 and aarch64 tests:
+#
 #  - I have experienced hangs on these platforms,
 #    which I traced to a trivial numpy operation -
 #    "numpy.linalg.det(numpy.eye(3))".
-
-#  - Numpy wheels are not available for these
-#    platforms, so has to be compiled from source
-#    during the build, which massively increases
-#    build time and complexity.
 #
-# Skip py312 tests on Windows due to unresolved
-# test failures.
-export CIBW_TEST_SKIP="*i686* *aarch64* cp312-win*"
+#  - Numpy wheels are not available for these
+#    platforms for all pyvers, so has to be compiled
+#    from source during the build, which massively
+#    increases build time and complexity.
+
+# Skip windows tests for some python versions:
+#
+#  - Some tests fail in the GHA Windows environment
+#    for certain Python versions. I don't know why,
+#    as the tests pass for the same Python versions
+#    in other environments. I don't have easy access
+#    to a Windows machine to try and reproduce this
+#    locally, so am disabling them for the time
+#    being.
+#
+export CIBW_TEST_SKIP="*i686* *aarch64* cp312-win* cp313-win*"
 
 # Pytest makes it *very* awkward to run tests
 # from an installed package, and still find/

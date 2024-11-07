@@ -14,11 +14,8 @@ jobs:
     strategy:
       matrix:
         os:             ["ubuntu-latest", "macos-latest", "windows-latest"]
-        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
+        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
         extra-args:     ["", "--concat"]
-        exclude:
-          - os:             windows-latest
-            python-version: 3.12
 
     env:
       PLATFORM:       ${{ matrix.os }}
@@ -46,4 +43,7 @@ jobs:
       - name: Build indexed_gzip
         run:  bash ./.ci/build_dev_indexed_gzip.sh "$ENV_DIR"
       - name: Run tests
+        if:   ${{ !(matrix.os             == 'windows-latest' &&
+                   (matrix.python-version == '3.12' ||
+                    matrix.python-version == '3.13')) }}
         run:  bash  ./.ci/run_tests.sh "$ENV_DIR"

@@ -9,36 +9,44 @@ random access to gzip files.
 """
 
 
-from libc.stdio     cimport (SEEK_SET,
-                             SEEK_CUR,
-                             SEEK_END,
-                             FILE,
-                             fopen,
-                             fdopen,
-                             fclose)
+from libc.stdio                 cimport (SEEK_SET,
+                                         SEEK_CUR,
+                                         SEEK_END,
+                                         FILE,
+                                         fopen,
+                                         fdopen,
+                                         fclose)
 
-from libc.stdint    cimport (uint8_t,
-                             uint32_t,
-                             uint64_t,
-                             int64_t)
+from libc.stdint                cimport (uint8_t,
+                                         uint32_t,
+                                         uint64_t,
+                                         int64_t)
 
-from cpython.mem    cimport (PyMem_Malloc,
-                             PyMem_Realloc,
-                             PyMem_Free)
+from cpython.mem                cimport (PyMem_Malloc,
+                                         PyMem_Realloc,
+                                         PyMem_Free)
 
-from cpython.buffer cimport (PyObject_GetBuffer,
-                             PyBuffer_Release,
-                             PyBUF_ANY_CONTIGUOUS,
-                             PyBUF_SIMPLE)
+from cpython.buffer             cimport (PyObject_GetBuffer,
+                                         PyBuffer_Release,
+                                         PyBUF_ANY_CONTIGUOUS,
+                                         PyBUF_SIMPLE)
 
-from cpython.ref cimport PyObject, Py_XDECREF
-from cpython.exc cimport PyErr_Occurred, PyErr_Fetch, PyErr_NormalizeException
+from cpython.ref                cimport (PyObject,
+                                         Py_XDECREF)
+from cpython.exc                cimport (PyErr_Fetch,
+                                         PyErr_Fetch,
+                                         PyErr_NormalizeException,
+                                         PyErr_Occurred)
+from indexed_gzip.set_traceback cimport  PyException_SetTraceback
+
 
 cimport indexed_gzip.zran as zran
+
 
 import            io
 import            os
 import os.path as op
+import            sys
 import            pickle
 import            logging
 import            warnings
@@ -55,6 +63,9 @@ instead.
 """
 
 
+PY3 = sys.version_info[0] >= 3
+
+
 log = logging.getLogger(__name__)
 
 
@@ -69,14 +80,28 @@ def open(filename=None, fileobj=None, *args, **kwargs):
     return IndexedGzipFile(filename, fileobj, **kwargs)
 
 
-cdef _get_python_exception():
+cdef get_python_exception():
+    """Checks to see if a Python exception has occurred. If so, returns a
+    reference to the exception object. Returns None otherwise.
+
+    This function is used so that, if an IndexedGzipFile object is reading
+    from a Python file-like, and the file-like raises an error, the
+    information about that error is not lost.
+    """
     cdef PyObject *ptype
     cdef PyObject *pvalue
     cdef PyObject *ptraceback
     if PyErr_Occurred():
         PyErr_Fetch(&ptype, &pvalue, &ptraceback)
         PyErr_NormalizeException(&ptype, &pvalue, &ptraceback)
+
+        # Populate traceback info for the original exception
+        if PY3 and (ptraceback != NULL):
+            PyException_SetTraceback(pvalue, ptraceback)
+
         exc = <object>pvalue
+        if PY3 and (ptraceback != NULL):
+            PyException_SetTraceback(pvalue, NULL)
         Py_XDECREF(ptype)
         Py_XDECREF(pvalue)
         Py_XDECREF(ptraceback)
@@ -759,7 +784,7 @@ cdef class _IndexedGzipFile:
 
                 # Unknown error
                 elif ret < 0:
-                    exc = _get_python_exception()
+                    exc = get_python_exception()
                     raise ZranError('zran_read returned error: {} (file: '
                                     '{})'.format(ZRAN_ERRORS.ZRAN_READ[ret],
                                                  self.errname)) from exc
@@ -818,7 +843,7 @@ cdef class _IndexedGzipFile:
 
         # see how the read went
         if ret == zran.ZRAN_READ_FAIL:
-            exc = _get_python_exception()
+            exc = get_python_exception()
             raise ZranError('zran_read returned error: {} (file: {})'
                             .format(ZRAN_ERRORS.ZRAN_READ[ret], self.errname)) from exc
 

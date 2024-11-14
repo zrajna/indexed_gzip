@@ -510,7 +510,8 @@ def test_read_beyond_end(concat, drop):
 
 
 def test_read_exception(testfile, nelems):
-    """When wrapping a python file object, if it raises an exception it should be preserved.
+    """When wrapping a python file object, if it raises an exception
+    it should be preserved.
     """
     if sys.version_info[0] < 3:
         # We can't set the .read attribute in Python 2
@@ -521,15 +522,15 @@ def test_read_exception(testfile, nelems):
     gzf  = None
 
     MY_ERROR = "This error should be preserved"
-    # We'll use a weakref to check that we are handling reference counting correctly,
-    # and you cannot weakref an Exception, so we need a subclass.
+
+    # We'll use a weakref to check that we are handling reference counting
+    # correctly, and you cannot weakref an Exception, so we need a subclass.
     class MyException(Exception):
         pass
-    my_err_weak = None
+    my_err_weak = [None]
     def my_error_fn(*args, **kwargs):
         err = MyException(MY_ERROR)
-        nonlocal my_err_weak
-        my_err_weak = weakref.ref(err)
+        my_err_weak[0] = weakref.ref(err)
         raise err
 
     try:
@@ -540,15 +541,20 @@ def test_read_exception(testfile, nelems):
         try:
             gzf.read(1)
         except Exception as e:
-            assert MY_ERROR in str(e) or MY_ERROR in str(e.__cause__), f"Exception was not preserved; got {e}"
+            assert (MY_ERROR in str(e) or MY_ERROR in str(e.__cause__),
+                    "Exception was not preserved; got {}".format(e))
+            del e
         else:
             assert False, "Expected an exception to be raised"
+
+
     finally:
         if gzf is not None: gzf.close()
         if f   is not None: f  .close()
         del f
         del gzf
-    assert my_err_weak is None or my_err_weak() is None, "Exception was not garbage collected"
+    assert (my_err_weak[0] is None or my_err_weak[0]() is None,
+            "Exception was not garbage collected")
 
 
 def test_seek(concat):

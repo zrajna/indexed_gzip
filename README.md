@@ -311,6 +311,7 @@ Many thanks to the following contributors (listed chronologically):
  - Maximilian Knespel (@mxmlnkn) Change default read buffer size to
    improve performance (#90).
  - Ben Beasley (@musicinmybrain) Python 3.12 compatibility (#126).
+ - @camillol: Preserve exceptions raised by Python file-likes (#152).
 
 
 ## License

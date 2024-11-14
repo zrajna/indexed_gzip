@@ -1,6 +1,12 @@
 # `indexed_gzip` changelog
 
 
+## 1.9.0 (November 15th 2024)
+
+
+* Preserve exception information when reading from a Python file-like (#152).
+
+
 ## 1.8.8 (November 7th 2024)
 
 

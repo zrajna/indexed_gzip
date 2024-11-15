@@ -117,16 +117,11 @@ jobs:
     needs:   [build_sdist, build_macos_wheels, build_windows_wheels, build_linux_wheels]
     steps:
 
-      - name: Download source archive
+      - name: Download wheels
         uses: actions/download-artifact@v4
         with:
-          name: sdist
-          path: dist/
-      - name: Download wheel archives
-        uses: actions/download-artifact@v4
-        with:
-          name: wheels
-          path: dist/
+          path:           dist/
+          merge-multiple: true
 
       - name: Publish archives to PyPI
         uses: pypa/gh-action-pypi-publish@v1.11.0

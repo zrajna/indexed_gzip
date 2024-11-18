@@ -34,7 +34,7 @@ from cpython.buffer             cimport (PyObject_GetBuffer,
 from cpython.ref                cimport (PyObject,
                                          Py_XDECREF)
 from cpython.exc                cimport (PyErr_Fetch,
-                                         PyErr_Fetch,
+                                         PyErr_Restore,
                                          PyErr_NormalizeException,
                                          PyErr_Occurred)
 from indexed_gzip.set_traceback cimport  PyException_SetTraceback
@@ -102,6 +102,7 @@ cdef get_python_exception():
         exc = <object>pvalue
         if PY3 and (ptraceback != NULL):
             PyException_SetTraceback(pvalue, NULL)
+        PyErr_Restore(NULL, NULL, NULL)
         Py_XDECREF(ptype)
         Py_XDECREF(pvalue)
         Py_XDECREF(ptraceback)

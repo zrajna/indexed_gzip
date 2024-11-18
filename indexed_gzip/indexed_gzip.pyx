@@ -1,4 +1,4 @@
-# cython: binding=True,embedsignature=True
+# cython: binding=True,embedsignature=True,freethreading_compatible=True
 #
 # The IndexedGzipFile class.
 #

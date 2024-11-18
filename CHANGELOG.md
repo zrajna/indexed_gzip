@@ -4,7 +4,8 @@
 ## 1.9.2 (November 18th 2024)
 
 
-* Adjustment to exception handling (#158).
+* Enable builds for free-threading Python versions (#157).
+* Adjustment to exception handling (#159).
 
 
 ## 1.9.1 (November 15th 2024)

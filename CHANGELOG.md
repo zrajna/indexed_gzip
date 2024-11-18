@@ -1,6 +1,12 @@
 # `indexed_gzip` changelog
 
 
+## 1.9.2 (November 18th 2024)
+
+
+* Adjustment to exception handling (#158).
+
+
 ## 1.9.1 (November 15th 2024)
 
 

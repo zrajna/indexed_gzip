@@ -56,8 +56,11 @@ A major advantage of `indexed_gzip` is that it will work with any GZIP file.
 However, if you have control over the creation of your GZIP files, you may
 wish to consider some alternatives:
 
+ * [`rapidgzip`](https://github.com/mxmlnkn/rapidgzip/) is an accelerated
+   GZIP decompression library which works with any GZIP file.
  * [`mgzip`](https://github.com/vinlyx/mgzip/) provides an accelerated
-   GZIP compression and decompression library.
+   GZIP compression and decompression library; in order to obtain improved
+   performance you must create your files with `mgzip`.
  * Compression formats other than GZIP, such as `bzip2` and `xz`, have better
    support for random access.
 

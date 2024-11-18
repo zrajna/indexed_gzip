@@ -17,9 +17,12 @@ export CIBW_ENVIRONMENT_WINDOWS="ZLIB_HOME='$ZLIB_HOME'"
 # Run quick test suite on built wheels.
 export CIBW_TEST_REQUIRES="cython pytest numpy nibabel coverage cython-coverage pytest-cov"
 
-# Disable pypy builds (reasons for doing this have been lost to
-# history [GHA logs of failing builds deleted]).
-export CIBW_SKIP="pp*"
+# Disable python 3.7, as it is EOL as of June 2023, and
+# unsupported by cython>=3.1.0
+#
+# Disable pypy builds (reasons for doing this have been
+# lost to history [GHA logs of failing builds deleted]).
+export CIBW_SKIP="cp37* pp*"
 
 # Skip i686 and aarch64 tests:
 #

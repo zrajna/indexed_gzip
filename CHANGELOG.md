@@ -6,6 +6,7 @@
 
 * Enable builds for free-threading Python versions (#157).
 * Adjustment to exception handling (#159).
+* Remove Python 3.7 builds (#160).
 
 
 ## 1.9.1 (November 15th 2024)

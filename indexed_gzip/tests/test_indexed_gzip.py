@@ -509,7 +509,8 @@ def test_read_beyond_end(concat, drop):
         os.remove(testfile)
 
 
-def test_read_exception(testfile, nelems):
+@pytest.mark.parametrize('use_readinto', [False, True])
+def test_read_exception(testfile, nelems, use_readinto):
     """When wrapping a python file object, if it raises an exception
     it should be preserved.
     """
@@ -539,10 +540,13 @@ def test_read_exception(testfile, nelems):
         gzf = igzip._IndexedGzipFile(fileobj=f)
         f.read = my_error_fn
         try:
-            gzf.read(1)
+            if use_readinto:
+                ba = bytearray(1)
+                gzf.readinto(ba)
+            else:
+                gzf.read(1)
         except Exception as e:
-            assert (MY_ERROR in str(e) or MY_ERROR in str(e.__cause__),
-                    "Exception was not preserved; got {}".format(e))
+            assert MY_ERROR in str(e) or MY_ERROR in str(e.__cause__), "Exception was not preserved; got {}".format(e)
             del e
         else:
             assert False, "Expected an exception to be raised"

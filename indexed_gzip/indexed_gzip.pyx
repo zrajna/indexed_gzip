@@ -469,8 +469,9 @@ cdef class _IndexedGzipFile:
                               window_size=window_size,
                               readbuf_size=readbuf_size,
                               flags=flags):
+                exc = get_python_exception()
                 raise ZranError('zran_init returned error (file: '
-                                '{})'.format(self.errname))
+                                '{})'.format(self.errname)) from exc
 
         log.debug('%s.__init__(%s, %s, %s, %s, %s, %s, %s)',
                   type(self).__name__,
@@ -486,6 +487,7 @@ cdef class _IndexedGzipFile:
             self.import_index(index_file)
 
 
+    @contextlib.contextmanager
     def __file_handle(self):
         """This method is used as a context manager whenever access to the
         underlying file stream is required. It makes sure that ``index.fd``
@@ -493,38 +495,28 @@ cdef class _IndexedGzipFile:
         necessary (depending on the value of :attr:`drop_handles`).
         """
 
-        # Errors occur with Python 2.7 and
-        # Cython < 0.26 when decorating
-        # cdef-class methods. This workaround
-        # can be removed when you are happy
-        # dropping support for cython < 0.26.
-        @contextlib.contextmanager
-        def proxy():
+        # If a file handle already exists,
+        # return it. This clause makes this
+        # context manager reentrant.
+        if self.index.fd is not NULL:
+            yield
 
-            # If a file handle already exists,
-            # return it. This clause makes this
-            # context manager reentrant.
-            if self.index.fd is not NULL:
+        # If a file-like object exists (without an associated
+        # file descriptor, since self.index.fd is NULL),
+        # also return it.
+        elif self.pyfid is not None:
+            yield
+
+        # otherwise we open a new
+        # file handle on each access
+        else:
+            try:
+                self.index.fd = fopen(self.filename.encode(), 'rb')
                 yield
 
-            # If a file-like object exists (without an associated
-            # file descriptor, since self.index.fd is NULL),
-            # also return it.
-            elif self.pyfid is not None:
-                yield
-
-            # otherwise we open a new
-            # file handle on each access
-            else:
-                try:
-                    self.index.fd = fopen(self.filename.encode(), 'rb')
-                    yield
-
-                finally:
-                    fclose(self.index.fd)
-                    self.index.fd = NULL
-
-        return proxy()
+            finally:
+                fclose(self.index.fd)
+                self.index.fd = NULL
 
 
     def seek_points(self):
@@ -667,8 +659,10 @@ cdef class _IndexedGzipFile:
             ret = zran.zran_build_index(&self.index, 0, 0)
 
         if ret != zran.ZRAN_BUILD_INDEX_OK:
+            exc = get_python_exception()
             raise ZranError('zran_build_index returned error: {} (file: {})'
-                            .format(ZRAN_ERRORS.ZRAN_BUILD[ret], self.errname))
+                            .format(ZRAN_ERRORS.ZRAN_BUILD[ret],
+                                    self.errname)) from exc
 
         log.debug('%s.build_full_index()', type(self).__name__)
 
@@ -716,8 +710,10 @@ cdef class _IndexedGzipFile:
                            '{})'.format(self.errname))
 
         elif ret not in (zran.ZRAN_SEEK_OK, zran.ZRAN_SEEK_EOF):
+            exc = get_python_exception()
             raise ZranError('zran_seek returned error: {} (file: {})'
-                            .format(ZRAN_ERRORS.ZRAN_SEEK[ret], self.errname))
+                            .format(ZRAN_ERRORS.ZRAN_SEEK[ret],
+                                    self.errname)) from exc
 
         offset = self.tell()
 
@@ -826,6 +822,9 @@ cdef class _IndexedGzipFile:
         cdef void              *vbuf
         cdef int64_t            ret
 
+        # reference to any exceptions that are raised
+        exc = None
+
         # Create a Py_Buffer which allows
         # us to access the memory managed
         # by the provided buf
@@ -838,6 +837,9 @@ cdef class _IndexedGzipFile:
             with self.__file_handle():
                 with nogil:
                     ret = zran.zran_read(index, vbuf, bufsz)
+                # Something in __file_handle seems to clear
+                # the exception state, so we look now in
+                # case an exception has occurred
                 exc = get_python_exception()
 
         # release the py_buffer
@@ -847,7 +849,8 @@ cdef class _IndexedGzipFile:
         # see how the read went
         if ret == zran.ZRAN_READ_FAIL:
             raise ZranError('zran_read returned error: {} (file: {})'
-                            .format(ZRAN_ERRORS.ZRAN_READ[ret], self.errname)) from exc
+                            .format(ZRAN_ERRORS.ZRAN_READ[ret],
+                                    self.errname)) from exc
 
         # This will happen if the current
         # seek point is not covered by the
@@ -1020,9 +1023,10 @@ cdef class _IndexedGzipFile:
                 fd = NULL
             ret = zran.zran_export_index(&self.index, fd, <PyObject*>fileobj)
             if ret != zran.ZRAN_EXPORT_OK:
+                exc = get_python_exception()
                 raise ZranError('export_index returned error: {} (file: '
                                 '{})'.format(ZRAN_ERRORS.ZRAN_EXPORT[ret],
-                                             self.errname))
+                                             self.errname)) from exc
 
         finally:
             if close_file:
@@ -1070,9 +1074,10 @@ cdef class _IndexedGzipFile:
                 fd = NULL
             ret = zran.zran_import_index(&self.index, fd, <PyObject*>fileobj)
             if ret != zran.ZRAN_IMPORT_OK:
+                exc = get_python_exception()
                 raise ZranError('import_index returned error: {} (file: '
                                 '{})'.format(ZRAN_ERRORS.ZRAN_IMPORT[ret],
-                                             self.errname))
+                                             self.errname)) from exc
 
             self.skip_crc_check = True
 

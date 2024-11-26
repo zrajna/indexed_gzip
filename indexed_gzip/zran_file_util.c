@@ -194,7 +194,8 @@ size_t _fwrite_python(const void *ptr,
         goto fail;
     if ((data = PyObject_CallMethod(f, "write", "(O)", input)) == NULL)
         goto fail;
-
+    if (PyErr_Occurred())
+        goto fail;
     #if PY_MAJOR_VERSION >= 3
     if ((len = PyLong_AsLong(data)) == -1 && PyErr_Occurred())
         goto fail;

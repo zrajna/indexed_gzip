@@ -1,6 +1,12 @@
 # `indexed_gzip` changelog
 
 
+## 1.9.3 (November 27th 2024)
+
+
+* Expanded exception preservation to more scenarios (#161, #162).
+
+
 ## 1.9.2 (November 18th 2024)
 
 

@@ -114,8 +114,11 @@ def compress(infile, outfile, buflen=-1):
                     chunk = inf.read(buflen)
 
     # Use python gzip module on windows,
-    # can't assume gzip exists
-    if sys.platform.startswith("win"):
+    # as we can't assume the gzip command
+    # exists.
+    onwin = sys.platform.startswith("win")
+
+    if onwin:
         target = compress_with_gzip_module
 
     # If not windows, assume that gzip command
@@ -124,9 +127,16 @@ def compress(infile, outfile, buflen=-1):
     else:
         target = compress_with_gzip_command
 
-    cmpThread = threading.Thread(target=target)
-    cmpThread.start()
-    poll(lambda : not cmpThread.is_alive())
+    # Some kind of corruption also seems to
+    # occur on windows+free-threaded builds,
+    # so don't thread on windows. Threading
+    # here is just for progress reporting.
+    if onwin:
+        target()
+    else:
+        cmpThread = threading.Thread(target=target)
+        cmpThread.start()
+        poll(lambda : not cmpThread.is_alive())
 
 
 def compress_inmem(data, concat):

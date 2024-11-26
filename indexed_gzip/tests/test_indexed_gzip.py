@@ -6,6 +6,7 @@
 
 from __future__ import print_function
 
+import                    gc
 import                    os
 import os.path         as op
 import itertools       as it
@@ -509,8 +510,7 @@ def test_read_beyond_end(concat, drop):
         os.remove(testfile)
 
 
-@pytest.mark.parametrize('use_readinto', [False, True])
-def test_read_exception(testfile, nelems, use_readinto):
+def test_exception_preserved(testfile, nelems):
     """When wrapping a python file object, if it raises an exception
     it should be preserved.
     """
@@ -519,47 +519,119 @@ def test_read_exception(testfile, nelems, use_readinto):
         # because it's read-only, so skip it.
         return
 
-    f    = None
-    gzf  = None
-
-    MY_ERROR = "This error should be preserved"
-
-    # We'll use a weakref to check that we are handling reference counting
-    # correctly, and you cannot weakref an Exception, so we need a subclass.
+    # We'll use a weakref to check that we are handling
+    # reference counting correctly, and you cannot
+    # weakref an Exception, so we need a subclass.
     class MyException(Exception):
         pass
-    my_err_weak = [None]
-    def my_error_fn(*args, **kwargs):
-        err = MyException(MY_ERROR)
-        my_err_weak[0] = weakref.ref(err)
+
+    # Function which raises an exception. This is
+    # is patched into the python file-like to test
+    # that the igzip object preserves the exception.
+    # We store a weakref to each exception to check
+    # that no references to them are kept.
+    all_errors = []
+    error_msg  = "This error should be preserved"
+
+    def error_fn(name, *args, **kwargs):
+        err = MyException(error_msg + ": " + name)
+        all_errors.append(weakref.ref(err))
         raise err
 
-    try:
-        with open(testfile, 'rb') as f2:
-            f = BytesIO(f2.read())
-        gzf = igzip._IndexedGzipFile(fileobj=f)
-        f.read = my_error_fn
+    # Below we check that each of these scenarios
+    # raises an appropriate exception
+    def test_create(pyf):
+        pyf.seek = ft.partial(error_fn, "test_create")
+        gzf = igzip.IndexedGzipFile(fileobj=pyf)
+        return gzf
+
+    def test_build_full_index(pyf):
+        pyf.read = ft.partial(error_fn, "test_build_full_index")
+        pyf.seek = ft.partial(error_fn, "test_build_full_index")
+        gzf = igzip.IndexedGzipFile(fileobj=pyf)
+        gzf.build_full_index()
+        return gzf
+
+    def test_seek(pyf):
+        pyf.seek = ft.partial(error_fn, "test_seek")
+        gzf = igzip.IndexedGzipFile(fileobj=pyf)
+        gzf.seek(5)
+        return gzf
+
+    def test_read(pyf):
+        # Test _IndexedGzipFile.read, as the buffered
+        # IndexedGzipFile.read method uses readinto
+        pyf.read = ft.partial(error_fn, "test_read")
+        gzf = igzip._IndexedGzipFile(fileobj=pyf)
+        gzf.read(1)
+        return gzf
+
+    def test_readinto(pyf):
+        pyf.read = ft.partial(error_fn, "test_readinto")
+        gzf = igzip.IndexedGzipFile(fileobj=pyf)
+        ba = bytearray(1)
+        gzf.readinto(ba)
+        return gzf
+
+    def test_export_index(pyf):
+        gzf = igzip.IndexedGzipFile(fileobj=pyf)
+        gzf.build_full_index()
+        idxf = BytesIO()
+        idxf.write = ft.partial(error_fn, "test_export_index")
+        gzf.export_index(fileobj=idxf)
+        return gzf
+
+    def test_import_index(pyf):
+        gzf = igzip.IndexedGzipFile(fileobj=pyf)
+        idxf = BytesIO()
+        gzf.build_full_index()
+        gzf.export_index(fileobj=idxf)
+        gzf.close()
+        del gzf
+        gzf = igzip.IndexedGzipFile(fileobj=pyf)
+        idxf.read = ft.partial(error_fn, "test_import_index")
+        gzf.import_index(fileobj=idxf)
+        return gzf
+
+    tests = [test_create, test_build_full_index, test_seek,
+             test_read, test_readinto, test_export_index,
+             test_import_index]
+
+    # Call the given function, making sure that
+    # the exception originating from the python
+    # file-like is preserved
+    def check_error_preserved(func):
+        pyf = None
+        gzf = None
+        with open(testfile, 'rb') as f:
+            pyf = BytesIO(f.read())
         try:
-            if use_readinto:
-                ba = bytearray(1)
-                gzf.readinto(ba)
-            else:
-                gzf.read(1)
+            gzf = func(pyf)
         except Exception as e:
-            assert MY_ERROR in str(e) or MY_ERROR in str(e.__cause__), "Exception was not preserved; got {}".format(e)
+            fname = func.__name__
+            estr = str(e) + " " + str(e.__cause__)
+            assert error_msg in estr, \
+                "Exception was not preserved; got {}".format(estr)
+            assert fname in estr, \
+                "Exception didn't come from {}; got {}".format(fname, estr)
             del e
         else:
             assert False, "Expected an exception to be raised"
 
-
-    finally:
         if gzf is not None: gzf.close()
-        if f   is not None: f  .close()
-        del f
+        if pyf is not None: pyf.close()
         del gzf
-    assert (my_err_weak[0] is None or my_err_weak[0]() is None,
-            "Exception was not garbage collected")
+        del pyf
 
+    # Run the tests
+    for test in tests:
+        check_error_preserved(test)
+
+    # Make sure there are no dangling
+    # references to any exception objects
+    gc.collect()
+    for e in all_errors:
+        assert (e() is None), "Exception was not garbage collected"
 
 def test_seek(concat):
     with tempdir() as tdir:

@@ -835,8 +835,10 @@ cdef class _IndexedGzipFile:
         try:
 
             vbuf = <void *>pbuf.buf
-            with self.__file_handle(), nogil:
-                ret = zran.zran_read(index, vbuf, bufsz)
+            with self.__file_handle():
+                with nogil:
+                    ret = zran.zran_read(index, vbuf, bufsz)
+                exc = get_python_exception()
 
         # release the py_buffer
         finally:
@@ -844,7 +846,6 @@ cdef class _IndexedGzipFile:
 
         # see how the read went
         if ret == zran.ZRAN_READ_FAIL:
-            exc = get_python_exception()
             raise ZranError('zran_read returned error: {} (file: {})'
                             .format(ZRAN_ERRORS.ZRAN_READ[ret], self.errname)) from exc
 

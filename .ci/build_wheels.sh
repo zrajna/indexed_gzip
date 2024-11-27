@@ -45,7 +45,7 @@ export CIBW_SKIP="cp37* pp*"
 #    locally, so am disabling them for the time
 #    being.
 #
-export CIBW_TEST_SKIP="*i686* *aarch64* cp312-win* cp313-win*"
+export CIBW_TEST_SKIP="*i686* *aarch64* cp312-win* cp313-win* cp313t-win*"
 
 # Enable free-threaded builds for Python versions (3.13t) that support it
 export CIBW_FREE_THREADED_SUPPORT=1

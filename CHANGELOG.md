@@ -1,6 +1,12 @@
 # `indexed_gzip` changelog
 
 
+## 1.9.4 (November 28th 2024)
+
+
+* Skip CI tests on Windows/free-threaded python (#163).
+
+
 ## 1.9.3 (November 27th 2024)
 
 

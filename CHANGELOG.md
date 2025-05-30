@@ -1,6 +1,13 @@
 # `indexed_gzip` changelog
 
 
+## 1.9.5 (May 30th 2025)
+
+
+* Remove minimum cython version constraint so source can be built against older
+  versions of Python (#168).
+
+
 ## 1.9.4 (November 28th 2024)
 
 

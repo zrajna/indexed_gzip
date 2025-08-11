@@ -1543,6 +1543,9 @@ static int _zran_validate_stream(zran_index_t *index,
 
     /* CRC validation is disabled */
     if (index->flags & ZRAN_SKIP_CRC_CHECK) {
+        stream->avail_in -= 8;
+        stream->next_in  += 8;
+        *offset          += 8;
         return 0;
     }
 

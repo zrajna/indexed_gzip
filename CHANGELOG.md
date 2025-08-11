@@ -1,6 +1,12 @@
 # `indexed_gzip` changelog
 
 
+## 1.9.5 (May 31st 2025)
+
+
+* Fixed a bug which could occur when CRC validation is disabled, on GZIP streams where the stream footer (containing the CRC and size) contained bytes that matched the GZIP magic bytes `0x1f8b` (#169).
+
+
 ## 1.9.5 (May 30th 2025)
 
 

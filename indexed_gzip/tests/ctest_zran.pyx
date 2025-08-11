@@ -1237,7 +1237,7 @@ cdef _write_index_file_v0(zran.zran_index_t *index, dest):
             f.write(data)
 
 
-def test_crc_validation(concat):
+def test_crc_validation(concat, seed):
     """Basic test of CRC validation. """
 
     cdef zran.zran_index_t index

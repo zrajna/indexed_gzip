@@ -1,5 +1,5 @@
 [build-system]
-requires      = ["setuptools >= 40.8.0", "cython"]
+requires      = ["setuptools >= 40.8.0", "setuptools-scm", "cython"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -21,6 +21,8 @@ classifiers     = [
     "Topic :: System :: Archiving :: Compression",
 ]
 
+[tool.setuptools_scm]
+
 [project.urls]
 "Repository" = "https://github.com/pauldmccarthy/indexed_gzip"
 
@@ -37,13 +39,9 @@ test = [
 [tool.setuptools.packages.find]
 include = ["indexed_gzip*"]
 
-[tool.setuptools.dynamic]
-version = {attr = "indexed_gzip.__version__"}
-
-
 [tool.pytest.ini_options]
 testpaths = ["indexed_gzip/tests"]
-addopts = "-v --cov=indexed_gzip --showlocals"
+addopts = "-v --cov=indexed_gzip"
 markers = [
     "zran_test:         Test the zran.c library",
     "indexed_gzip_test: Test the indexed_gzip library",

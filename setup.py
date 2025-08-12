@@ -16,6 +16,7 @@ library files are assumed to be provided by the system.
 """
 
 import sys
+import sysconfig
 import os
 import glob
 import os.path as op
@@ -78,12 +79,19 @@ command_classes = {
 }
 
 # Platform information
-testing    = 'INDEXED_GZIP_TESTING' in os.environ
-thisdir    = op.dirname(__file__)
-windows    = sys.platform.startswith("win")
-noc99      = sys.version_info[0] == 3 and sys.version_info[1] <= 4
+testing       = 'INDEXED_GZIP_TESTING' in os.environ
+thisdir       = op.dirname(__file__)
+windows       = sys.platform.startswith("win")
+free_threaded = sysconfig.get_config_var('Py_GIL_DISABLED') == 1
+noc99         = sys.version_info[0] == 3 and sys.version_info[1] <= 4
+
+# Build against py_limited_api for python >= 3.11,
+# but not if we're testing, as cython line tracing
+# won't work. And also not for free-threaded
+# builds, as this isn't supported at the moment.
 stable_abi = sys.version_info[0] == 3 and sys.version_info[1] >= 11
 stable_abi = stable_abi and (not testing)
+stable_abi = stable_abi and (not free_threaded)
 
 # compile ZLIB source?
 ZLIB_HOME = os.environ.get("ZLIB_HOME", None)

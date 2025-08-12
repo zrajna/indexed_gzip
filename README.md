@@ -301,7 +301,7 @@ Many thanks to the following contributors (listed chronologically):
 
  - Zalan Rajna (@zrajna): Bug fixes (#2)
  - Martin Craig (@mcraig-ibme): Porting `indexed_gzip` to Windows (#3)
- - Chris Markiewicz (@effigies): Option to drop file handles (#6)
+ - Chris Markiewicz (@effigies): Option to drop file handles (#6), stable API builds (#144), free-threaded builds (#157)
  - Omer Ozarslan (@ozars): Index import/export (#8)
  - @DarioDaF: Windows overflow bug (#30)
  - Sławomir Zborowski (@szborows): `seek_points` method (#35), README fixes

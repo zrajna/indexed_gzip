@@ -50,7 +50,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: wheels
+          name: macos_wheels
           path: ./dist/*.whl
 
   build_windows_wheels:
@@ -77,7 +77,7 @@ jobs:
         run:  bash ./.ci/build_wheels.sh
       - uses: actions/upload-artifact@v4
         with:
-          name: wheels
+          name: windows_${{ matrix.arch }}_wheels
           path: ./dist/*.whl
 
   build_linux_wheels:
@@ -106,5 +106,5 @@ jobs:
         run:  bash ./.ci/build_wheels.sh
       - uses: actions/upload-artifact@v4
         with:
-          name: wheels
+          name: linux_${{ matrix.arch }}_wheels
           path: ./dist/*.whl

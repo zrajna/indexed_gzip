@@ -16,9 +16,9 @@ library files are assumed to be provided by the system.
 """
 
 import sys
+import sysconfig
 import os
 import glob
-import functools as ft
 import os.path as op
 import shutil
 
@@ -74,12 +74,24 @@ class Clean(Command):
                 try:            os.remove(g)
                 except OSError: pass
 
+command_classes = {
+    'clean' : Clean,
+}
 
 # Platform information
-noc99     = sys.version_info[0] == 3 and sys.version_info[1] <= 4
-windows   = sys.platform.startswith("win")
-testing   = 'INDEXED_GZIP_TESTING' in os.environ
-thisdir   = op.dirname(__file__)
+testing       = 'INDEXED_GZIP_TESTING' in os.environ
+thisdir       = op.dirname(__file__)
+windows       = sys.platform.startswith("win")
+free_threaded = sysconfig.get_config_var('Py_GIL_DISABLED') == 1
+noc99         = sys.version_info[0] == 3 and sys.version_info[1] <= 4
+
+# Build against py_limited_api for python >= 3.11,
+# but not if we're testing, as cython line tracing
+# won't work. And also not for free-threaded
+# builds, as this isn't supported at the moment.
+stable_abi = sys.version_info[0] == 3 and sys.version_info[1] >= 11
+stable_abi = stable_abi and (not testing)
+stable_abi = stable_abi and (not free_threaded)
 
 # compile ZLIB source?
 ZLIB_HOME = os.environ.get("ZLIB_HOME", None)
@@ -96,6 +108,7 @@ have_cython = True
 have_numpy  = True
 
 try:
+    import Cython
     from Cython.Build import cythonize
 except Exception:
     have_cython = False
@@ -116,7 +129,13 @@ print('  ZLIB_HOME:   {} (if set, ZLIB sources are compiled into '
       'the indexed_gzip extension)'.format(ZLIB_HOME))
 print('  testing:     {} (if True, code will be compiled with line '
       'tracing enabled)'.format(testing))
+print('  stable_abi:  {} (if True, code will be compiled against '
+      'limited/stable Python API)'.format(stable_abi))
 
+if stable_abi and have_cython:
+    cython_version_info = tuple(map(int, Cython.__version__.split('.')[:2]))
+    # Cython 3.1 is/will be the first version to support the stable ABI
+    stable_abi = cython_version_info >= (3, 1)
 
 # compile flags
 include_dirs        = ['indexed_gzip']
@@ -128,6 +147,11 @@ compiler_directives = {'language_level' : 2}
 define_macros       = [
     ('NPY_NO_DEPRECATED_API', 'NPY_1_7_API_VERSION'),
 ]
+if stable_abi:
+    define_macros += [
+        ('CYTHON_LIMITED_API', '1'),
+        ('Py_LIMITED_API', '0x030b0000'),
+    ]
 
 if ZLIB_HOME is not None:
     include_dirs.append(ZLIB_HOME)
@@ -174,7 +198,9 @@ igzip_ext = Extension(
     library_dirs=lib_dirs,
     include_dirs=include_dirs,
     extra_compile_args=extra_compile_args,
-    define_macros=define_macros)
+    define_macros=define_macros,
+    py_limited_api=stable_abi,
+)
 
 # Optional test modules
 test_exts = []
@@ -190,7 +216,9 @@ if not windows:
         library_dirs=lib_dirs,
         include_dirs=include_dirs,
         extra_compile_args=extra_compile_args,
-        define_macros=define_macros))
+        define_macros=define_macros,
+        py_limited_api=stable_abi,
+    ))
 
 # If we have numpy, we can compile the tests
 if have_numpy: extensions = [igzip_ext] + test_exts
@@ -201,8 +229,14 @@ else:          extensions = [igzip_ext]
 if have_cython:
     extensions = cythonize(extensions, compiler_directives=compiler_directives)
 
+if stable_abi:
+    options = {'bdist_wheel': {'py_limited_api': 'cp311'}}
+else:
+    options = None
+
 setup(
     name='indexed_gzip',
-    cmdclass={'clean' : Clean},
+    cmdclass=command_classes,
     ext_modules=extensions,
+    options=options
 )

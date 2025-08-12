@@ -2,8 +2,7 @@
 requires      = [
   "setuptools >= 40.8.0",
   "setuptools-scm",
-  "cython",
-  "wheel; python_version >= '3.11'"
+  "cython"
   ]
 
 build-backend = "setuptools.build_meta"

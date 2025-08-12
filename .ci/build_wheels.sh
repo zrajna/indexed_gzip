@@ -17,13 +17,6 @@ export CIBW_ENVIRONMENT_WINDOWS="ZLIB_HOME='$ZLIB_HOME'"
 # Run quick test suite on built wheels.
 export CIBW_TEST_REQUIRES="cython pytest numpy nibabel coverage cython-coverage pytest-cov"
 
-# Disable python 3.7, as it is EOL as of June 2023, and
-# unsupported by cython>=3.1.0
-#
-# Disable pypy builds (reasons for doing this have been
-# lost to history [GHA logs of failing builds deleted]).
-export CIBW_SKIP="cp37* pp*"
-
 # Skip i686 and aarch64 tests:
 #
 #  - I have experienced hangs on these platforms,
@@ -48,7 +41,7 @@ export CIBW_SKIP="cp37* pp*"
 export CIBW_TEST_SKIP="*i686* *aarch64* cp312-win* cp313-win* cp313t-win*"
 
 # Enable free-threaded builds for Python versions (3.13t) that support it
-export CIBW_FREE_THREADED_SUPPORT=1
+export CIBW_ENABLE=cpython-freethreading
 
 # Pytest makes it *very* awkward to run tests
 # from an installed package, and still find/

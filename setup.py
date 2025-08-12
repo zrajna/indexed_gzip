@@ -18,7 +18,6 @@ library files are assumed to be provided by the system.
 import sys
 import os
 import glob
-import functools as ft
 import os.path as op
 import shutil
 
@@ -223,19 +222,13 @@ if have_cython:
     extensions = cythonize(extensions, compiler_directives=compiler_directives)
 
 if stable_abi:
-    from wheel.bdist_wheel import bdist_wheel
-
-    class bdist_wheel_abi3(bdist_wheel):
-        def get_tag(self):
-            python, abi, plat = super().get_tag()
-            if python.startswith('cp3'):
-                python, abi = 'cp311', 'abi3'
-            return python, abi, plat
-
-    command_classes['bdist_wheel'] = bdist_wheel_abi3
+    options = {'bdist_wheel': {'py_limited_api': 'cp311'}}
+else:
+    options = None
 
 setup(
     name='indexed_gzip',
     cmdclass=command_classes,
     ext_modules=extensions,
+    options=options
 )

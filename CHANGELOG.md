@@ -1,9 +1,9 @@
 # `indexed_gzip` changelog
 
 
-## 1.9.6 (August 12th 2025)
+## 1.10.0 (August 12th 2025)
 
-
+* Binary wheels are now built against the [Python Limited API](https://docs.python.org/3/c-api/stable.html) - wheels built for Python 3.11 should now be forward compatible with Python >= 3.11 (#144).
 * Fixed a bug which could occur when CRC validation is disabled, on GZIP streams where the stream footer (containing the CRC and size) contained bytes that matched the GZIP magic bytes `0x1f8b` (#169).
 
 

@@ -1507,7 +1507,7 @@ def test_read_eof_memmove_rotate_bug(seed):
 
 
 # pauldmccarthy/indexed_gzip#169
-def test_skip_crc_with_footer_that_looks_like_new_stream():
+def test_skip_crc_with_footer_that_looks_like_new_stream(seed):
     """Test the code with a file where the 8 byte GZIP footer (the CRC and
     uncompressed size modulo 2**32) contains bytes which look like a new
     GZIP stream (i.e. contain 0x1f8b).

@@ -381,8 +381,9 @@ int ZRAN_VALIDATE_STREAM_INVALID = -1;
  * The number of bytes that were read before the new stream was found is
  * added to the provided offset pointer.
  *
- * If ZRAN_SKIP_CRC_CHECK is active, this function returns immediately without
- * doing anything.
+ * If ZRAN_SKIP_CRC_CHECK is active, this function updates the stream buffer
+ * offsets to skip over the CRC32 and file size bytes, and then returns without
+ * doing anything else.
  *
  * If an error occurs, ZRAN_VALIDATE_STREAM_ERROR is returned.
  */
@@ -1541,7 +1542,9 @@ static int _zran_validate_stream(zran_index_t *index,
     uint32_t crc;
     uint32_t size;
 
-    /* CRC validation is disabled */
+    /* CRC validation is disabled. Skip over footer
+     * and return.
+     */
     if (index->flags & ZRAN_SKIP_CRC_CHECK) {
         stream->avail_in -= 8;
         stream->next_in  += 8;

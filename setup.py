@@ -79,11 +79,12 @@ command_classes = {
 }
 
 # Platform information
-noc99     = sys.version_info[0] == 3 and sys.version_info[1] <= 4
+testing    = 'INDEXED_GZIP_TESTING' in os.environ
+thisdir    = op.dirname(__file__)
+windows    = sys.platform.startswith("win")
+noc99      = sys.version_info[0] == 3 and sys.version_info[1] <= 4
 stable_abi = sys.version_info[0] == 3 and sys.version_info[1] >= 11
-windows   = sys.platform.startswith("win")
-testing   = 'INDEXED_GZIP_TESTING' in os.environ
-thisdir   = op.dirname(__file__)
+stable_abi = stable_abi and (not testing)
 
 # compile ZLIB source?
 ZLIB_HOME = os.environ.get("ZLIB_HOME", None)
@@ -121,6 +122,8 @@ print('  ZLIB_HOME:   {} (if set, ZLIB sources are compiled into '
       'the indexed_gzip extension)'.format(ZLIB_HOME))
 print('  testing:     {} (if True, code will be compiled with line '
       'tracing enabled)'.format(testing))
+print('  stable_abi:  {} (if True, code will be compiled against '
+      'limited/stable Python API)'.format(stable_abi))
 
 if stable_abi and have_cython:
     cython_version_info = tuple(map(int, Cython.__version__.split('.')[:2]))

@@ -11,8 +11,10 @@ import                    sys
 import                    time
 import                    gzip
 import                    shutil
+import                    operator
 import                    tempfile
 import                    threading
+import functools       as ft
 import subprocess      as sp
 import multiprocessing as mp
 
@@ -139,37 +141,43 @@ def compress(infile, outfile, buflen=-1):
         poll(lambda : not cmpThread.is_alive())
 
 
+
+def _compress_inmem(data):
+    """Compress one chunk of data using the gzip module. """
+    f = io.BytesIO()
+    with gzip.GzipFile(mode='ab', fileobj=f) as gzf:
+        gzf.write(data)
+    return f.getvalue()
+
+
 def compress_inmem(data, concat):
     """Compress the given data (assumed to be bytes) and return a bytearray
     containing the compressed data (including gzip header and footer).
     Also returns offsets for the end of each separate stream.
     """
 
-    f = io.BytesIO()
     if concat: chunksize = len(data) // 10
     else:      chunksize = len(data)
 
-    offsets    = []
-    compressed = 0
-    print('Generating compressed data {}, concat: {})'.format(
-        len(data), concat))
-    while compressed < len(data):
-        start = len(f.getvalue())
-        chunk = data[compressed:compressed + chunksize]
-        with gzip.GzipFile(mode='ab', fileobj=f) as gzf:
-            gzf.write(chunk)
+    print('Generating compressed data {}, concat: {}, chunk: {})'.format(
+        len(data), concat, chunksize))
 
-        end = len(f.getvalue())
+    rawoffsets = range(0, len(data), chunksize)
+    rawchunks  = [data[o:o + chunksize] for o in rawoffsets]
 
-        print('  Wrote stream to {} - {} [{} bytes] ...'.format(
-            start, end, end - start))
-        offsets.append(end)
-        compressed += chunksize
+    with mp.Pool() as p:
+        cmpchunks = p.map(_compress_inmem, rawchunks)
 
-    print('  Final size: {}'.format(len(f.getvalue())))
+    cmpoffsets = [len(cmpchunks[0])]
+    for c in cmpchunks[1:]:
+        cmpoffsets.append(cmpoffsets[-1] + len(c))
 
-    f.seek(0)
-    return bytearray(f.read()), offsets
+    compressed = ft.reduce(operator.add, cmpchunks)
+
+    print('  Final size: {} ({} chunks)'.format(
+        len(compressed), len(cmpoffsets)))
+
+    return bytearray(compressed), cmpoffsets
 
 
 def gen_test_data(filename, nelems, concat):

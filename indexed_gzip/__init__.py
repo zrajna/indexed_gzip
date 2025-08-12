@@ -5,6 +5,8 @@
 """The indexed_gzip namespace. """
 
 
+from importlib.metadata import version, PackageNotFoundError
+
 from .indexed_gzip import (_IndexedGzipFile,     # noqa
                            IndexedGzipFile,
                            open,
@@ -19,4 +21,7 @@ versions of ``nibabel``.
 """
 
 
-__version__ = '1.9.5'
+try:
+    __version__ = version("indexed_gzip")
+except PackageNotFoundError:
+    __version__ = '<unknown>'

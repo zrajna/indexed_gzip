@@ -1237,7 +1237,7 @@ cdef _write_index_file_v0(zran.zran_index_t *index, dest):
             f.write(data)
 
 
-def test_crc_validation(concat):
+def test_crc_validation(concat, seed):
     """Basic test of CRC validation. """
 
     cdef zran.zran_index_t index
@@ -1247,23 +1247,21 @@ def test_crc_validation(concat):
     # use uint32 so there are lots of zeros,
     # and so there is something to compress
     dsize             = 1048576 * 10
-    data              = np.random.randint(0, 255, dsize // 4, dtype=np.uint32)
-    cmpdata, strmoffs = compress_inmem(data.tobytes(), concat)
-    buf               = ReadBuffer(dsize)
-    buffer            = buf.buffer
-    f                 = [None]  # to prevent gc
+    rawdata           = np.random.randint(0, 255, dsize // 4, dtype=np.uint32)
+    cmpdata, strmoffs = compress_inmem(rawdata.tobytes(), concat)
 
-    def _zran_init(flags):
-        f[0] = BytesIO(cmpdata)
+    def _zran_init(data, flags):
+        f = BytesIO(data)
         assert not zran.zran_init(&index,
                                   NULL,
-                                  <PyObject*>f[0],
+                                  <PyObject*>f,
                                   1048576,
                                   32768,
                                   131072,
                                   flags)
+        return f
 
-    def _run_crc_tests(shouldpass, flags=zran.ZRAN_AUTO_BUILD):
+    def _run_crc_tests(data, shouldpass, flags=zran.ZRAN_AUTO_BUILD):
         if shouldpass:
             expect_build = zran.ZRAN_BUILD_INDEX_OK
             expect_seek  = zran.ZRAN_SEEK_OK
@@ -1287,60 +1285,64 @@ def test_crc_validation(concat):
         # to be disabled.  It depends on the data,
         # and on the constants used in
         # _zran_estimate_offset
-        _zran_init(flags)
+        f   = _zran_init(data, flags)
         ret = zran.zran_build_index(&index, 0, 0)
         assert ret == expect_build, ret
         zran.zran_free(&index)
 
         # error if we try to seek
-        _zran_init(flags)
+        f   = _zran_init(data, flags)
         ret = zran.zran_seek(&index, dsize - 1, SEEK_SET, NULL)
         assert ret == expect_seek, ret
         zran.zran_free(&index)
 
         # error if we try to read
-        _zran_init(flags)
-        ret = zran.zran_read(&index, buffer, dsize)
+        buf    = ReadBuffer(dsize)
+        buffer = buf.buffer
+        f      = _zran_init(data, flags)
+        ret    = zran.zran_read(&index, buffer, dsize)
         assert ret == expect_read, ret
         zran.zran_free(&index)
 
         if shouldpass:
             pybuf = <bytes>(<char *>buffer)[:dsize]
-            assert np.all(np.frombuffer(pybuf, dtype=np.uint32) == data)
+            assert np.all(np.frombuffer(pybuf, dtype=np.uint32) == rawdata)
 
     def wrap(val):
         return val % 255
 
     # data/crc is good, all should be well
-    _run_crc_tests(True)
+    _run_crc_tests(cmpdata, True)
 
     # corrupt the size, we should get an error
-    cmpdata[-1] = wrap(cmpdata[-1] + 1)  # corrupt size
-    _run_crc_tests(False)
+    data     = cmpdata.copy()
+    data[-1] = wrap(data[-1] + 1)  # corrupt size
+    _run_crc_tests(data, False)
 
     # corrupt the crc, we should get an error
-    cmpdata[-1] = wrap(cmpdata[-1] - 1)  # restore size to correct value
-    cmpdata[-5] = wrap(cmpdata[-5] + 1)  # corrupt crc
-    _run_crc_tests(False)
+    data     = cmpdata.copy()
+    data[-5] = wrap(data[-5] + 1)  # corrupt crc
+    _run_crc_tests(data, False)
 
     # Corrupt a different stream, if we have more than one
-    cmpdata[-5] = wrap(cmpdata[-5] - 1)  # restore crc to correct value
     if len(strmoffs) > 1:
         for off in strmoffs[1:]:
-            cmpdata[off-1] = wrap(cmpdata[off-1] + 1)
-            _run_crc_tests(False)
-            cmpdata[off-1] = wrap(cmpdata[off-1] - 1)
+            data        = cmpdata.copy()
+            data[off-1] = wrap(data[off-1] + 1)
+            _run_crc_tests(data, False)
 
     # Disable CRC, all should be well, even with a corrupt CRC/size
     # First test with good data
-    _run_crc_tests(True, zran.ZRAN_AUTO_BUILD | zran.ZRAN_SKIP_CRC_CHECK)
+    data = cmpdata.copy()
+    _run_crc_tests(data, True, zran.ZRAN_AUTO_BUILD | zran.ZRAN_SKIP_CRC_CHECK)
 
-    cmpdata[-1] = wrap(cmpdata[-1] + 1)  # corrupt size
-    _run_crc_tests(True, zran.ZRAN_AUTO_BUILD | zran.ZRAN_SKIP_CRC_CHECK)
+    data     = cmpdata.copy()
+    data[-1] = wrap(data[-1] + 1)  # corrupt size
+    _run_crc_tests(data, True, zran.ZRAN_AUTO_BUILD | zran.ZRAN_SKIP_CRC_CHECK)
 
-    cmpdata[-1] = wrap(cmpdata[-1] - 1)  # restore size to correct value
-    cmpdata[-5] = wrap(cmpdata[-5] - 1)  # corrupt crc
-    _run_crc_tests(True, zran.ZRAN_AUTO_BUILD | zran.ZRAN_SKIP_CRC_CHECK)
+    data     = cmpdata.copy()
+    data[-5] = wrap(data[-5] - 1)  # corrupt crc
+    _run_crc_tests(data, True, zran.ZRAN_AUTO_BUILD | zran.ZRAN_SKIP_CRC_CHECK)
 
 
 def test_standard_usage_with_null_padding(concat):
@@ -1502,3 +1504,59 @@ def test_read_eof_memmove_rotate_bug(seed):
 
             assert got                    == zran.ZRAN_SEEK_OK, got
             assert zran.zran_tell(&index) == eof
+
+
+# pauldmccarthy/indexed_gzip#169
+def test_skip_crc_with_footer_that_looks_like_new_stream(seed):
+    """Test the code with a file where the 8 byte GZIP footer (the CRC and
+    uncompressed size modulo 2**32) contains bytes which look like a new
+    GZIP stream (i.e. contain 0x1f8b).
+    """
+
+    cdef zran.zran_index_t index
+    cdef void             *buffer
+    cdef int64_t           ret
+
+    # 0x1f8b == 8075, so we just need to use some data with that size
+    # (with little-endian storage). The compress_imem function chunks
+    # the data into 10 separate gzip streams
+    nbytes  = 10 * 0x128b1f
+    rawdata = np.random.randint(0, 255, nbytes, dtype=np. uint8)
+    cmpdata = compress_inmem(rawdata.tobytes(), True)[0]
+
+    def _zran_init(data, flags):
+        f = BytesIO(data)
+        assert not zran.zran_init(&index,
+                                  NULL,
+                                  <PyObject*>f,
+                                  1048576,
+                                  32768,
+                                  131072,
+                                  flags)
+        return f
+
+    for flags in [zran.ZRAN_AUTO_BUILD,
+                  zran.ZRAN_AUTO_BUILD | zran.ZRAN_SKIP_CRC_CHECK]:
+
+        # check that we can build an index
+        f   = _zran_init(cmpdata, flags)
+        ret = zran.zran_build_index(&index, 0, 0)
+        assert ret == zran.ZRAN_BUILD_INDEX_OK, ret
+        zran.zran_free(&index)
+
+        # check that we can seek
+        f   = _zran_init(cmpdata, flags)
+        ret = zran.zran_seek(&index, nbytes - 1, SEEK_SET, NULL)
+        assert ret == zran.ZRAN_SEEK_OK, ret
+        zran.zran_free(&index)
+
+        # check that we can read
+        buf    = ReadBuffer(nbytes)
+        buffer = buf.buffer
+        f      = _zran_init(cmpdata, flags)
+        ret    = zran.zran_read(&index, buffer, nbytes)
+        assert ret == nbytes, ret
+        zran.zran_free(&index)
+
+        pybuf = <bytes>(<char *>buffer)[:nbytes]
+        assert np.all(np.frombuffer(pybuf, dtype=np.uint8) == rawdata)

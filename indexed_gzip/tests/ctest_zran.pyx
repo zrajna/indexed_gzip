@@ -1504,3 +1504,59 @@ def test_read_eof_memmove_rotate_bug(seed):
 
             assert got                    == zran.ZRAN_SEEK_OK, got
             assert zran.zran_tell(&index) == eof
+
+
+# pauldmccarthy/indexed_gzip#169
+def test_skip_crc_with_footer_that_looks_like_new_stream():
+    """Test the code with a file where the 8 byte GZIP footer (the CRC and
+    uncompressed size modulo 2**32) contains bytes which look like a new
+    GZIP stream (i.e. contain 0x1f8b).
+    """
+
+    cdef zran.zran_index_t index
+    cdef void             *buffer
+    cdef int64_t           ret
+
+    # 0x1f8b == 8075, so we just need to use some data with that size
+    # (with little-endian storage). The compress_imem function chunks
+    # the data into 10 separate gzip streams
+    nbytes  = 10 * 0x128b1f
+    rawdata = np.random.randint(0, 255, nbytes, dtype=np. uint8)
+    cmpdata = compress_inmem(rawdata.tobytes(), True)[0]
+
+    def _zran_init(data, flags):
+        f = BytesIO(data)
+        assert not zran.zran_init(&index,
+                                  NULL,
+                                  <PyObject*>f,
+                                  1048576,
+                                  32768,
+                                  131072,
+                                  flags)
+        return f
+
+    for flags in [zran.ZRAN_AUTO_BUILD,
+                  zran.ZRAN_AUTO_BUILD | zran.ZRAN_SKIP_CRC_CHECK]:
+
+        # check that we can build an index
+        f   = _zran_init(cmpdata, flags)
+        ret = zran.zran_build_index(&index, 0, 0)
+        assert ret == zran.ZRAN_BUILD_INDEX_OK, ret
+        zran.zran_free(&index)
+
+        # check that we can seek
+        f   = _zran_init(cmpdata, flags)
+        ret = zran.zran_seek(&index, nbytes - 1, SEEK_SET, NULL)
+        assert ret == zran.ZRAN_SEEK_OK, ret
+        zran.zran_free(&index)
+
+        # check that we can read
+        buf    = ReadBuffer(nbytes)
+        buffer = buf.buffer
+        f      = _zran_init(cmpdata, flags)
+        ret    = zran.zran_read(&index, buffer, nbytes)
+        assert ret == nbytes, ret
+        zran.zran_free(&index)
+
+        pybuf = <bytes>(<char *>buffer)[:nbytes]
+        assert np.all(np.frombuffer(pybuf, dtype=np.uint8) == rawdata)

@@ -143,6 +143,7 @@ def compress(infile, outfile, buflen=-1):
 
 
 def _compress_inmem(data):
+    """Compress one chunk of data using the gzip module. """
     f = io.BytesIO()
     with gzip.GzipFile(mode='ab', fileobj=f) as gzf:
         gzf.write(data)
@@ -158,8 +159,8 @@ def compress_inmem(data, concat):
     if concat: chunksize = len(data) // 10
     else:      chunksize = len(data)
 
-    print('Generating compressed data {}, concat: {})'.format(
-        len(data), concat))
+    print('Generating compressed data {}, concat: {}, chunk: {})'.format(
+        len(data), concat, chunksize))
 
     rawoffsets = range(0, len(data), chunksize)
     rawchunks  = [data[o:o + chunksize] for o in rawoffsets]

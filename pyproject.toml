@@ -12,8 +12,7 @@ name            = "indexed_gzip"
 dynamic         = ["version"]
 description     = "Fast random access of gzip files in Python"
 readme          = {file = "README.md", content-type="text/markdown"}
-license         = "Zlib"
-license-files   = ["LICENSE"]
+license         = {text = "Zlib"}
 requires-python = ">=3.7"
 maintainers     = [{name = "Paul McCarthy", email = "pauldmccarthy@gmail.com"}]
 classifiers     = [
@@ -37,8 +36,7 @@ test = [
   "numpy",
   "nibabel",
   "coverage",
-  "pytest-cov",
-  "cython-coverage"
+  "pytest-cov"
 ]
 
 [tool.setuptools.packages.find]

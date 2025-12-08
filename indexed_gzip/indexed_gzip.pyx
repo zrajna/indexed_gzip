@@ -417,6 +417,12 @@ cdef class _IndexedGzipFile:
         if (filename is not None) and (not op.isfile(filename)):
             raise DoesNotExistError('File {} does not exist'.format(filename))
 
+        # fopen will also seg fault if passed
+        # a pathlib.Path, so let's make sure
+        # it's a string.
+        if filename is not None:
+            filename = str(filename)
+
         mode     = 'rb'
         own_file = fileobj is None
 

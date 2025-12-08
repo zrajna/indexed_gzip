@@ -21,9 +21,11 @@ import                    random
 import                    shutil
 import                    pickle
 import                    hashlib
+import                    pathlib
 import                    textwrap
 import                    tempfile
 import                    contextlib
+
 
 import numpy as np
 from io import BytesIO
@@ -164,6 +166,22 @@ def test_open_mode():
         else:
             with pytest.raises(ValueError):
                 igzip.IndexedGzipFile(fileobj=fileobj).read()
+
+
+#pauldmccarthy/indexed_gzip#176
+@pytest.mark.parametrize('drop', [False, True])
+def test_open_path(testfile, nelems, seed, drop):
+
+    testfile = pathlib.Path(testfile)
+
+    with igzip._IndexedGzipFile(filename=testfile, drop_handles=drop) as f:
+
+        element = np.random.randint(0, nelems, 1)[0]
+        readval = read_element(f, element)
+
+    assert readval == element
+    assert f.closed
+
 
 @pytest.mark.parametrize('drop', [False, True])
 def test_atts(testfile, drop):

@@ -15,7 +15,7 @@ export CIBW_BEFORE_ALL_LINUX="yum install -y zlib-devel || apt-get install -y zl
 export CIBW_ENVIRONMENT_WINDOWS="ZLIB_HOME='$ZLIB_HOME'"
 
 # Run quick test suite on built wheels.
-export CIBW_TEST_REQUIRES="cython pytest numpy nibabel coverage cython-coverage pytest-cov"
+export CIBW_TEST_REQUIRES="cython pytest numpy nibabel coverage pytest-cov"
 
 # Skip i686 and aarch64 tests:
 #

@@ -12,7 +12,7 @@ name            = "indexed_gzip"
 dynamic         = ["version"]
 description     = "Fast random access of gzip files in Python"
 readme          = {file = "README.md", content-type="text/markdown"}
-license         = {text = "Zlib"}
+license         = "Zlib"
 requires-python = ">=3.7"
 maintainers     = [{name = "Paul McCarthy", email = "pauldmccarthy@gmail.com"}]
 classifiers     = [

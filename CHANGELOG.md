@@ -1,5 +1,9 @@
 # `indexed_gzip` changelog
 
+## 1.10.3 (December 8th 2025)
+
+* Adjust `pyproject.toml` for compatibility with older `setuptools` versions (#178).
+
 
 ## 1.10.2 (December 8th 2025)
 

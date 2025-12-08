@@ -1,6 +1,11 @@
 # `indexed_gzip` changelog
 
 
+## 1.10.2 (December 8th 2025)
+
+* Adjust the `IndexedGzipFile` class so it accepts `pathlib.Path` objects  (#177).
+
+
 ## 1.10.1 (August 13th 2025)
 
 * Small adjustments to package build mechanism (#170).

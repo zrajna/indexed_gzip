@@ -21,7 +21,7 @@ jobs:
       - uses: actions/setup-python@v6
         name: Install Python
         with:
-          python-version: "3.11"
+          python-version: "3.12"
 
       - name: Build sdist
         run:  bash ./.ci/build_sdist.sh
@@ -44,7 +44,7 @@ jobs:
       - uses: actions/setup-python@v6
         name: Install Python
         with:
-          python-version: "3.11"
+          python-version: "3.12"
 
       - name: Build wheels
         run:  bash ./.ci/build_wheels.sh
@@ -71,7 +71,7 @@ jobs:
       - uses: actions/setup-python@v6
         name: Install Python
         with:
-          python-version: "3.11"
+          python-version: "3.12"
       - name: Download zlib
         run:  bash ./.ci/download_zlib.sh
       - name: Build wheels
@@ -99,7 +99,7 @@ jobs:
       - uses: actions/setup-python@v6
         name: Install Python
         with:
-          python-version: "3.11"
+          python-version: "3.12"
       - name: Set up QEMU for emulated (e.g. ARM) builds
         if:   ${{ matrix.arch == 'aarch64' }}
         uses: docker/setup-qemu-action@v3
